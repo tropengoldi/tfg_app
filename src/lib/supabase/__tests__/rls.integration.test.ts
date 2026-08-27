@@ -469,4 +469,295 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
     expect(error).toBeNull()
     expect(data ?? []).toHaveLength(0)
   })
+
+  it('Eingeladener Teilnehmer sieht Eckdaten und Teilnehmerliste', async () => {
+    const ev = await userA.client
+      .from('tasting_events')
+      .select('id, location, status')
+      .eq('id', activeEvent.id)
+      .single()
+    expect(ev.error).toBeNull()
+    expect(ev.data!.location).toBe('Bei Host')
+
+    const parts = await userA.client
+      .from('event_participants')
+      .select('profile_id')
+      .eq('event_id', activeEvent.id)
+    expect(parts.error).toBeNull()
+    // userA, userB, host (host wird von create_event automatisch hinzugefügt)
+    expect(parts.data!.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('Neues Konto bekommt automatisch ein Profil mit Rolle "teilnehmer"', async () => {
+    const { data } = await service
+      .from('profiles')
+      .select('role, is_active')
+      .eq('id', userB.id)
+      .single()
+    expect(data!.role).toBe('teilnehmer')
+    expect(data!.is_active).toBe(true)
+  })
+
+  // --- Bewerten: Wertebereich & Upsert --------------------------------
+  it('Nasenpunkte außerhalb 1–5 werden abgelehnt (CHECK)', async () => {
+    const { error } = await userA.client
+      .from('ratings')
+      .update({ nose_points: 9 })
+      .eq('event_id', activeEvent.id)
+      .eq('profile_id', userA.id)
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('23514')
+  })
+
+  it('Geschmackspunkte außerhalb 1–10 werden abgelehnt (CHECK)', async () => {
+    const { error } = await userA.client
+      .from('ratings')
+      .update({ taste_points: 11 })
+      .eq('event_id', activeEvent.id)
+      .eq('profile_id', userA.id)
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('23514')
+  })
+
+  it('Erneutes Speichern derselben Bewertung überschreibt (kein zweiter Eintrag)', async () => {
+    const up = await userA.client
+      .from('ratings')
+      .upsert(
+        {
+          whisky_id: activeEvent.whiskyA,
+          event_id: activeEvent.id,
+          profile_id: userA.id,
+          nose_points: 4,
+          taste_points: 9,
+        },
+        { onConflict: 'whisky_id,profile_id' },
+      )
+    expect(up.error).toBeNull()
+
+    const { data } = await userA.client
+      .from('ratings')
+      .select('id, nose_points, taste_points')
+      .eq('event_id', activeEvent.id)
+      .eq('whisky_id', activeEvent.whiskyA)
+      .eq('profile_id', userA.id)
+    expect(data).toHaveLength(1)
+    expect(data![0].nose_points).toBe(4)
+    expect(data![0].taste_points).toBe(9)
+  })
+
+  // --- Ablaufsteuerung: Berechtigung & Zeitpunkt --------------------
+  it('Whisky nachtragen nach dem Start wird abgelehnt (TS005)', async () => {
+    const { error } = await userA.client.rpc('add_whisky', {
+      p_event: activeEvent.id,
+      p_name: 'Zu spät',
+    })
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('TS005')
+  })
+
+  it('Nicht-Gastgeber darf die Runde nicht weiterschalten (TS004)', async () => {
+    const { error } = await userA.client.rpc('close_round', {
+      p_event: activeEvent.id,
+      p_expected_position: 1,
+    })
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('TS004')
+  })
+
+  it('Nicht-Gastgeber darf das Event nicht abschließen (TS004)', async () => {
+    const { error } = await userA.client.rpc('close_event', { p_event: activeEvent.id })
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('TS004')
+  })
+
+  it('Bereits ausgeschenkte Whiskies lassen sich nicht umsortieren (TS006)', async () => {
+    // activeEvent steht auf current_position 1 → Position 1 ist gesperrt.
+    // Reihenfolge, die den Whisky von Position 2 nach vorne zieht:
+    const { error } = await host.client.rpc('set_whisky_order', {
+      p_event: activeEvent.id,
+      p_ordered: [activeEvent.whiskyB, activeEvent.whiskyA, activeEvent.whiskyH],
+    })
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('TS006')
+  })
+
+  // --- MUTIEREND: ab hier wird activeEvent weitergeschaltet. Am Ende halten. ---
+  it('Doppel-Tap auf „Runde abschließen" schaltet nur einmal weiter', async () => {
+    const first = await host.client.rpc('close_round', {
+      p_event: activeEvent.id,
+      p_expected_position: 1,
+    })
+    expect(first.error).toBeNull()
+    const second = await host.client.rpc('close_round', {
+      p_event: activeEvent.id,
+      p_expected_position: 1,
+    })
+    expect(second.error).toBeTruthy()
+    expect(second.error!.code).toBe('TS002')
+  })
+
+  it('„Runde abschließen" am letzten Whisky wird abgelehnt (TS007)', async () => {
+    // activeEvent ist jetzt auf Position 2 (nach dem Doppel-Tap-Test), n = 3.
+    const toLast = await host.client.rpc('close_round', {
+      p_event: activeEvent.id,
+      p_expected_position: 2,
+    })
+    expect(toLast.error).toBeNull() // → Position 3 (letzter Whisky)
+
+    const past = await host.client.rpc('close_round', {
+      p_event: activeEvent.id,
+      p_expected_position: 3,
+    })
+    expect(past.error).toBeTruthy()
+    expect(past.error!.code).toBe('TS007')
+  })
+})
+
+// ===========================================================================
+// RPC-Regeln, die sich an einem Draft-Event prüfen lassen (kein zweites aktives
+// Event nötig — davon darf es nur eines geben).
+// ===========================================================================
+describe.skipIf(!RUN)('RPC-Constraints am Draft-Event', () => {
+  let limitEventId: string
+  let emptyEventId: string
+  let swapEventId: string
+  const swapWhiskies: string[] = []
+
+  beforeAll(async () => {
+    // Event mit Limit 1 pro Person
+    limitEventId = (
+      await step('limitEvent: create', () =>
+        admin.client.rpc('create_event', {
+          p_event_date: '2026-10-01',
+          p_location: 'Limit-Test',
+          p_host_id: host.id,
+          p_max_whiskies: 1,
+        }),
+      )
+    ).data as string
+    created.eventIds.push(limitEventId)
+    await step('limitEvent: participants', () =>
+      admin.client.rpc('set_event_participants', {
+        p_event: limitEventId,
+        p_profile_ids: [userA.id, userB.id],
+      }),
+    )
+
+    // Leeres Event (kein Whisky)
+    emptyEventId = (
+      await step('emptyEvent: create', () =>
+        admin.client.rpc('create_event', {
+          p_event_date: '2026-10-02',
+          p_location: 'Leer-Test',
+          p_host_id: host.id,
+        }),
+      )
+    ).data as string
+    created.eventIds.push(emptyEventId)
+
+    // Event mit 3 Whiskies zum Umsortieren (bleibt Draft)
+    swapEventId = (
+      await step('swapEvent: create', () =>
+        admin.client.rpc('create_event', {
+          p_event_date: '2026-10-03',
+          p_location: 'Swap-Test',
+          p_host_id: host.id,
+        }),
+      )
+    ).data as string
+    created.eventIds.push(swapEventId)
+    for (const name of ['S1', 'S2', 'S3']) {
+      const id = (
+        await step(`swapEvent: add ${name}`, () =>
+          host.client.rpc('add_whisky', { p_event: swapEventId, p_name: name }),
+        )
+      ).data as string
+      swapWhiskies.push(id)
+    }
+  }, 120_000)
+
+  it('Zweiter Whisky über dem Limit wird abgelehnt (TS003)', async () => {
+    const first = await userA.client.rpc('add_whisky', {
+      p_event: limitEventId,
+      p_name: 'A-Limit-1',
+    })
+    expect(first.error).toBeNull()
+    const second = await userA.client.rpc('add_whisky', {
+      p_event: limitEventId,
+      p_name: 'A-Limit-2',
+    })
+    expect(second.error).toBeTruthy()
+    expect(second.error!.code).toBe('TS003')
+  })
+
+  it('Der Gastgeber darf genau einen mehr als das Limit (Bonus)', async () => {
+    const one = await host.client.rpc('add_whisky', {
+      p_event: limitEventId,
+      p_name: 'H-Limit-1',
+    })
+    expect(one.error).toBeNull()
+    const bonus = await host.client.rpc('add_whisky', {
+      p_event: limitEventId,
+      p_name: 'H-Limit-2',
+    })
+    expect(bonus.error).toBeNull() // Bonus: Limit 1 + 1
+    const tooMany = await host.client.rpc('add_whisky', {
+      p_event: limitEventId,
+      p_name: 'H-Limit-3',
+    })
+    expect(tooMany.error).toBeTruthy()
+    expect(tooMany.error!.code).toBe('TS003')
+  })
+
+  it('Teilnehmer mit eingetragenem Whisky kann nicht entfernt werden (TS009)', async () => {
+    const { error } = await admin.client.rpc('set_event_participants', {
+      p_event: limitEventId,
+      p_profile_ids: [userB.id], // userA raus — hat aber A-Limit-1
+    })
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('TS009')
+  })
+
+  it('Start ohne einen einzigen Whisky wird abgelehnt (TS008)', async () => {
+    const { error } = await host.client.rpc('start_event', { p_event: emptyEventId })
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('TS008')
+  })
+
+  it('Zwei Positionen tauschen gelingt in einem Zug ohne Kollision', async () => {
+    const { error } = await host.client.rpc('set_whisky_order', {
+      p_event: swapEventId,
+      p_ordered: [swapWhiskies[1], swapWhiskies[0], swapWhiskies[2]],
+    })
+    expect(error).toBeNull()
+
+    const { data } = await admin.client
+      .from('whiskies')
+      .select('id, position')
+      .eq('event_id', swapEventId)
+      .order('position')
+    expect(data!.map((w) => w.id)).toEqual([
+      swapWhiskies[1],
+      swapWhiskies[0],
+      swapWhiskies[2],
+    ])
+  })
+
+  it('set_whisky_order mit fremder Whisky-ID wird abgelehnt (TS008)', async () => {
+    const { error } = await host.client.rpc('set_whisky_order', {
+      p_event: swapEventId,
+      p_ordered: [swapWhiskies[0], swapWhiskies[1], activeEvent.whiskyA],
+    })
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('TS008')
+  })
+
+  it('Ein Nicht-Teilnehmer kann keinen Whisky eintragen (TS004)', async () => {
+    const { error } = await outsider.client.rpc('add_whisky', {
+      p_event: swapEventId,
+      p_name: 'Fremd',
+    })
+    expect(error).toBeTruthy()
+    expect(error!.code).toBe('TS004')
+  })
 })
