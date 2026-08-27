@@ -581,23 +581,8 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
     expect(error!.code).toBe('TS006')
   })
 
-  // --- MUTIEREND: ab hier wird activeEvent weitergeschaltet. Am Ende halten. ---
-  it('Doppel-Tap auf „Runde abschließen" schaltet nur einmal weiter', async () => {
-    const first = await host.client.rpc('close_round', {
-      p_event: activeEvent.id,
-      p_expected_position: 1,
-    })
-    expect(first.error).toBeNull()
-    const second = await host.client.rpc('close_round', {
-      p_event: activeEvent.id,
-      p_expected_position: 1,
-    })
-    expect(second.error).toBeTruthy()
-    expect(second.error!.code).toBe('TS002')
-  })
-
   it('„Runde abschließen" am letzten Whisky wird abgelehnt (TS007)', async () => {
-    // activeEvent ist jetzt auf Position 2 (nach dem Doppel-Tap-Test), n = 3.
+    // activeEvent ist nach dem Doppel-Tap-Test (weiter oben) auf Position 2, n = 3.
     const toLast = await host.client.rpc('close_round', {
       p_event: activeEvent.id,
       p_expected_position: 2,
