@@ -514,7 +514,140 @@ npm run test:rls       # RLS-Matrix grün?
 Danach im Dashboard: Signup OFF, anonyme Logins OFF, alten PAT widerrufen.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-27
+**Tester:** QA Engineer (AI) + Red-Team
+**Art:** Reines Backend-Feature — keine Oberfläche. Geprüft über: statischer Gate
+(`build`/`lint`/`test`), SQL-Red-Team-Review aller Policies/RPCs/Views,
+RLS-Integrationssuite (`npm run test:rls`, 41 Assertions) und Supabase-Advisors.
+
+### Statischer Gate (in dieser Session ausgeführt)
+
+| Prüfung | Ergebnis |
+|---------|----------|
+| `npm run build` | ✅ TypeScript sauber, Prod-Build ok |
+| `npm run lint` | ✅ (Flat-Config `eslint.config.mjs`; `next lint` in Next 16 entfernt) |
+| `npm test` (Unit) | ✅ 7/7 — `src/lib/errors.test.ts` |
+| Blocker B2 (doppelter `export` in `src/lib/supabase.ts`) | ✅ Datei entfernt, ersetzt durch `src/lib/supabase/*` |
+
+### RLS-Integrationssuite — `npm run test:rls`
+
+Muss der Nutzer nach `npm run db:push` (inkl. Migrationen 120600–120800)
+ausführen — diese Session hat keinen DB-Zugang. Stand letzter Nutzer-Lauf:
+**19/22 grün**, die drei Fehler waren der `PT###`-SQLSTATE-Bug (siehe BUG-2,
+behoben in `1d1a033`). Danach 22 → jetzt **41 Assertions** (Erweiterung in
+`b20dbfa`). Erwartung: alle grün, sobald 120800 angewendet ist.
+
+#### Abdeckung der Akzeptanzkriterien durch die Suite
+
+| AC-Gruppe | Assertions | Status |
+|-----------|-----------|--------|
+| Geheimhaltung Whiskies (fremd/eigen/Gastgeber/Positionen/nach Abschluss/Zeitstempel) | 7 | ✅ automatisiert |
+| Geheimhaltung Bewertungen (A↮B, Gastgeber blind, `rating_progress` nur Zählwerte, nach Abschluss offen) | 4 | ✅ automatisiert |
+| Bewerten (ausgeschenkt→ok, nicht ausgeschenkt→ab, Upsert-Dedup, nach Abschluss gesperrt, Wertebereich 1–5/1–10, fremder Name) | 6 | ✅ automatisiert |
+| Sichtbarkeit Events (Außenstehender→0, Eingeladener→Eckdaten+Liste, fremde `event_participants`→0 ohne 42P17) | 3 | ✅ automatisiert |
+| Ablaufsteuerung (Start-Happy-Path, Start ohne Whisky→TS008, Doppel-Tap→einmal, letzter Whisky→TS007, Nicht-Gastgeber→TS004, Status-Direktänderung→ab, Reihenfolge poured-lock→TS006, Tausch ohne Kollision) | 8 | ✅ automatisiert |
+| Whiskies eintragen (Limit→TS003, Gastgeber-Bonus, nach Start→TS005, Nicht-Teilnehmer→TS004) | 4 | ✅ automatisiert |
+| Rangliste (aktiv→0, abgeschlossen→vollständig mit Rang) | 2 | ✅ automatisiert; **Tie-Break-Reihenfolge und `rating_count` bei ungleicher Teilnahme nicht separat getestet** (Low, siehe FINDING-2) |
+| Rollen & Zugang (Selbst-Admin→42501, Anzeigename ändern→ok, neues Konto→Profil `teilnehmer`) | 3 | ✅ automatisiert |
+| Signup/anon abgeschaltet | – | ⚠️ **manuell im Dashboard**, kein Code erzwingt es (siehe FINDING-1) |
+| Grundlage (`build` ok, Typen generiert, Realtime-Publication, Advisors sauber) | – | `build`/Typen ✅; Realtime-Publication + Advisors: **offen, Nutzer** |
+
+### Security-Audit (Red-Team-Review des SQL)
+
+| Angriff | Abwehr | Ergebnis |
+|---------|--------|----------|
+| Teilnehmer liest fremde `whisky_details` / `ratings` im laufenden Tasting | `wd_select` / `ratings_select` — Zeilenprädikat über Helper, `security definer` bricht Rekursion | ✅ |
+| Gastgeber liest Punkte vor Abschluss | `ratings_select`: `profile_id = uid OR is_event_closed` — Gastgeber ist Teilnehmer, aber weder Eigentümer noch closed | ✅ |
+| Selbst-Beförderung `UPDATE profiles SET role='admin'` | Spalten-GRANT ohne `role`/`is_active` → 42501 | ✅ |
+| Deaktivierter Nutzer reaktiviert sich selbst | `is_active` nicht im Spalten-GRANT → 42501; `is_admin()` verlangt `is_active` | ✅ |
+| Direkter Schreibzugriff auf `tasting_events`/`whiskies`/`event_participants` | `revoke insert,update,delete … from authenticated`; alles über `SECURITY DEFINER`-RPCs | ✅ |
+| `ratings` mit fremder `profile_id` anlegen | `ratings_insert_own` WITH CHECK `profile_id = auth.uid()` → 42501 | ✅ |
+| `event_id`/`whisky_id`-Mismatch in `ratings`/`whisky_details` | zusammengesetzter FK `(whisky_id, event_id)` → 23503 | ✅ strukturell |
+| `total_points` manipulieren | `GENERATED ALWAYS … STORED` → 428C9 | ✅ |
+| Limit/Position per Nebenläufigkeit umgehen (`add_whisky`) | `SELECT … FOR UPDATE` auf Event-Zeile serialisiert konkurrierende Aufrufe | ✅ |
+| Doppel-Tap `close_round` auf zwei Geräten | Row-Lock + `current_position <> p_expected_position` → TS002 | ✅ |
+| Ausgeschenkte Whiskies umsortieren | `set_whisky_order`: erste `current_position` Einträge müssen unverändert bleiben → TS006 | ✅ |
+| SQL-Injection über RPC-Parameter | keine dynamische SQL (`EXECUTE`) irgendwo; alles parametrisiert; `set_whisky_order` validiert `uuid[]` als Permutation | ✅ |
+| `javascript:`-URL im `video_url` (XSS-Vorstufe für PROJ-9) | CHECK `video_url ~* '^https?://.+'` | ✅ |
+| Realtime als Leck-Kanal | Publikation nur `tasting_events` + `whiskies` (nur `id,event_id,position`); `ratings`/`whisky_details` nie publiziert; RLS greift pro Abonnent | ✅ |
+| Rekursion in `event_participants`-Policy (42P17) | Prädikat über `is_event_participant()` (`security definer`) statt Direktbezug | ✅ (Test „kein 42P17") |
+| Service-Role-Key im Client-Bundle | `admin.ts` liest nur `SUPABASE_SERVICE_ROLE_KEY` (kein `NEXT_PUBLIC_`), in PROJ-1 nirgends importiert | ✅ |
+
+**`mcp__supabase__get_advisors` (security + performance): offen — muss der Nutzer
+nach der Migration ausführen, Ergebnis hier eintragen.**
+
+### Bugs Found
+
+#### BUG-1: `ratings`-Spalten-GRANT bricht den Upsert
+- **Severity:** High → **behoben** (`b20dbfa`, Migration `20260827120800`)
+- **Repro:** App speichert Bewertungen per `upsert(onConflict: 'whisky_id,profile_id')`.
+  PostgREST erzeugt `INSERT … ON CONFLICT DO UPDATE SET <alle Payload-Spalten>`.
+  Das enge GRANT `update (nose_points, taste_points, notes)` verweigert
+  `whisky_id/event_id/profile_id` → **42501**, jede zweite Speicherung derselben
+  Bewertung schlägt fehl.
+- **Fix:** GRANT auf die 6 realen Spalten geweitet; Manipulationsschutz bleibt über
+  RLS `ratings_update_own` (WITH CHECK) + zusammengesetzten FK + `GENERATED total_points`.
+
+#### BUG-2: Custom-SQLSTATE `PT###` = HTTP-Status in PostgREST
+- **Severity:** High → **behoben** (`1d1a033`, Migration `20260827120700`)
+- **Repro:** `RAISE … USING ERRCODE = 'PT004'` → PostgREST deutet `PT`+3 Ziffern als
+  HTTP-Status → `004` ungültig → API-Gateway antwortet „upstream connect error …
+  protocol error", `error.code` kommt als `undefined` an. 3 RLS-Tests fielen darauf.
+- **Fix:** alle Codes `PT001–PT010` → `TS001–TS010`.
+
+#### BUG-3: `start_event` — abgefangene Unique-Violation → Verbindungsabbruch
+- **Severity:** Medium → **behoben** (`e9f2572` / `1d1a033`, Migration `20260827120600`/`120700`)
+- **Repro:** Zweites Event starten, während eines läuft: `EXCEPTION WHEN unique_violation`
+  aus dem Partial-Index kam über den Proxy als „protocol error" statt als sauberer
+  Fehler zurück.
+- **Fix:** `start_event` prüft jetzt proaktiv `exists(… status='active' …)` → TS010.
+
+#### BUG-4: `rating_progress` — reservierter Spaltenname `position`
+- **Severity:** Medium → **behoben** (`c1a6e31`)
+- **Repro:** `RETURNS TABLE (position smallint, …)` → `db push` bricht mit 42601.
+- **Fix:** OUT-Spalte → `whisky_position`.
+
+### Findings (kein Bug, dokumentiert)
+
+#### FINDING-1: „Signup abgeschaltet" ist nicht durch Code erzwungen
+- **Severity:** Low (bewusst so — Dashboard-Einstellung). `supabase/config.toml` setzt
+  `auth.enable_signup = false` + `auth.email.enable_signup = false`; für das gehostete
+  Projekt gilt das erst nach `supabase config push` **oder** manuell im Dashboard.
+  Gehört in die `/deploy`-Checkliste; für `/qa` als „muss der Nutzer setzen" markiert.
+
+#### FINDING-2: „Start ohne festgelegte Reihenfolge → abgelehnt" ist im Modell nicht auslösbar
+- **Severity:** Low. `add_whisky` vergibt immer lückenlose Positionen `1..n`, `remove_whisky`
+  packt die Lücke. Damit existiert **immer** eine Reihenfolge; `start_event` lehnt nur echte
+  Lücken ab (die konstruktiv nicht entstehen). Der Plan §4 hatte das AC bereits auf
+  „lückenlose Reihenfolge 1..n" reduziert. Der Gastgeber sieht/bestätigt die Reihenfolge in
+  PROJ-6. Kein Handlungsbedarf, aber Abweichung vom Wortlaut des AC.
+
+#### FINDING-3: `set_event_participants` bei inaktivem Gastgeber
+- **Severity:** Low. Wird der Gastgeber deaktiviert (`is_active=false`) und der Admin ruft
+  danach `set_event_participants`, filtert `and p.is_active` den Gastgeber aus `v_ids` →
+  er wird still aus der Teilnehmerliste entfernt (solange ≥1 aktiver Teilnehmer bleibt).
+  Sehr enger Randfall; `host_id` selbst bleibt am Event. Für PROJ-3/PROJ-4 vormerken.
+
+#### FINDING-4: Tie-Break der Rangliste nicht separat getestet
+- **Severity:** Low. `whisky_rankings` sortiert `total desc, taste desc, nose desc, position asc`
+  — die letzte Stufe (Position) ist eindeutig, ein echter Gleichstand ist damit ausgeschlossen.
+  Automatisierter Gleichstands-Test wäre nice-to-have; das Verhalten fällt spätestens in
+  PROJ-9 an echten Daten auf.
+
+### Summary
+- **Acceptance Criteria:** von der erweiterten Suite abgedeckt; **finale Bestätigung offen**
+  bis `npm run test:rls` (41 Assertions) beim Nutzer grün ist und Advisors sauber sind.
+- **Bugs Found:** 4 (2 High, 2 Medium) — **alle behoben** in dieser QA-Runde.
+- **Findings:** 4 × Low, dokumentiert, kein Handlungsbedarf für PROJ-1.
+- **Security:** Red-Team-Review bestanden — keine offene Schwachstelle. Blindheit strukturell
+  auf DB-Ebene erzwungen.
+- **Production Ready:** **NOCH NEIN** — zwei nutzerseitige Schritte offen:
+  1. `npm run db:push` (Migrationen 120600–120800) + `npm run test:rls` → 41/41 grün
+  2. `mcp__supabase__get_advisors` (security + performance) → ohne Befund
+  3. Dashboard: Signup OFF, anonyme Logins OFF, alten PAT widerrufen
+- **Recommendation:** Nach den drei Schritten ist PROJ-1 **Approved** (keine offenen
+  Critical/High). Ergebnisse hier nachtragen, Status auf Approved.
 
 ## Deployment
 _To be added by /deploy_
