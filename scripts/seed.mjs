@@ -20,25 +20,57 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+// --env-file lässt Anführungszeichen/Whitespace teils stehen → selbst säubern.
+const clean = (v) => (v ?? '').trim().replace(/^['"]|['"]$/g, '').trim()
+
+const url = clean(process.env.NEXT_PUBLIC_SUPABASE_URL).replace(/\/+$/, '')
+const serviceKey = clean(process.env.SUPABASE_SERVICE_ROLE_KEY).replace(/\s+/g, '')
 const password = process.env.SEED_DEV_PASSWORD || 'tasting-dev-2026'
 const adminEmail = process.env.SEED_ADMIN_EMAIL || 'hermann.hoppen@gmail.com'
 const testEmail = process.env.SEED_TEST_EMAIL || 'test.teilnehmer@example.com'
 
-const missing = [
-  !url && 'NEXT_PUBLIC_SUPABASE_URL',
-  !serviceKey && 'SUPABASE_SERVICE_ROLE_KEY',
-].filter(Boolean)
-
-if (missing.length > 0) {
-  console.error(
-    `\n  Fehlt in .env.local: ${missing.join(', ')}\n\n` +
-      '  SUPABASE_SERVICE_ROLE_KEY findest du im Supabase-Dashboard unter\n' +
-      '  Project Settings -> API -> Project API keys -> service_role (secret).\n' +
-      '  Eintragen als eigene Zeile in .env.local (NICHT mit NEXT_PUBLIC_ praefixen).\n\n' +
-      '  Aufruf danach:  npm run db:seed\n',
+const problems = []
+if (!url) problems.push('NEXT_PUBLIC_SUPABASE_URL fehlt')
+else if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url))
+  problems.push(
+    `NEXT_PUBLIC_SUPABASE_URL sieht falsch aus: "${url}"\n` +
+      '    erwartet: https://<project-ref>.supabase.co  (kein Slash/Pfad am Ende)',
   )
+if (!serviceKey) problems.push('SUPABASE_SERVICE_ROLE_KEY fehlt')
+else if (serviceKey.split('.').length !== 3)
+  problems.push('SUPABASE_SERVICE_ROLE_KEY ist kein gültiges JWT (nicht 3 Teile) — evtl. abgeschnitten oder umgebrochen')
+else if (/your_service_role_key_here|your-project-ref/.test(serviceKey + url))
+  problems.push('In .env.local stehen noch Platzhalterwerte aus .env.local.example')
+
+if (problems.length > 0) {
+  console.error(
+    '\n  .env.local passt noch nicht:\n\n    - ' +
+      problems.join('\n    - ') +
+      '\n\n  Werte: Supabase-Dashboard -> Project Settings -> API\n' +
+      '    NEXT_PUBLIC_SUPABASE_URL   = Project URL\n' +
+      '    SUPABASE_SERVICE_ROLE_KEY  = Project API keys -> service_role (secret), am Stück in EINE Zeile\n',
+  )
+  process.exit(1)
+}
+
+// Preflight: zeigt exakt, was der Auth-Admin-Endpunkt zurückgibt.
+try {
+  const res = await fetch(`${url}/auth/v1/admin/users?page=1&per_page=1`, {
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+  })
+  const body = await res.text()
+  if (!res.ok) {
+    console.error(
+      `\n  Auth-Admin-API antwortet mit HTTP ${res.status}.\n` +
+        `  Body: ${body || '(leer)'}\n\n` +
+        (res.status === 401
+          ? '  → Der service_role-Key gehört nicht zu dieser Projekt-URL (oder ist kein service_role-Key).\n'
+          : '  → URL prüfen.\n'),
+    )
+    process.exit(1)
+  }
+} catch (err) {
+  console.error(`\n  Verbindung zu ${url} fehlgeschlagen: ${err.message}\n`)
   process.exit(1)
 }
 
