@@ -5,7 +5,7 @@
 ## Vision
 
 Eine mobile-first Web-App, die den Ablauf eines privaten Whisky-Tastings vom Zettel auf
-das Smartphone holt. Jeder bringt Whiskys mit, der Gastgeber schenkt sie blind in einer nur
+das Smartphone holt. Jeder bringt Whiskies mit, der Gastgeber schenkt sie blind in einer nur
 ihm bekannten Reihenfolge aus, alle bewerten Nase und Geschmack — und am Ende des Abends
 steht die Rangliste sofort, statt mühsam ausgezählt zu werden. Jedes Tasting wird dauerhaft
 archiviert, sodass die Runde über Jahre nachvollziehen kann, welche Flasche wann gewonnen hat.
@@ -36,22 +36,25 @@ Handy bedient — mit einem Glas in der anderen Hand, oft bei gedämpftem Licht.
 | P0 (MVP) | Bewertungsansicht | Roadmap |
 | P0 (MVP) | Tasting-Dashboard mit Live-Sync | Roadmap |
 | P1 | Ergebnisse & Tasting-Historie | Roadmap |
-| P2 | Profil-Seite | Roadmap |
+| P2 | Profil-Seite mit persönlicher Bilanz | Roadmap |
 
 Details und Abhängigkeiten: siehe [features/INDEX.md](../features/INDEX.md).
 
 ## Kernablauf eines Tastings
 
 1. **Admin** legt ein Event an: Datum, Ort, Gastgeber, Teilnehmerliste, optional Thema und
-   maximale Anzahl Whiskys pro Person.
-2. **Teilnehmer** tragen vorab ein, welche Whiskys sie mitbringen. Niemand außer dem
-   Bringer selbst und dem Gastgeber sieht diese Angaben.
+   maximale Anzahl Whiskies pro Person.
+2. **Teilnehmer** tragen vorab ein, welche Whiskies sie mitbringen — üblicherweise einen pro
+   Person, **der Gastgeber darf als Bonus zwei einbringen**. Optional hinterlegen sie einen
+   Link zu einem Verkostungsvideo. Niemand außer dem Bringer selbst und dem Gastgeber sieht
+   diese Angaben.
 3. **Gastgeber** legt die Ausschankreihenfolge fest und startet das Event.
-4. **Alle** bewerten den aktuellen Whisky blind — sie sehen nur „Whisky 3 von 6".
+4. **Alle** bewerten den aktuellen Whisky blind — sie sehen nur „Whisky 3 von 8".
    Nase 1–5, Geschmack 1–10, optional eigene Notizen.
 5. **Gastgeber** schaltet auf den nächsten Whisky weiter; alle Handys springen automatisch mit.
 6. **Gastgeber** schließt das Event ab. Erst jetzt werden die Whisky-Namen aufgelöst,
-   die Rangliste erscheint und keine Bewertung kann mehr geändert werden.
+   die Rangliste erscheint samt Verkostungsvideos, und keine Bewertung kann mehr geändert
+   werden.
 
 ## Success Metrics
 
@@ -67,6 +70,12 @@ Details und Abhängigkeiten: siehe [features/INDEX.md](../features/INDEX.md).
 - **Zielgerät:** Smartphone. Desktop wird unterstützt, aber nicht optimiert.
 - **Nutzung während des Abends:** kurze, große Bedienelemente; die Bewertung muss in
   wenigen Sekunden erledigt sein.
+- **Typische Größe eines Abends:** 6–7 Teilnehmer, jeder bringt einen Whisky mit, der
+  Gastgeber als Bonus zwei. In der Regel also **7–8 Whiskies, selten mehr als 10** — der
+  Gläserstreifen und die Rangliste müssen bis 10 ohne Scrollen lesbar bleiben.
+- **Verkostet werden schottische Single Malts.** Das ist keine technische Einschränkung
+  (Regionen und Herkunft sind Freitext), prägt aber Beispieldaten, Platzhaltertexte und
+  Wortwahl.
 - **Backend:** Supabase (PostgreSQL + Auth + Realtime), Projekt `tfg_app`, Region
   eu-central-1. Row Level Security ist die tragende Sicherheitsschicht — die Blindheit der
   Verkostung wird auf Datenbankebene erzwungen, nicht im Frontend.
@@ -96,16 +105,20 @@ Vercel. `.mcp.json` ist gitignored, weil sie einen Supabase Personal Access Toke
 ## Non-Goals
 
 - **Kein Zahlungs- oder Rechnungsmodul** — die Runde rechnet untereinander ab
-- **Keine öffentliche Whisky-Datenbank** — Whiskys werden pro Event frei eingetragen, es gibt
+- **Keine öffentliche Whisky-Datenbank** — Whiskies werden pro Event frei eingetragen, es gibt
   keinen Katalog und keine Anbindung an externe Whisky-APIs
+- **Keine YouTube-Integration** — das Verkostungsvideo ist eine gespeicherte Verknüpfung, die
+  in einem neuen Tab öffnet. Kein eingebetteter Player, keine API-Abfrage, kein automatisches
+  Suchen von Videos beim Anlegen eines Whiskys
 - **Keine Fotos oder Datei-Uploads** in dieser Version (Supabase Storage bleibt ungenutzt)
 - **Keine Aromen-Räder, Flavour-Profile oder Tasting-Notes-Vorlagen** — nur Nase, Geschmack
   und ein Freitextfeld
 - **Keine Einladung von Gästen außerhalb der Runde** — geschlossener Nutzerkreis
 - **Keine parallelen Tastings** an unterschiedlichen Orten zur selben Zeit
 - **Keine native App**, keine Push-Benachrichtigungen, keine Offline-Fähigkeit
-- **Keine Statistiken über mehrere Tastings hinweg** (Lieblingsdestillerie, Punkteschnitt pro
-  Person über die Zeit) — denkbar für später, nicht im MVP
+- **Keine Auswertungen über die Runde hinweg** — die persönliche Bilanz auf der Profil-Seite
+  (eigene Tastings, mitgebrachte Whiskies, beste Platzierung, Punkteschnitt) ist Teil von
+  PROJ-10. Gruppenweite Ranglisten („wer vergibt die härtesten Noten") sind es nicht.
 
 ---
 

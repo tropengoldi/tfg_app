@@ -67,7 +67,7 @@ Punktzahlen werden groß und in der Display-Schrift gesetzt — sie sind der Hel
 - **Eine Spalte ab 375 px.** Breakpoints nur dort einsetzen, wo eine zweite Spalte echten
   Mehrwert bringt (Rangliste auf dem Desktop, Admin-Tabellen).
 - **Bottom-Navigation** statt Header-Menü, `env(safe-area-inset-bottom)` respektieren.
-  Vier Ziele: Tasting, Meine Whiskys, Historie, Profil. Admin und Gastgeber sind
+  Vier Ziele: Tasting, Meine Whiskies, Historie, Profil. Admin und Gastgeber sind
   kontextuelle Absprünge, keine Dauer-Navigation.
 - **Touch-Ziele ≥ 44 px** (`min-h-11`). Gilt auch für Icon-Buttons und Listeneinträge.
 - **Sticky Aktionsleiste** am unteren Rand für die Primäraktion („Bewertung speichern",
@@ -84,9 +84,14 @@ mit den Zuständen `full` (noch ausstehend), `active` (aktuell im Glas, in `--pr
 hervorgehoben, dezent pulsierend) und `empty` (bereits verkostet). Lucide hat kein passendes
 Icon — deshalb ausnahmsweise ein eigenes.
 
-Darüber die Textangabe „Whisky 3 von 6" für alle, die den Gläserstreifen nicht deuten wollen,
-plus `aria-label` für Screenreader. Bei mehr als 8 Gläsern horizontal scrollbar statt
-schrumpfen.
+Darüber die Textangabe „Whisky 3 von 8" für alle, die den Gläserstreifen nicht deuten wollen,
+plus `aria-label` für Screenreader.
+
+**Dimensionierung:** Ein Abend hat typischerweise 7–8 Whiskies (jeder einen, der Gastgeber
+zwei) und selten mehr als 10. Der Streifen muss **bis 10 Gläser auf 375 px Breite ohne
+Scrollen** lesbar bleiben — das heißt Gläser skalieren mit `flex: 1` innerhalb einer
+Mindest- und Höchstbreite, statt feste Größe plus Überlauf. Erst ab 11 Gläsern wird
+horizontal gescrollt; das ist der Ausnahmefall, nicht der Normalfall.
 
 ### Bewertungs-Slider
 `shadcn/ui slider` mit vergrößertem Thumb (mindestens 28 px) und einem Zahlen-Badge, das den
@@ -99,6 +104,21 @@ Solange nicht aufgelöst ist, zeigt die Whisky-Karte nur die Nummer, groß und i
 Display-Schrift, auf dunklem Grund — kein Platzhaltertext wie „Unbekannt", sondern
 selbstbewusst die Ziffer. Nach dem Abschluss wird an derselben Stelle der Name eingeblendet.
 
+### Verkostungsvideo
+Jeder Whisky kann eine Verknüpfung zu einem Verkostungsvideo tragen (deutschsprachig,
+vorzugsweise [Whisky.de](https://www.youtube.com/channel/UC-p_XuItNNwUfTP-wES1IWw)).
+Darstellung als ruhige Zeile mit Play-Symbol unter dem Whisky-Namen, **nie** als eingebetteter
+Player und nie als lauter Button — der Link ist Nachschlagewerk, nicht Hauptaktion.
+`target="_blank"` mit `rel="noopener noreferrer"` und einem „öffnet YouTube"-Hinweis für
+Screenreader.
+
+Ist kein Link hinterlegt, steht dort stattdessen **„Auf Whisky.de suchen"** und öffnet eine
+YouTube-Suche nach Kanal und Whisky-Namen. So ist die Zeile nie leer und nie tot.
+
+**Sichtbarkeit:** genau wie Name und Destillerie — vor dem Abschluss nur für den Bringer und
+den Gastgeber. Eine YouTube-URL verrät den Whisky, also liegt sie in der geheimen Tabelle
+und wird von denselben Regeln geschützt.
+
 ## Zustände (Pflicht für jede Ansicht)
 
 `.claude/rules/frontend.md` verlangt Loading-, Error- und Empty-States. Konkret hier:
@@ -106,7 +126,7 @@ selbstbewusst die Ziffer. Nach dem Abschluss wird an derselben Stelle der Name e
 | Zustand | Umsetzung |
 |---------|-----------|
 | Loading | `shadcn Skeleton` in der Form des echten Inhalts, nie ein Spinner mitten auf der Seite |
-| Empty | Kurzer Satz plus die naheliegende Aktion („Noch keine Whiskys eingetragen. Whisky hinzufügen") |
+| Empty | Kurzer Satz plus die naheliegende Aktion („Noch keine Whiskies eingetragen. Whisky hinzufügen") |
 | Error | `sonner`-Toast mit deutscher, konkreter Meldung — nie „Ein Fehler ist aufgetreten" |
 | Offline / Realtime weg | Dezenter Hinweisstreifen „Verbindung unterbrochen — Ansicht könnte veraltet sein" |
 
