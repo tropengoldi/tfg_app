@@ -255,7 +255,11 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
     })
     expect(error).toBeNull()
     expect(Array.isArray(data)).toBe(true)
-    const row = (data as { position: number; rating_count: number; participant_count: number }[])[0]
+    const row = (data as {
+      whisky_position: number
+      rating_count: number
+      participant_count: number
+    }[])[0]
     expect(row).toHaveProperty('rating_count')
     expect(row).not.toHaveProperty('nose_points')
     expect(row).not.toHaveProperty('profile_id')

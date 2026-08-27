@@ -470,7 +470,7 @@ $$;
 -- Bewertungsfortschritt  (Gastgeber oder Admin): NUR Zählwerte, keine Punkte, keine Namen.
 -- ===========================================================================
 create or replace function public.rating_progress(p_event uuid)
-returns table (position smallint, rating_count int, participant_count int)
+returns table (whisky_position smallint, rating_count int, participant_count int)
 language plpgsql security definer set search_path = ''
 as $$
 begin

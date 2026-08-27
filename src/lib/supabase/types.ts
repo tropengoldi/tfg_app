@@ -360,7 +360,7 @@ export interface Database {
       rating_progress: {
         Args: { p_event: string }
         Returns: {
-          position: number
+          whisky_position: number
           rating_count: number
           participant_count: number
         }[]
