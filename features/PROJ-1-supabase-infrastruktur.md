@@ -499,9 +499,11 @@ gesperrt). Anwenden + Verifizieren ist der erste Schritt in `/qa`.
 - `supabase db push` / `get_advisors` — **offen**, `/qa`.
 
 ### Anwenden (durch den Nutzer, vor `/qa`)
+Die `supabase` CLI liegt als devDependency vor → immer über `npx` aufrufen
+(nicht global installiert, nicht auf dem PATH):
 ```
-supabase login
-supabase link --project-ref ogwuwisutgaxxpknkgpg
+npx supabase login
+npx supabase link --project-ref ogwuwisutgaxxpknkgpg   # fragt nach dem DB-Passwort
 npm run db:push
 npm run db:seed        # braucht SUPABASE_SERVICE_ROLE_KEY in .env.local
 npm run db:types       # generierte Typen committen
