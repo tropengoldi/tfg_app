@@ -1,6 +1,6 @@
 # PROJ-1: Supabase-Infrastruktur
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -258,13 +258,172 @@ und kein einziger Button**. Konkret nicht enthalten:
 | **Beide Seed-Konten erhalten ein Entwicklungs-Passwort** | Ausdrücklich so gewünscht, macht das Entwickeln und automatisierte Anmelden einfacher. Auflagen: Das Passwort wird nirgends als echtes Passwort wiederverwendet, das Seed-Skript läuft nur gegen die Entwicklungsumgebung, und vor dem ersten echten Tasting wird das Admin-Passwort geändert | 2026-08-27 |
 
 ### Technical Decisions
-_To be added by /architecture_
+
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Blindheit über zwei getrennte Tabellen (`whiskies` sichtbar / `whisky_details` geheim) statt über Spaltenrechte oder eine geheime Sicht | Die Zugriffsregeln von PostgreSQL wirken zeilenweise, nicht spaltenweise. „Name für den Bringer und den Gastgeber sichtbar, für alle anderen erst nach Abschluss" ist damit als Spaltenregel nicht ausdrückbar, als Zeilenregel auf einer zweiten Tabelle dagegen mühelos. Eine geheime Sicht schied aus, weil Live-Updates auf Sichten nicht funktionieren | 2026-08-27 |
+| `brought_by` (wer den Whisky mitgebracht hat) liegt in der geheimen Tabelle | Wer weiß, wessen Whisky an Position 3 steht, hat die Blindheit halb gebrochen | 2026-08-27 |
+| Anlage- und Änderungszeitpunkte der sichtbaren Whisky-Tabelle werden Teilnehmern entzogen | Über die Reihenfolge der Eingaben ließe sich sonst erschließen, wer welchen Whisky gebracht hat | 2026-08-27 |
+| Zustand des Abends steht als zwei Felder am Event (Status + aktuelle Position), nicht als Status pro Whisky | Ein Rundenwechsel ist damit die Änderung einer einzigen Zeile → genau eine Live-Benachrichtigung pro Gerät. Der Glas-Fortschritt ergibt sich rechnerisch aus der Position, es gibt keinen zweiten Wahrheitsort, der auseinanderlaufen kann | 2026-08-27 |
+| Alle Zustandsübergänge (Event starten, Runde abschließen, Event abschließen, Reihenfolge setzen, Whisky anlegen/entfernen, Teilnehmerliste setzen) laufen über benannte Datenbank-Aktionen (RPCs), nicht über direkte Schreibzugriffe | Ein gültiger Übergang ist eine Prüfung über den alten *und* den neuen Zustand plus eine Zählung („nächste Position darf die Whisky-Anzahl nicht überschreiten") und muss zusätzlich festlegen, welche Felder sich ändern dürfen. Zeilenregeln allein können das nicht. Die Aktion bündelt Berechtigung, Zulässigkeit, Gleichzeitigkeits-Schutz und Zeitstempel an einer prüfbaren Stelle | 2026-08-27 |
+| Der Gastgeber bekommt gar kein direktes Schreibrecht auf die Event-Tabelle | Zeilenregeln können nicht einschränken, *welche* Spalten geschrieben werden — mit Schreibrecht könnte der Gastgeber aus dem Browser heraus `host_id` oder `status` umschreiben. Stattdessen: Schreibrechte komplett entzogen, alles über RPCs | 2026-08-27 |
+| „Runde abschließen" nimmt die erwartete aktuelle Position als Parameter entgegen | Optimistische Sperre gegen Doppel-Tap: Löst der Gastgeber die Aktion auf zwei Geräten aus, greift nur die erste, die zweite wird wirkungslos statt zum Doppelsprung | 2026-08-27 |
+| Kein Zugriffs-Prädikat verweist direkt auf eine andere Tabelle; jede tabellenübergreifende Prüfung läuft über eine Helfer-Funktion | Eine Regel auf der Teilnehmer-Tabelle, die die Teilnehmer-Tabelle abfragt, erzeugt eine Endlosschleife (Fehler 42P17) — ebenso der Zyklus Event → Teilnehmer → Event. Die Helfer laufen mit erhöhten Rechten und brechen den Zyklus beim ersten Sprung ab | 2026-08-27 |
+| Admin-Erkennung per Datenbank-Lookup, nicht über einen Token-Claim | Ein Claim im Anmelde-Token ist bis zur nächsten Erneuerung (bis zu 1 Stunde) veraltet. Bei rund zehn Profilen ist der Lookup ein einzelner Index-Treffer pro Abfrage | 2026-08-27 |
+| Schutz vor Selbst-Beförderung zum Admin über ein Spaltenrecht, nicht über eine Zeilenregel | Eine Zeilenregel kann nicht verhindern, dass jemand in seiner *eigenen* Profilzeile die Rolle ändert. Das Schreibrecht wird daher auf die unkritischen Profilfelder (Anzeigename, Bio, Lieblings-Dram, Lieblingsregion, Avatar) eingegrenzt; Rolle und Aktiv-Status bleiben außen vor. Einzige Stelle, an der Rechtetrennung über ein Spaltenrecht statt über eine Zeilenregel läuft | 2026-08-27 |
+| Rangliste und Historie als Datenbank-Sichten, die hart auf abgeschlossene Events gefiltert sind und mit den Rechten des Abfragenden laufen | Der scheinbare Widerspruch („fremde Einzelbewertungen unsichtbar, Rangliste aggregiert genau die") löst sich auf, weil beide Sichtbarkeiten im selben Moment kippen — beim Abschluss. Der harte Filter verhindert den gefährlicheren Fall: ein unvollständiges Aggregat aus nur den eigenen Bewertungen, das wie ein echtes Zwischenergebnis aussieht | 2026-08-27 |
+| Live-Updates nur für die Event-Tabelle und die sichtbare Whisky-Tabelle freigegeben, nicht für Bewertungen und Whisky-Details | So wandert kein Geheimnis je über einen Live-Kanal. Die Auflösung beim Abschluss ist ein Nachladen: Die Event-Änderung kommt an, die Seite lädt ihre Daten neu, und erst dann geben die Regeln die Namen frei | 2026-08-27 |
+| Vier getrennte Supabase-Zugänge im Code (Browser, Server, Session-Auffrischung, Verwaltung) | Jeder Kontext hat andere Anforderungen an Cookie-Handling und Rechte. Der Verwaltungs-Zugang mit dem mächtigen Service-Schlüssel wird in genau einer Datei angelegt und in diesem Feature noch nirgends benutzt | 2026-08-27 |
+| Schema wird als versionierte Migrationsdateien im Repo geführt (`supabase/migrations/`) | Nachvollziehbarkeit und Wiederholbarkeit: Die Datenbank lässt sich aus dem Repo neu aufbauen, Änderungen sind in der Git-Historie sichtbar, `/qa` und spätere Features setzen auf einem definierten Stand auf | 2026-08-27 |
+| TypeScript-Typen werden aus dem laufenden Schema generiert, nicht von Hand gepflegt | Die Typen bleiben automatisch deckungsgleich mit der Datenbank; ein Schema-Fehler fällt beim Bauen auf statt zur Laufzeit | 2026-08-27 |
+| Fehlercodes der Datenbank werden in einer eigenen Datei auf deutsche Meldungen abgebildet | Die Zustands-Aktionen melden Konflikte über PostgreSQL-Fehlercodes (z. B. „Runde bereits weitergeschaltet"). Die Übersetzung an einer Stelle hält die Meldungen konsistent und die Aktionen frei von UI-Text | 2026-08-27 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+> **Für PMs in einem Satz:** Dieses Feature baut keine Oberfläche. Es legt die Datenbank an
+> und — der eigentliche Kern — die Regeln, die dafür sorgen, dass niemand vor dem Abschluss
+> sehen kann, welcher Whisky im Glas ist oder wie andere bewerten. Diese Regeln liegen in
+> der Datenbank, nicht im Browser, und lassen sich deshalb nicht durch einen Blick in die
+> Entwicklerkonsole aushebeln.
+
+### 1. Was gebaut wird (Überblick)
+
+```
+Datenbank (Supabase / PostgreSQL)
+├── 5 Tabellen            Profile, Events, Event-Teilnehmer, Whiskies (sichtbar),
+│                         Whisky-Details (geheim), Bewertungen
+├── Zugriffsregeln        auf jeder Tabelle, für jede Operation (Lesen/Anlegen/Ändern/Löschen)
+├── 6 Helfer-Funktionen   beantworten "ist Admin?", "ist Teilnehmer?", "ist Gastgeber?",
+│                         "ist das Event abgeschlossen?" — einmal zentral statt überall neu
+├── ~9 benannte Aktionen  jeder Zustandswechsel des Abends (starten, Runde weiter, abschließen,
+│                         Reihenfolge setzen, Whisky anlegen/entfernen, Teilnehmerliste)
+├── 2 Sichten             Rangliste (nach Abschluss) und Liste vergangener Tastings
+└── Live-Freigabe         nur Event- und Whisky-Tabelle senden Änderungen an alle Geräte
+
+Code im Repo
+├── supabase/migrations/  das Schema als versionierte Dateien
+├── src/lib/supabase/     vier Zugänge: Browser, Server, Session-Auffrischung, Verwaltung
+├── src/lib/supabase/types.ts   automatisch aus dem Schema erzeugte TypeScript-Typen
+└── src/lib/errors.ts     Datenbank-Fehlercodes → deutsche Meldungen
+
+Seed-Daten
+└── Admin-Konto (deine E-Mail) + ein Testkonto, beide mit Entwicklungs-Passwort.
+    Keine Beispiel-Events (bewusst — siehe Decision Log).
+```
+
+**Keine** UI-Komponenten, **keine** Seiten, **keine** API-Routen entstehen hier. Der
+Service-Schlüssel (mächtiger Verwaltungszugang) wird zwar als Datei angelegt, aber in diesem
+Feature noch nirgends verwendet.
+
+### 2. Datenmodell (in Alltagssprache)
+
+**Profil** — eine Zeile pro Person in der Runde
+- Anzeigename, Rolle (Admin oder Teilnehmer), Aktiv-Status (still­gelegt statt gelöscht)
+- Kurzbeschreibung, Lieblings-Dram, Lieblingsregion, Avatar
+- **Keine E-Mail-Adresse** — die bleibt in der Benutzerverwaltung von Supabase, weil jede
+  Regel, die dem Admin E-Mails zeigt, sie auch allen Teilnehmern zeigen würde
+
+**Tasting-Event** — eine Zeile pro Abend
+- Datum, Ort, Thema, Info zum Essen, Anmerkungen des Gastgebers
+- Gastgeber, wer es angelegt hat, maximale Whisky-Zahl pro Person
+- Status (in Vorbereitung / läuft / abgeschlossen), aktuelle Position, Start- und Abschlusszeit
+- Höchstens **ein** Event darf gleichzeitig „läuft" sein — von der Datenbank erzwungen
+
+**Event-Teilnehmer** — verbindet Event und Profil, eine Zeile pro eingeladener Person
+
+**Whisky (sichtbar)** — eine Zeile pro Whisky des Abends
+- Nur Event-Zugehörigkeit und Position („Whisky 3 von 8")
+- Das ist alles, was ein Teilnehmer während des Tastings sieht
+- Positionen sind lückenlos und eindeutig — von der Datenbank erzwungen
+
+**Whisky-Details (geheim)** — die zweite Hälfte desselben Whiskys, streng abgeschirmt
+- Name, Destillerie, Region, Alter, Stärke, Fasstyp, Abfüller, Preis
+- Eigene Notizen des Bringers, **Link zum Verkostungsvideo**
+- Wer den Whisky mitgebracht hat
+- Sichtbar nur für den Bringer und den Gastgeber — für alle anderen erst nach Abschluss
+- Strukturell an den sichtbaren Whisky gekoppelt: ein Detaileintrag kann gar nicht zu einem
+  anderen Event gehören als sein Whisky
+
+**Bewertung** — eine Zeile pro Person pro Whisky
+- Nasenpunkte 1–5, Geschmackspunkte 1–10, Gesamtpunkte (automatisch die Summe), Notizen
+- Genau eine Bewertung pro Person und Whisky — erneutes Speichern überschreibt
+- Punktebereiche von der Datenbank erzwungen, nicht nur vom Formular
+
+**Rangliste (Sicht)** — pro Whisky Gesamt-, Nasen- und Geschmackssumme, Anzahl abgegebener
+Bewertungen, Rang. Liefert **nur bei abgeschlossenen Events** Daten. Gleichstand: erst
+Geschmack, dann Nase, dann Ausschankposition.
+
+**Vergangene Tastings (Sicht)** — Datum, Gastgeber, Sieger-Whisky je abgeschlossenem Event.
+
+### 3. Wer darf was sehen (die Kernregel des Produkts)
+
+| Wer | Sichtbare Whisky-Liste | Whisky-Details (Namen) | Bewertungen | Rangliste |
+|-----|------------------------|------------------------|-------------|-----------|
+| Teilnehmer, Event läuft | alle (nur Position) | **nur die eigenen** | **nur die eigenen** | **nichts** |
+| Gastgeber, Event läuft | alle | **alle** (er schenkt aus) | **nichts** (auch er nicht) | **nichts** |
+| Teilnehmer, Event abgeschlossen | alle | alle | alle | vollständig |
+| Nicht-Teilnehmer | nichts | nichts | nichts | nichts |
+| Admin | alle | alle | alle | vollständig |
+
+Für „6 von 7 haben bewertet" ruft der Gastgeber eine eigene Aktion auf, die **nur Zählwerte**
+zurückgibt — nie Punkte, nie Namen.
+
+### 4. Warum die Zwei-Tabellen-Aufteilung bei den Whiskies
+
+Die Zugriffsregeln von PostgreSQL entscheiden pro *Zeile*, nicht pro *Spalte*. Die Anforderung
+„das Namensfeld sehen nur Bringer und Gastgeber, die Positionsangabe alle" lässt sich als
+Spaltenregel nicht formulieren. Indem die geheimen Felder in einer **zweiten Tabelle** liegen,
+wird die Geheimhaltung zu einer ganz normalen Zeilenregel. Der Link zum Verkostungsvideo liegt
+mit in dieser geheimen Tabelle, weil eine Video-Adresse den Whisky genauso verrät wie sein Name.
+
+Verworfen wurde eine „geheime Sicht" auf die Namen — auf Sichten funktionieren die Live-Updates
+nicht, die das Dashboard später braucht.
+
+### 5. Warum Zustandswechsel über benannte Aktionen laufen
+
+„Runde weiterschalten" ist kein simpler Schreibvorgang. Es muss geprüft werden: Ist der
+Aufrufer der Gastgeber? Läuft das Event? Gibt es überhaupt noch einen nächsten Whisky? Und es
+muss verhindert werden, dass ein Doppel-Tap auf zwei Geräten die Runde zweimal weiterschaltet.
+Solche Prüfungen über alten und neuen Zustand kann eine reine Zeilenregel nicht leisten. Jede
+benannte Aktion bündelt Berechtigung, Zulässigkeit, Gleichzeitigkeits-Schutz und Zeitstempel
+an einer Stelle, die sich testen lässt. Der Gastgeber hat deshalb **kein** direktes Schreibrecht
+auf das Event — sonst könnte er aus dem Browser heraus Felder wie den Status umschreiben.
+
+### 6. Live-Updates (Grundlage für das Dashboard in PROJ-8)
+
+Nur die Event-Tabelle und die sichtbare Whisky-Tabelle senden Änderungen an alle Geräte.
+Bewertungen und Whisky-Details bleiben bewusst außen vor — so kann kein Geheimnis über einen
+Live-Kanal entweichen. Wenn der Gastgeber das Event abschließt, ändert sich eine Event-Zeile,
+alle Geräte laden ihre Daten neu, und **erst dieses Neuladen** bringt die Namen zum Vorschein.
+
+### 7. Neue Pakete
+
+| Paket | Zweck |
+|-------|-------|
+| `@supabase/ssr` | Verbindet Supabase mit dem Server-Rendering von Next.js (Session in Cookies) — Voraussetzung für die vier Zugänge und für PROJ-2 |
+
+`date-fns`, `@dnd-kit/*` und die shadcn-Komponenten `slider`/`calendar` aus dem
+Implementierungsplan gehören zu späteren Features und werden dort installiert, nicht hier.
+
+### 8. Manuelle Schritte außerhalb des Codes (gehören in die Abnahme)
+
+1. **Supabase → Auth → Providers → Email:** „Allow new users to sign up" = **OFF**
+2. **Supabase → Auth → Providers:** „Allow anonymous sign-ins" = **OFF**
+3. Alten Supabase Personal Access Token im Dashboard widerrufen (siehe Open Questions)
+
+Kein Code im Repo kann diese drei erzwingen — `/qa` prüft sie manuell.
+
+### 9. Wie der Erfolg geprüft wird
+
+Die Sichtbarkeitsmatrix aus Abschnitt 3 wird als ausführbare Testsuite umgesetzt: zwei
+gleichzeitig angemeldete Test-Nutzer, die reihum versuchen, aufeinander zuzugreifen, mit
+Prüfungen auf „0 Zeilen" bzw. „Fehlercode X". Zusätzlich läuft nach der Migration die
+Sicherheits- und Performance-Prüfung von Supabase und muss ohne Befund durchlaufen.
+`npm run build` und `npm run lint` müssen sauber sein — der aktuell defekte Supabase-Import
+mit dem doppelten Export wird dabei ersetzt.
 
 ## QA Test Results
 _To be added by /qa_
