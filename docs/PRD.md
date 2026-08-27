@@ -27,7 +27,7 @@ Handy bedient — mit einem Glas in der anderen Hand, oft bei gedämpftem Licht.
 
 | Priority | Feature | Status |
 |----------|---------|--------|
-| P0 (MVP) | Supabase-Infrastruktur (Schema, RLS, RPCs, Seed) | Roadmap |
+| P0 (MVP) | Supabase-Infrastruktur (Schema, RLS, RPCs, Seed) | Planned |
 | P0 (MVP) | Auth & Zugangskontrolle | Roadmap |
 | P0 (MVP) | Admin – Teilnehmerverwaltung | Roadmap |
 | P0 (MVP) | Admin – Tasting-Events verwalten | Roadmap |
