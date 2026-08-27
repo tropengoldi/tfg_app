@@ -26,11 +26,18 @@ const password = process.env.SEED_DEV_PASSWORD || 'tasting-dev-2026'
 const adminEmail = process.env.SEED_ADMIN_EMAIL || 'hermann.hoppen@gmail.com'
 const testEmail = process.env.SEED_TEST_EMAIL || 'test.teilnehmer@example.com'
 
-if (!url || !serviceKey) {
+const missing = [
+  !url && 'NEXT_PUBLIC_SUPABASE_URL',
+  !serviceKey && 'SUPABASE_SERVICE_ROLE_KEY',
+].filter(Boolean)
+
+if (missing.length > 0) {
   console.error(
-    '\n  Fehlende Umgebungsvariablen. Aufruf:\n' +
-      '    node --env-file=.env.local scripts/seed.mjs\n' +
-      '  (oder `npm run db:seed`)\n',
+    `\n  Fehlt in .env.local: ${missing.join(', ')}\n\n` +
+      '  SUPABASE_SERVICE_ROLE_KEY findest du im Supabase-Dashboard unter\n' +
+      '  Project Settings -> API -> Project API keys -> service_role (secret).\n' +
+      '  Eintragen als eigene Zeile in .env.local (NICHT mit NEXT_PUBLIC_ praefixen).\n\n' +
+      '  Aufruf danach:  npm run db:seed\n',
   )
   process.exit(1)
 }
