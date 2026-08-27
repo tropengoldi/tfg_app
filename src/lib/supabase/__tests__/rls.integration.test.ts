@@ -187,6 +187,29 @@ async function buildEvent(tag: string, makeClosed: boolean): Promise<EventFixtur
   return { id: eventId, whiskyA, whiskyB, whiskyH }
 }
 
+/** Räumt Artefakte früherer (evtl. abgebrochener) Läufe weg. */
+async function cleanupLeftovers() {
+  const stale: string[] = []
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await service.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) break
+    for (const u of data.users) {
+      if (u.email && /^rls-.+@example\.com$/.test(u.email)) stale.push(u.id)
+    }
+    if (data.users.length < 200) break
+  }
+  if (stale.length === 0) return
+  // Events zuerst (host_id/created_by sind ON DELETE RESTRICT), dann die User.
+  await service
+    .from('tasting_events')
+    .delete()
+    .or(`host_id.in.(${stale.join(',')}),created_by.in.(${stale.join(',')})`)
+    .then(undefined, () => {})
+  for (const id of stale) {
+    await service.auth.admin.deleteUser(id).then(undefined, () => {})
+  }
+}
+
 beforeAll(async () => {
   if (!RUN) return
   service = createClient<Database>(URL!, SERVICE!, {
@@ -194,6 +217,8 @@ beforeAll(async () => {
   })
 
   try {
+    await cleanupLeftovers()
+
     admin = await makePerson('admin')
     host = await makePerson('host')
     userA = await makePerson('a')
