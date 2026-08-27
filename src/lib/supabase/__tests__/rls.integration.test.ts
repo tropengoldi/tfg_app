@@ -27,7 +27,52 @@ const RUN = Boolean(URL && ANON && SERVICE)
 
 const PASSWORD = 'rls-integration-2026!'
 const stamp = Date.now()
-const email = (tag: string) => `rls-${tag}-${stamp}@example.test`
+const email = (tag: string) => `rls-${tag}-${stamp}@example.com`
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+const TRANSIENT =
+  /upstream connect|protocol error|before headers|reset|fetch failed|ECONNRESET|socket hang up|ETIMEDOUT|EAI_AGAIN|network|503|502|504/i
+
+function isTransient(err: unknown): boolean {
+  const msg =
+    (err as { message?: string })?.message ??
+    (typeof err === 'string' ? err : JSON.stringify(err ?? ''))
+  return TRANSIENT.test(msg)
+}
+
+/** Führt einen Setup-Schritt aus; wiederholt bei transienten Netz-/Proxy-Fehlern. */
+async function step<R extends { error: unknown }>(
+  label: string,
+  fn: () => PromiseLike<R>,
+  tries = 5,
+): Promise<R> {
+  let last: unknown
+  for (let i = 1; i <= tries; i++) {
+    try {
+      const res = await fn()
+      if (res.error) {
+        if (isTransient(res.error) && i < tries) {
+          last = res.error
+          await sleep(400 * i)
+          continue
+        }
+        throw res.error
+      }
+      return res
+    } catch (err) {
+      last = err
+      if (isTransient(err) && i < tries) {
+        await sleep(400 * i)
+        continue
+      }
+      const m = (err as { message?: string })?.message ?? JSON.stringify(err)
+      throw new Error(`Setup-Schritt "${label}" fehlgeschlagen: ${m}`)
+    }
+  }
+  const m = (last as { message?: string })?.message ?? JSON.stringify(last)
+  throw new Error(`Setup-Schritt "${label}" nach ${tries} Versuchen fehlgeschlagen: ${m}`)
+}
 
 type Client = SupabaseClient<Database>
 
@@ -44,22 +89,26 @@ interface Person {
 }
 
 async function makePerson(tag: string): Promise<Person> {
-  const { data, error } = await service.auth.admin.createUser({
-    email: email(tag),
-    password: PASSWORD,
-    email_confirm: true,
-    user_metadata: { display_name: `RLS ${tag}` },
-  })
-  if (error) throw error
-  created.userIds.push(data.user.id)
+  const res = await step(`createUser(${tag})`, () =>
+    service.auth.admin.createUser({
+      email: email(tag),
+      password: PASSWORD,
+      email_confirm: true,
+      user_metadata: { display_name: `RLS ${tag}` },
+    }),
+  )
+  const userId = res.data.user!.id
+  created.userIds.push(userId)
 
   const client = createClient<Database>(URL!, ANON!, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-  const signIn = await client.auth.signInWithPassword({ email: email(tag), password: PASSWORD })
-  if (signIn.error) throw signIn.error
+  await step(`signIn(${tag})`, () =>
+    client.auth.signInWithPassword({ email: email(tag), password: PASSWORD }),
+  )
+  await sleep(150)
 
-  return { id: data.user.id, email: email(tag), client }
+  return { id: userId, email: email(tag), client }
 }
 
 let admin: Person
@@ -78,63 +127,64 @@ interface EventFixture {
 let activeEvent: EventFixture
 let closedEvent: EventFixture
 
-async function buildEvent(makeClosed: boolean): Promise<EventFixture> {
-  const { data: eventId, error: ce } = await admin.client.rpc('create_event', {
-    p_event_date: '2026-09-01',
-    p_location: 'Bei Host',
-    p_host_id: host.id,
-  })
-  if (ce) throw ce
-  created.eventIds.push(eventId as string)
+async function buildEvent(tag: string, makeClosed: boolean): Promise<EventFixture> {
+  const eventId = (
+    await step(`${tag}: create_event`, () =>
+      admin.client.rpc('create_event', {
+        p_event_date: '2026-09-01',
+        p_location: 'Bei Host',
+        p_host_id: host.id,
+      }),
+    )
+  ).data as string
+  created.eventIds.push(eventId)
 
-  const { error: pe } = await admin.client.rpc('set_event_participants', {
-    p_event: eventId as string,
-    p_profile_ids: [userA.id, userB.id],
-  })
-  if (pe) throw pe
+  await step(`${tag}: set_event_participants`, () =>
+    admin.client.rpc('set_event_participants', {
+      p_event: eventId,
+      p_profile_ids: [userA.id, userB.id],
+    }),
+  )
 
-  const add = async (who: Person, name: string) => {
-    const { data, error } = await who.client.rpc('add_whisky', {
-      p_event: eventId as string,
-      p_name: name,
-    })
-    if (error) throw error
-    return data as string
-  }
+  const add = async (who: Person, name: string) =>
+    (
+      await step(`${tag}: add_whisky(${name})`, () =>
+        who.client.rpc('add_whisky', { p_event: eventId, p_name: name }),
+      )
+    ).data as string
   const whiskyA = await add(userA, 'A-Dram')
   const whiskyB = await add(userB, 'B-Dram')
   const whiskyH = await add(host, 'H-Dram')
 
-  const { error: se } = await host.client.rpc('start_event', { p_event: eventId as string })
-  if (se) throw se
+  await step(`${tag}: start_event`, () =>
+    host.client.rpc('start_event', { p_event: eventId }),
+  )
 
   // Whisky an Position 1 (A-Dram) ist jetzt ausgeschenkt → A und B bewerten ihn.
   for (const who of [userA, userB]) {
-    const { error } = await who.client.from('ratings').insert({
-      whisky_id: whiskyA,
-      event_id: eventId as string,
-      profile_id: who.id,
-      nose_points: 3,
-      taste_points: 7,
-    })
-    if (error) throw error
+    await step(`${tag}: rating(${who.id})`, () =>
+      who.client.from('ratings').insert({
+        whisky_id: whiskyA,
+        event_id: eventId,
+        profile_id: who.id,
+        nose_points: 3,
+        taste_points: 7,
+      }),
+    )
   }
 
   if (makeClosed) {
-    // Runden bis zum Ende weiterschalten, dann abschließen.
-    let pos = 1
-    for (; pos < 3; pos++) {
-      const { error } = await host.client.rpc('close_round', {
-        p_event: eventId as string,
-        p_expected_position: pos,
-      })
-      if (error) throw error
+    for (let pos = 1; pos < 3; pos++) {
+      await step(`${tag}: close_round(${pos})`, () =>
+        host.client.rpc('close_round', { p_event: eventId, p_expected_position: pos }),
+      )
     }
-    const { error } = await host.client.rpc('close_event', { p_event: eventId as string })
-    if (error) throw error
+    await step(`${tag}: close_event`, () =>
+      host.client.rpc('close_event', { p_event: eventId }),
+    )
   }
 
-  return { id: eventId as string, whiskyA, whiskyB, whiskyH }
+  return { id: eventId, whiskyA, whiskyB, whiskyH }
 }
 
 beforeAll(async () => {
@@ -143,21 +193,30 @@ beforeAll(async () => {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  admin = await makePerson('admin')
-  host = await makePerson('host')
-  userA = await makePerson('a')
-  userB = await makePerson('b')
-  outsider = await makePerson('out')
+  try {
+    admin = await makePerson('admin')
+    host = await makePerson('host')
+    userA = await makePerson('a')
+    userB = await makePerson('b')
+    outsider = await makePerson('out')
 
-  const { error } = await service
-    .from('profiles')
-    .update({ role: 'admin' })
-    .eq('id', admin.id)
-  if (error) throw error
+    await step('profiles: promote admin', () =>
+      service.from('profiles').update({ role: 'admin' }).eq('id', admin.id),
+    )
 
-  activeEvent = await buildEvent(false)
-  closedEvent = await buildEvent(true)
-})
+    activeEvent = await buildEvent('activeEvent', false)
+    closedEvent = await buildEvent('closedEvent', true)
+  } catch (err) {
+    // Cleanup, damit ein halb aufgebauter Zustand den nächsten Lauf nicht stört.
+    for (const id of created.eventIds) {
+      await service.from('tasting_events').delete().eq('id', id).then(undefined, () => {})
+    }
+    for (const id of created.userIds) {
+      await service.auth.admin.deleteUser(id).then(undefined, () => {})
+    }
+    throw err
+  }
+}, 120_000)
 
 afterAll(async () => {
   if (!RUN || !service) return

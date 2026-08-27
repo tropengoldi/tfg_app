@@ -1,14 +1,3 @@
-/**
- * Datenbank-Typen für die Whisky-Tasting App (PROJ-1).
- *
- * HANDGEPFLEGT als Fallback, damit `npm run build` ohne DB-Zugang läuft.
- * Nach jeder Migration neu generieren und diese Datei ersetzen:
- *
- *     npm run db:types
- *
- * (ruft `supabase gen types typescript --project-id ogwuwisutgaxxpknkgpg --schema public`)
- */
-
 export type Json =
   | string
   | number
@@ -17,374 +6,667 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type AppRole = 'admin' | 'teilnehmer'
-export type EventStatus = 'draft' | 'active' | 'closed'
-
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.17"
+  }
   public: {
     Tables: {
-      profiles: {
+      event_participants: {
         Row: {
-          id: string
-          display_name: string
-          role: AppRole
-          avatar_url: string | null
-          bio: string | null
-          favorite_dram: string | null
-          favorite_region: string | null
-          is_active: boolean
           created_at: string
-          updated_at: string
+          event_id: string
+          profile_id: string
         }
         Insert: {
-          id: string
-          display_name: string
-          role?: AppRole
-          avatar_url?: string | null
-          bio?: string | null
-          favorite_dram?: string | null
-          favorite_region?: string | null
-          is_active?: boolean
           created_at?: string
-          updated_at?: string
+          event_id: string
+          profile_id: string
         }
         Update: {
-          display_name?: string
-          avatar_url?: string | null
-          bio?: string | null
-          favorite_dram?: string | null
-          favorite_region?: string | null
+          created_at?: string
+          event_id?: string
+          profile_id?: string
         }
-        Relationships: []
-      }
-      tasting_events: {
-        Row: {
-          id: string
-          event_date: string
-          location: string
-          theme: string | null
-          food_info: string | null
-          host_notes: string | null
-          host_id: string
-          created_by: string
-          max_whiskies_per_participant: number | null
-          status: EventStatus
-          current_position: number
-          started_at: string | null
-          closed_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: never
-        Update: never
         Relationships: [
           {
-            foreignKeyName: 'tasting_events_host_id_fkey'
-            columns: ['host_id']
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
           },
           {
-            foreignKeyName: 'tasting_events_created_by_fkey'
-            columns: ['created_by']
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
-      event_participants: {
+      profiles: {
         Row: {
-          event_id: string
-          profile_id: string
+          avatar_url: string | null
+          bio: string | null
           created_at: string
+          display_name: string
+          favorite_dram: string | null
+          favorite_region: string | null
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
         }
-        Insert: never
-        Update: never
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name: string
+          favorite_dram?: string | null
+          favorite_region?: string | null
+          id: string
+          is_active?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          favorite_dram?: string | null
+          favorite_region?: string | null
+          id?: string
+          is_active?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ratings: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          nose_points: number
+          notes: string | null
+          profile_id: string
+          taste_points: number
+          total_points: number | null
+          updated_at: string
+          whisky_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          nose_points: number
+          notes?: string | null
+          profile_id: string
+          taste_points: number
+          total_points?: number | null
+          updated_at?: string
+          whisky_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          nose_points?: number
+          notes?: string | null
+          profile_id?: string
+          taste_points?: number
+          total_points?: number | null
+          updated_at?: string
+          whisky_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'event_participants_event_id_fkey'
-            columns: ['event_id']
-            referencedRelation: 'tasting_events'
-            referencedColumns: ['id']
+            foreignKeyName: "ratings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
           },
           {
-            foreignKeyName: 'event_participants_profile_id_fkey'
-            columns: ['profile_id']
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            foreignKeyName: "ratings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whiskies"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id", "event_id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["winner_whisky_id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: false
+            referencedRelation: "whiskies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id"]
+          },
+        ]
+      }
+      tasting_events: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          created_by: string
+          current_position: number
+          event_date: string
+          food_info: string | null
+          host_id: string
+          host_notes: string | null
+          id: string
+          location: string
+          max_whiskies_per_participant: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["event_status"]
+          theme: string | null
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          created_by: string
+          current_position?: number
+          event_date: string
+          food_info?: string | null
+          host_id: string
+          host_notes?: string | null
+          id?: string
+          location: string
+          max_whiskies_per_participant?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["event_status"]
+          theme?: string | null
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string
+          current_position?: number
+          event_date?: string
+          food_info?: string | null
+          host_id?: string
+          host_notes?: string | null
+          id?: string
+          location?: string
+          max_whiskies_per_participant?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["event_status"]
+          theme?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasting_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasting_events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
       whiskies: {
         Row: {
-          id: string
           event_id: string
+          id: string
           position: number
         }
-        Insert: never
-        Update: never
+        Insert: {
+          event_id: string
+          id?: string
+          position: number
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          position?: number
+        }
         Relationships: [
           {
-            foreignKeyName: 'whiskies_event_id_fkey'
-            columns: ['event_id']
-            referencedRelation: 'tasting_events'
-            referencedColumns: ['id']
+            foreignKeyName: "whiskies_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "whiskies_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
           },
         ]
       }
       whisky_details: {
         Row: {
-          whisky_id: string
-          event_id: string
-          brought_by: string
-          name: string
-          distillery: string | null
-          region: string | null
-          age_years: number | null
           abv: number | null
-          cask_type: string | null
+          age_years: number | null
           bottler: string | null
-          price_eur: number | null
-          owner_notes: string | null
-          video_url: string | null
+          brought_by: string
+          cask_type: string | null
           created_at: string
-          updated_at: string
-        }
-        Insert: never
-        Update: {
-          name?: string
-          distillery?: string | null
-          region?: string | null
-          age_years?: number | null
-          abv?: number | null
-          cask_type?: string | null
-          bottler?: string | null
-          price_eur?: number | null
-          owner_notes?: string | null
-          video_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'whisky_details_whisky_id_fkey'
-            columns: ['whisky_id']
-            referencedRelation: 'whiskies'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'whisky_details_brought_by_fkey'
-            columns: ['brought_by']
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      ratings: {
-        Row: {
-          id: string
-          whisky_id: string
+          distillery: string | null
           event_id: string
-          profile_id: string
-          nose_points: number
-          taste_points: number
-          total_points: number
-          notes: string | null
-          created_at: string
+          name: string
+          owner_notes: string | null
+          price_eur: number | null
+          region: string | null
           updated_at: string
+          video_url: string | null
+          whisky_id: string
         }
         Insert: {
-          whisky_id: string
+          abv?: number | null
+          age_years?: number | null
+          bottler?: string | null
+          brought_by: string
+          cask_type?: string | null
+          created_at?: string
+          distillery?: string | null
           event_id: string
-          profile_id: string
-          nose_points: number
-          taste_points: number
-          notes?: string | null
+          name: string
+          owner_notes?: string | null
+          price_eur?: number | null
+          region?: string | null
+          updated_at?: string
+          video_url?: string | null
+          whisky_id: string
         }
         Update: {
-          nose_points?: number
-          taste_points?: number
-          notes?: string | null
+          abv?: number | null
+          age_years?: number | null
+          bottler?: string | null
+          brought_by?: string
+          cask_type?: string | null
+          created_at?: string
+          distillery?: string | null
+          event_id?: string
+          name?: string
+          owner_notes?: string | null
+          price_eur?: number | null
+          region?: string | null
+          updated_at?: string
+          video_url?: string | null
+          whisky_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'ratings_whisky_id_fkey'
-            columns: ['whisky_id']
-            referencedRelation: 'whiskies'
-            referencedColumns: ['id']
+            foreignKeyName: "whisky_details_brought_by_fkey"
+            columns: ["brought_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'ratings_event_id_fkey'
-            columns: ['event_id']
-            referencedRelation: 'tasting_events'
-            referencedColumns: ['id']
+            foreignKeyName: "whisky_details_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whiskies"
+            referencedColumns: ["id", "event_id"]
           },
           {
-            foreignKeyName: 'ratings_profile_id_fkey'
-            columns: ['profile_id']
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            foreignKeyName: "whisky_details_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id", "event_id"]
+          },
+          {
+            foreignKeyName: "whisky_details_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: true
+            referencedRelation: "past_tastings"
+            referencedColumns: ["winner_whisky_id"]
+          },
+          {
+            foreignKeyName: "whisky_details_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: true
+            referencedRelation: "whiskies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whisky_details_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: true
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id"]
           },
         ]
       }
     }
     Views: {
-      whisky_rankings: {
-        Row: {
-          event_id: string | null
-          whisky_id: string | null
-          position: number | null
-          name: string | null
-          distillery: string | null
-          region: string | null
-          video_url: string | null
-          brought_by: string | null
-          nose_total: number | null
-          taste_total: number | null
-          total_points: number | null
-          rating_count: number | null
-          rank: number | null
-        }
-        Relationships: []
-      }
       past_tastings: {
         Row: {
-          event_id: string | null
           event_date: string | null
-          location: string | null
-          theme: string | null
+          event_id: string | null
           host_id: string | null
           host_name: string | null
-          winner_whisky_id: string | null
+          location: string | null
+          theme: string | null
           winner_name: string | null
           winner_points: number | null
+          winner_whisky_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasting_events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whisky_rankings: {
+        Row: {
+          brought_by: string | null
+          distillery: string | null
+          event_id: string | null
+          name: string | null
+          nose_total: number | null
+          position: number | null
+          rank: number | null
+          rating_count: number | null
+          region: string | null
+          taste_total: number | null
+          total_points: number | null
+          video_url: string | null
+          whisky_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whiskies_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "whiskies_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whisky_details_brought_by_fkey"
+            columns: ["brought_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
-      is_admin: {
-        Args: Record<string, never>
-        Returns: boolean
+      add_whisky: {
+        Args: {
+          p_abv?: number
+          p_age_years?: number
+          p_bottler?: string
+          p_cask_type?: string
+          p_distillery?: string
+          p_event: string
+          p_name: string
+          p_owner_notes?: string
+          p_price_eur?: number
+          p_region?: string
+          p_video_url?: string
+        }
+        Returns: string
       }
-      is_event_participant: {
-        Args: { p_event: string }
-        Returns: boolean
-      }
-      is_event_host: {
-        Args: { p_event: string }
-        Returns: boolean
-      }
-      event_status_of: {
-        Args: { p_event: string }
-        Returns: EventStatus
-      }
-      is_event_closed: {
-        Args: { p_event: string }
-        Returns: boolean
-      }
-      can_rate_whisky: {
-        Args: { p_whisky: string }
-        Returns: boolean
+      can_rate_whisky: { Args: { p_whisky: string }; Returns: boolean }
+      close_event: { Args: { p_event: string }; Returns: undefined }
+      close_round: {
+        Args: { p_event: string; p_expected_position: number }
+        Returns: undefined
       }
       create_event: {
         Args: {
           p_event_date: string
-          p_location: string
+          p_food_info?: string
           p_host_id: string
-          p_theme?: string | null
-          p_food_info?: string | null
-          p_max_whiskies?: number | null
+          p_location: string
+          p_max_whiskies?: number
+          p_theme?: string
         }
         Returns: string
       }
-      update_event: {
-        Args: {
-          p_event: string
-          p_event_date: string
-          p_location: string
-          p_host_id: string
-          p_theme?: string | null
-          p_food_info?: string | null
-          p_max_whiskies?: number | null
-        }
-        Returns: undefined
+      event_status_of: {
+        Args: { p_event: string }
+        Returns: Database["public"]["Enums"]["event_status"]
       }
-      update_event_host_fields: {
-        Args: {
-          p_event: string
-          p_theme: string | null
-          p_food_info: string | null
-          p_host_notes: string | null
-        }
-        Returns: undefined
+      is_admin: { Args: never; Returns: boolean }
+      is_event_closed: { Args: { p_event: string }; Returns: boolean }
+      is_event_host: { Args: { p_event: string }; Returns: boolean }
+      is_event_participant: { Args: { p_event: string }; Returns: boolean }
+      rating_progress: {
+        Args: { p_event: string }
+        Returns: {
+          participant_count: number
+          rating_count: number
+          whisky_position: number
+        }[]
       }
+      remove_whisky: { Args: { p_whisky: string }; Returns: undefined }
       set_event_participants: {
         Args: { p_event: string; p_profile_ids: string[] }
-        Returns: undefined
-      }
-      add_whisky: {
-        Args: {
-          p_event: string
-          p_name: string
-          p_distillery?: string | null
-          p_region?: string | null
-          p_age_years?: number | null
-          p_abv?: number | null
-          p_cask_type?: string | null
-          p_bottler?: string | null
-          p_price_eur?: number | null
-          p_owner_notes?: string | null
-          p_video_url?: string | null
-        }
-        Returns: string
-      }
-      remove_whisky: {
-        Args: { p_whisky: string }
         Returns: undefined
       }
       set_whisky_order: {
         Args: { p_event: string; p_ordered: string[] }
         Returns: undefined
       }
-      start_event: {
-        Args: { p_event: string }
+      start_event: { Args: { p_event: string }; Returns: undefined }
+      update_event: {
+        Args: {
+          p_event: string
+          p_event_date: string
+          p_food_info?: string
+          p_host_id: string
+          p_location: string
+          p_max_whiskies?: number
+          p_theme?: string
+        }
         Returns: undefined
       }
-      close_round: {
-        Args: { p_event: string; p_expected_position: number }
+      update_event_host_fields: {
+        Args: {
+          p_event: string
+          p_food_info: string
+          p_host_notes: string
+          p_theme: string
+        }
         Returns: undefined
-      }
-      close_event: {
-        Args: { p_event: string }
-        Returns: undefined
-      }
-      rating_progress: {
-        Args: { p_event: string }
-        Returns: {
-          whisky_position: number
-          rating_count: number
-          participant_count: number
-        }[]
       }
     }
     Enums: {
-      app_role: AppRole
-      event_status: EventStatus
+      app_role: "admin" | "teilnehmer"
+      event_status: "draft" | "active" | "closed"
     }
-    CompositeTypes: Record<string, never>
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
 
-// --- Bequeme Kurzformen -----------------------------------------------------
-export type Tables<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Row']
-export type Views<T extends keyof Database['public']['Views']> =
-  Database['public']['Views'][T]['Row']
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-export type Profile = Tables<'profiles'>
-export type TastingEvent = Tables<'tasting_events'>
-export type EventParticipant = Tables<'event_participants'>
-export type Whisky = Tables<'whiskies'>
-export type WhiskyDetail = Tables<'whisky_details'>
-export type Rating = Tables<'ratings'>
-export type WhiskyRanking = Views<'whisky_rankings'>
-export type PastTasting = Views<'past_tastings'>
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["admin", "teilnehmer"],
+      event_status: ["draft", "active", "closed"],
+    },
+  },
+} as const

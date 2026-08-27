@@ -45,7 +45,8 @@ export default defineConfig({
     include: ['src/**/*.integration.test.{ts,tsx}'],
     env: loadEnvLocal(),
     testTimeout: 30_000,
-    hookTimeout: 30_000,
+    hookTimeout: 120_000,
+    retry: 1,
     fileParallelism: false,
   },
   resolve: {
