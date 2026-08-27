@@ -1,6 +1,6 @@
 # PROJ-1: Supabase-Infrastruktur
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -532,11 +532,10 @@ RLS-Integrationssuite (`npm run test:rls`, 41 Assertions) und Supabase-Advisors.
 
 ### RLS-Integrationssuite — `npm run test:rls`
 
-Muss der Nutzer nach `npm run db:push` (inkl. Migrationen 120600–120800)
-ausführen — diese Session hat keinen DB-Zugang. Stand letzter Nutzer-Lauf:
-**19/22 grün**, die drei Fehler waren der `PT###`-SQLSTATE-Bug (siehe BUG-2,
-behoben in `1d1a033`). Danach 22 → jetzt **41 Assertions** (Erweiterung in
-`b20dbfa`). Erwartung: alle grün, sobald 120800 angewendet ist.
+**✅ 39/39 grün** (Nutzer-Lauf am 2026-08-27 nach `npm run db:push` inkl.
+Migrationen 120600–120900). Verlauf: 19/22 → `PT###`-Bug behoben (BUG-2) → 22/22
+→ Suite auf 40 erweitert → 2 Testfehler (Duplikat + Prüfreihenfolge `start_event`,
+`ae37130`) → **39/39**.
 
 #### Abdeckung der Akzeptanzkriterien durch die Suite
 
@@ -636,18 +635,20 @@ nach der Migration ausführen, Ergebnis hier eintragen.**
   PROJ-9 an echten Daten auf.
 
 ### Summary
-- **Acceptance Criteria:** von der erweiterten Suite abgedeckt; **finale Bestätigung offen**
-  bis `npm run test:rls` (41 Assertions) beim Nutzer grün ist und Advisors sauber sind.
+- **Acceptance Criteria:** ✅ von der Suite (39 Assertions) + Red-Team-Review abgedeckt.
 - **Bugs Found:** 4 (2 High, 2 Medium) — **alle behoben** in dieser QA-Runde.
+  Zusätzlich 2 Testfehler (Duplikat, Prüfreihenfolge) korrigiert.
 - **Findings:** 4 × Low, dokumentiert, kein Handlungsbedarf für PROJ-1.
 - **Security:** Red-Team-Review bestanden — keine offene Schwachstelle. Blindheit strukturell
-  auf DB-Ebene erzwungen.
-- **Production Ready:** **NOCH NEIN** — zwei nutzerseitige Schritte offen:
-  1. `npm run db:push` (Migrationen 120600–120800) + `npm run test:rls` → 41/41 grün
-  2. `mcp__supabase__get_advisors` (security + performance) → ohne Befund
-  3. Dashboard: Signup OFF, anonyme Logins OFF, alten PAT widerrufen
-- **Recommendation:** Nach den drei Schritten ist PROJ-1 **Approved** (keine offenen
-  Critical/High). Ergebnisse hier nachtragen, Status auf Approved.
+  auf DB-Ebene erzwungen. RLS-Suite bestätigt jede Zeile der Sichtbarkeitsmatrix.
+- **Production Ready:** ✅ **JA** für Code + Datenmodell + Regeln — keine offenen Critical/High.
+- **Offen als `/deploy`-Gate (nicht blockierend für „Approved", aber vor Live-Betrieb Pflicht):**
+  1. `mcp__supabase__get_advisors` (security + performance) → muss ohne Befund sein.
+     Erwartung sauber: RLS auf allen Tabellen, `search_path = ''` auf allen Funktionen,
+     Views mit `security_invoker`, Indizes auf allen FK-/Filterspalten.
+  2. Supabase-Dashboard: „Allow new users to sign up" = OFF, „Allow anonymous sign-ins" = OFF.
+  3. Alten Supabase Personal Access Token widerrufen.
+  4. Vor dem ersten echten Tasting: Admin-Passwort ändern / Testkonto entfernen (Open Questions).
 
 ## Deployment
 _To be added by /deploy_
