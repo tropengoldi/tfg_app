@@ -399,6 +399,9 @@ begin
   end;
 end;
 $$;
+-- HINWEIS: 20260827120600_start_event_precheck.sql ersetzt diese Funktion durch
+-- eine Variante mit proaktiver Prüfung (die abgefangene unique_violation kam über
+-- den API-Proxy als Verbindungsabbruch zurück).
 
 -- ===========================================================================
 -- Runde abschließen  (Gastgeber oder Admin): current_position + 1

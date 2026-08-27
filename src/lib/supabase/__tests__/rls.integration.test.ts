@@ -204,8 +204,11 @@ beforeAll(async () => {
       service.from('profiles').update({ role: 'admin' }).eq('id', admin.id),
     )
 
-    activeEvent = await buildEvent('activeEvent', false)
+    // Reihenfolge wichtig: nur EIN Event darf gleichzeitig 'active' sein
+    // (Partial-Unique-Index). Erst das abzuschließende Event komplett
+    // durchziehen, dann das aktive.
     closedEvent = await buildEvent('closedEvent', true)
+    activeEvent = await buildEvent('activeEvent', false)
   } catch (err) {
     // Cleanup, damit ein halb aufgebauter Zustand den nächsten Lauf nicht stört.
     for (const id of created.eventIds) {
