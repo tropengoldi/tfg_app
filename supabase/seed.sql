@@ -1,0 +1,15 @@
+-- PROJ-1 · Seed
+--
+-- Bewusst LEER. Es gibt keine Beispiel-Events (Produktentscheidung, siehe
+-- features/PROJ-1-supabase-infrastruktur.md → Decision Log).
+--
+-- Die zwei Seed-Konten (Admin + Testkonto) werden NICHT hier per SQL angelegt,
+-- sondern über die Supabase Admin-API:
+--
+--     npm run db:seed
+--
+-- Das Script scripts/seed.mjs liest NEXT_PUBLIC_SUPABASE_URL und
+-- SUPABASE_SERVICE_ROLE_KEY aus .env.local, legt echte Auth-User an (Passwort
+-- korrekt gehasht, identities-Eintrag inklusive) und hebt das Admin-Konto per
+-- Direkt-Update auf profiles.role = 'admin'. Der profiles-Eintrag selbst entsteht
+-- über den Trigger handle_new_user.

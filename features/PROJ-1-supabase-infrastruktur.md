@@ -1,6 +1,6 @@
 # PROJ-1: Supabase-Infrastruktur
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -424,6 +424,90 @@ Prüfungen auf „0 Zeilen" bzw. „Fehlercode X". Zusätzlich läuft nach der M
 Sicherheits- und Performance-Prüfung von Supabase und muss ohne Befund durchlaufen.
 `npm run build` und `npm run lint` müssen sauber sein — der aktuell defekte Supabase-Import
 mit dem doppelten Export wird dabei ersetzt.
+
+## Implementation Notes (Backend)
+
+**Stand:** Code vollständig geschrieben, aber **noch nicht gegen die Live-DB
+`ogwuwisutgaxxpknkgpg` angewendet** — die Build-Session hatte keinen DB-Zugang
+(Supabase-MCP nicht autorisiert, kein Docker für lokales Supabase, `.env.local`
+gesperrt). Anwenden + Verifizieren ist der erste Schritt in `/qa`.
+
+### Was gebaut wurde
+
+**`supabase/` (via `supabase init`)**
+- `config.toml`: `auth.enable_signup = false` und `auth.email.enable_signup = false`
+  gesetzt (anonyme Logins waren schon `false`). Für das gehostete Projekt gilt das
+  **zusätzlich** manuell im Dashboard, solange `supabase config push` nicht läuft.
+- `migrations/` — sechs nummerierte Dateien, in dieser Reihenfolge anzuwenden:
+  | Datei | Inhalt |
+  |-------|--------|
+  | `20260827120000_schema.sql` | Enums `app_role`/`event_status`, 5 Tabellen, Constraints, Indizes, generischer `updated_at`-Trigger. `whiskies` bewusst **ohne** Zeitstempel-Spalten (Realtime setzt keine Spalten-GRANTs durch). Partieller Unique-Index `one_active_event_at_a_time`. Zusammengesetzte FKs `(whisky_id, event_id)` auf `whiskies(id, event_id)`. |
+  | `20260827120100_helpers.sql` | `is_admin`, `is_event_participant`, `is_event_host`, `event_status_of`, `is_event_closed`, `can_rate_whisky` — alle `SECURITY DEFINER STABLE SET search_path = ''`. |
+  | `20260827120200_triggers.sql` | `handle_new_user` (Profil-Anlage, Rolle `teilnehmer`), `tg_ratings_lock` (SQLSTATE `PT001` nach Abschluss). |
+  | `20260827120300_rls.sql` | RLS auf allen 5 Tabellen (**kein** `force`), alle Policies `to authenticated`, `revoke all … from anon`, Spalten-GRANTs für `profiles`/`whiskies`/`whisky_details`/`ratings`. |
+  | `20260827120400_rpcs.sql` | 11 RPCs: `create_event`, `update_event`, `update_event_host_fields`, `set_event_participants`, `add_whisky`, `remove_whisky`, `set_whisky_order`, `start_event`, `close_round`, `close_event`, `rating_progress`. Alle `SECURITY DEFINER`, prüfen Autorisierung selbst, custom SQLSTATEs `PT002`–`PT010`. |
+  | `20260827120500_views_realtime.sql` | Views `whisky_rankings` + `past_tastings` (`security_invoker = on`, hart auf `status='closed'`), `replica identity full` + Realtime-Publication für `tasting_events` und `whiskies`. |
+- `seed.sql` — bewusst leer (keine Beispiel-Events). Konten kommen über das Node-Script.
+
+**`src/lib/supabase/`** — vier Clients + Typen:
+- `client.ts` (Browser), `server.ts` (SSR, nutzergebunden), `middleware.ts`
+  (Session-Refresh-Helfer; die echte `src/middleware.ts` baut PROJ-2),
+  `admin.ts` (Service-Role, `import 'server-only'` weggelassen mangels Paket — der
+  Env-Check wirft stattdessen; in PROJ-1 ungenutzt).
+- `types.ts` — **handgepflegt** als Build-Fallback. `npm run db:types` generiert es
+  aus der Live-DB neu (danach committen).
+
+**Weitere Dateien**
+- `src/lib/errors.ts` (+ `errors.test.ts`, 7 Unit-Tests) — PT-Codes + Standard-
+  Postgres-Codes → deutsche Meldungen.
+- `scripts/seed.mjs` — legt Admin (`hermann.hoppen@gmail.com`) + Testkonto über
+  `auth.admin.createUser` an, hebt den Admin per Direkt-Update auf `role='admin'`.
+  Idempotent. Dev-Passwort aus `SEED_DEV_PASSWORD` (Default `tasting-dev-2026`).
+- `src/lib/supabase/__tests__/rls.integration.test.ts` — die RLS-Matrix aus §11 des
+  Plans als 20+ Assertions, eigener Testdaten-Aufbau, Cleanup im `afterAll`.
+  Läuft über `npm run test:rls` (eigene `vitest.integration.config.ts`, lädt
+  `.env.local` selbst). Von `npm test` ausgeschlossen.
+
+### Neue npm-Scripts
+`db:push`, `db:reset`, `db:seed`, `db:types`, `test:rls`.
+
+### Abweichungen / Nebenarbeiten (für `/qa`)
+
+- **Blocker B2 behoben:** `src/lib/supabase.ts` (doppelter `export const supabase`)
+  gelöscht, ersetzt durch `src/lib/supabase/*`. Nichts importierte die alte Datei.
+- **`npm run lint` war projektweit kaputt:** Next 16 hat `next lint` entfernt und
+  `eslint-config-next@16` ist reines Flat-Config. Neu: `eslint.config.mjs` (nutzt
+  `eslint-config-next/core-web-vitals`), Script auf `eslint .` umgestellt,
+  `.eslintrc.json` entfernt. `src/components/ui/**` (shadcn, unveränderlich) und
+  `supabase/**` sind von ESLint ausgenommen — sonst schlägt ein vorbestehender
+  `react-hooks/purity`-Fehler in `sidebar.tsx` an.
+- **`update_event` als RPC statt direktem Write:** Der Architektur-§4 sah für
+  „Event anlegen/bearbeiten" einen direkten Tabellen-Write vor, der §-Text danach
+  aber `revoke insert, update, delete … from authenticated`. Aufgelöst zugunsten der
+  strengeren Variante: **alle** Schreibpfade auf `tasting_events` laufen über RPCs
+  (`create_event`/`update_event`). RLS kann keine Spaltenauswahl beim Schreiben
+  erzwingen — ein UPDATE-Recht für den Admin würde beliebige `status`-Sprünge aus
+  dem Browser erlauben.
+- **`admin.ts` ohne `import 'server-only'`** — das Paket ist nicht installiert. Der
+  fehlende `SUPABASE_SERVICE_ROLE_KEY` im Browser-Bundle wirft ohnehin.
+
+### Verifikation in dieser Session
+- `npm run build` ✓ (TypeScript sauber)
+- `npm run lint` ✓
+- `npm test` ✓ (7 Tests, `errors.ts`)
+- `npm run test:rls` — **nicht ausgeführt** (kein DB-Zugang). Muss in `/qa` laufen.
+- `supabase db push` / `get_advisors` — **offen**, `/qa`.
+
+### Anwenden (durch den Nutzer, vor `/qa`)
+```
+supabase login
+supabase link --project-ref ogwuwisutgaxxpknkgpg
+npm run db:push
+npm run db:seed        # braucht SUPABASE_SERVICE_ROLE_KEY in .env.local
+npm run db:types       # generierte Typen committen
+npm run test:rls       # RLS-Matrix grün?
+```
+Danach im Dashboard: Signup OFF, anonyme Logins OFF, alten PAT widerrufen.
 
 ## QA Test Results
 _To be added by /qa_

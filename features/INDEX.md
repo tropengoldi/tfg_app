@@ -15,7 +15,7 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| PROJ-1 | Supabase-Infrastruktur | Architected | [PROJ-1-supabase-infrastruktur.md](PROJ-1-supabase-infrastruktur.md) | 2026-08-27 |
+| PROJ-1 | Supabase-Infrastruktur | In Progress | [PROJ-1-supabase-infrastruktur.md](PROJ-1-supabase-infrastruktur.md) | 2026-08-27 |
 | PROJ-2 | Auth & Zugangskontrolle | Roadmap | – | 2026-08-27 |
 | PROJ-3 | Admin – Teilnehmerverwaltung | Roadmap | – | 2026-08-27 |
 | PROJ-4 | Admin – Tasting-Events verwalten | Roadmap | – | 2026-08-27 |
