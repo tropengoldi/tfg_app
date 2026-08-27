@@ -355,7 +355,7 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
   it('Nicht-Gastgeber darf rating_progress nicht aufrufen', async () => {
     const { error } = await userA.client.rpc('rating_progress', { p_event: activeEvent.id })
     expect(error).toBeTruthy()
-    expect(error!.code).toBe('PT004')
+    expect(error!.code).toBe('TS004')
   })
 
   it('Nach Abschluss sieht Teilnehmer A die Bewertungen von B', async () => {
@@ -427,14 +427,14 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
     expect(error).toBeTruthy()
   })
 
-  it('Nach Abschluss ist keine Bewertungsänderung mehr möglich (Trigger PT001)', async () => {
+  it('Nach Abschluss ist keine Bewertungsänderung mehr möglich (Trigger TS001)', async () => {
     const { error } = await userA.client
       .from('ratings')
       .update({ taste_points: 1 })
       .eq('event_id', closedEvent.id)
       .eq('profile_id', userA.id)
     expect(error).toBeTruthy()
-    expect(error!.code).toBe('PT001')
+    expect(error!.code).toBe('TS001')
   })
 
   it('Gastgeber kann den Event-Status nicht direkt setzen', async () => {
@@ -457,7 +457,7 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
       p_expected_position: 1,
     })
     expect(second.error).toBeTruthy()
-    expect(second.error!.code).toBe('PT002')
+    expect(second.error!.code).toBe('TS002')
   })
 
   // --- Sichtbarkeit von Events / Rekursionsschutz --------------------

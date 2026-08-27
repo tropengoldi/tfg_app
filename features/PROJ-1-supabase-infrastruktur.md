@@ -443,10 +443,12 @@ gesperrt). Anwenden + Verifizieren ist der erste Schritt in `/qa`.
   |-------|--------|
   | `20260827120000_schema.sql` | Enums `app_role`/`event_status`, 5 Tabellen, Constraints, Indizes, generischer `updated_at`-Trigger. `whiskies` bewusst **ohne** Zeitstempel-Spalten (Realtime setzt keine Spalten-GRANTs durch). Partieller Unique-Index `one_active_event_at_a_time`. Zusammengesetzte FKs `(whisky_id, event_id)` auf `whiskies(id, event_id)`. |
   | `20260827120100_helpers.sql` | `is_admin`, `is_event_participant`, `is_event_host`, `event_status_of`, `is_event_closed`, `can_rate_whisky` — alle `SECURITY DEFINER STABLE SET search_path = ''`. |
-  | `20260827120200_triggers.sql` | `handle_new_user` (Profil-Anlage, Rolle `teilnehmer`), `tg_ratings_lock` (SQLSTATE `PT001` nach Abschluss). |
+  | `20260827120200_triggers.sql` | `handle_new_user` (Profil-Anlage, Rolle `teilnehmer`), `tg_ratings_lock` (nach Abschluss keine Bewertungsänderung). |
   | `20260827120300_rls.sql` | RLS auf allen 5 Tabellen (**kein** `force`), alle Policies `to authenticated`, `revoke all … from anon`, Spalten-GRANTs für `profiles`/`whiskies`/`whisky_details`/`ratings`. |
-  | `20260827120400_rpcs.sql` | 11 RPCs: `create_event`, `update_event`, `update_event_host_fields`, `set_event_participants`, `add_whisky`, `remove_whisky`, `set_whisky_order`, `start_event`, `close_round`, `close_event`, `rating_progress`. Alle `SECURITY DEFINER`, prüfen Autorisierung selbst, custom SQLSTATEs `PT002`–`PT010`. |
+  | `20260827120400_rpcs.sql` | 11 RPCs: `create_event`, `update_event`, `update_event_host_fields`, `set_event_participants`, `add_whisky`, `remove_whisky`, `set_whisky_order`, `start_event`, `close_round`, `close_event`, `rating_progress`. Alle `SECURITY DEFINER`, prüfen Autorisierung selbst. |
   | `20260827120500_views_realtime.sql` | Views `whisky_rankings` + `past_tastings` (`security_invoker = on`, hart auf `status='closed'`), `replica identity full` + Realtime-Publication für `tasting_events` und `whiskies`. |
+  | `20260827120600_start_event_precheck.sql` | `start_event` prüft aktives Event proaktiv statt die Unique-Violation abzufangen (kam über den API-Proxy als Verbindungsabbruch). |
+  | `20260827120700_error_codes_ts_prefix.sql` | Alle Custom-SQLSTATEs von `PT###` auf `TS001`–`TS010`. `PT` + 3 Ziffern deutet PostgREST als HTTP-Status (`PT402` → 402); `PT001`/`004` sind keine gültigen Status → „protocol error" am Gateway. `src/lib/errors.ts` mappt `TS###` → deutsche Toasts. |
 - `seed.sql` — bewusst leer (keine Beispiel-Events). Konten kommen über das Node-Script.
 
 **`src/lib/supabase/`** — vier Clients + Typen:

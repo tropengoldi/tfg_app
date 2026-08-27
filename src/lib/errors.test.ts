@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { DB_ERROR_MESSAGES, isStalePositionError, messageForDbError } from './errors'
 
 describe('messageForDbError', () => {
-  it('nutzt die DB-Meldung bei PT-Codes', () => {
-    const err = { code: 'PT002', message: 'Die Runde wurde bereits weitergeschaltet.' }
+  it('nutzt die DB-Meldung bei TS-Codes', () => {
+    const err = { code: 'TS002', message: 'Die Runde wurde bereits weitergeschaltet.' }
     expect(messageForDbError(err)).toBe('Die Runde wurde bereits weitergeschaltet.')
   })
 
-  it('fällt bei PT-Code ohne message auf die Tabelle zurück', () => {
-    expect(messageForDbError({ code: 'PT003' })).toBe(DB_ERROR_MESSAGES.PT003)
+  it('fällt bei TS-Code ohne message auf die Tabelle zurück', () => {
+    expect(messageForDbError({ code: 'TS003' })).toBe(DB_ERROR_MESSAGES.TS003)
   })
 
   it('mappt Standard-Postgres-Codes', () => {
@@ -29,13 +29,13 @@ describe('messageForDbError', () => {
 })
 
 describe('isStalePositionError', () => {
-  it('erkennt PT002', () => {
-    expect(isStalePositionError({ code: 'PT002' })).toBe(true)
+  it('erkennt TS002', () => {
+    expect(isStalePositionError({ code: 'TS002' })).toBe(true)
   })
 
   it('ist false für alles andere', () => {
-    expect(isStalePositionError({ code: 'PT001' })).toBe(false)
+    expect(isStalePositionError({ code: 'TS001' })).toBe(false)
     expect(isStalePositionError(null)).toBe(false)
-    expect(isStalePositionError('PT002')).toBe(false)
+    expect(isStalePositionError('TS002')).toBe(false)
   })
 })
