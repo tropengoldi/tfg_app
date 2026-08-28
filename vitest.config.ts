@@ -8,8 +8,14 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    // Integrationstests gegen die echte DB laufen separat: `npm run test:rls`
-    exclude: ['**/node_modules/**', '**/dist/**', '**/*.integration.test.{ts,tsx}'],
+    // `tests/` gehört Playwright (E2E); Integrationstests gegen die echte DB
+    // laufen separat über `npm run test:rls`.
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/*.integration.test.{ts,tsx}',
+      'tests/**',
+    ],
   },
   resolve: {
     alias: {
