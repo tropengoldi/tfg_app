@@ -438,16 +438,52 @@ ergänzt (wird beim nächsten `npm run db:types` überschrieben).
 - **Nicht** getestet (braucht die Migration): einladen / deaktivieren / Rollen,
   Liste mit echten Daten → `/backend` + `/qa`.
 
-### Für `/backend`
-- Migration `20260828090000` anwenden (`npm run db:push`), danach `npm run db:types`
-  (die handgepflegten RPC-Typen durch die generierten ersetzen und committen).
-- DB-Regeltests in der Art der PROJ-1-Suite: Nicht-Admin-Aufruf → `TS004`;
-  letzter aktiver Admin lässt sich nicht deaktivieren/degradieren → `TS012`;
-  Gastgeber eines `draft`/`active`-Events → `TS013`; „Eingeladen" befördern → `TS014`;
-  Selbst-Deaktivieren → `TS011`.
-- `inviteUserByEmail`-Fehlerformen (`email_exists`, 429) gegen echtes Supabase prüfen.
-- E-Mail-Versand: `NEXT_PUBLIC_SITE_URL` in Supabase Redirect URLs (mit
-  `/auth/confirm`); Standard-SMTP-Limits beachten → `/deploy`.
+## Implementation Notes (Backend)
+
+**Kein neues Schema, keine `/api`-Routen** — vier RPCs (Migration
+`20260828090000`, in dieser Session geschrieben + gehärtet, **noch nicht
+angewendet**) plus die Server Actions aus dem Frontend-Durchlauf.
+
+### Härtung der RPCs (gegenüber dem Frontend-Stand)
+- `deactivate_member` und `set_member_admin` sperren jetzt **vor** der
+  „mindestens ein aktiver Admin"-Prüfung das Ziel **und alle aktiven Admins** in
+  stabiler `id`-Reihenfolge (`perform 1 … for update`). Damit können zwei
+  gleichzeitige Aktionen nicht beide am letzten Admin vorbei — und die feste
+  Reihenfolge verhindert Deadlocks.
+- `admin_list_members` hat ein `limit 1000` (Hausregel „`.limit()` auf
+  Listen-Queries"; für die Runde faktisch ohne Wirkung).
+- **`TS012` beim Deaktivieren ist defensiver Code, praktisch nicht erreichbar:**
+  Der Aufrufer hat `is_admin()` bestanden, ist also selbst ein aktiver Admin; ist
+  er nicht das Ziel, zählt er in der Prüfung mit → es bleibt immer ≥ 1. Der einzige
+  reale `TS012`-Pfad ist die **Selbst-Degradierung** als letzter Admin
+  (`set_member_admin(self, false)`). Die Regel bleibt trotzdem in beiden Funktionen
+  stehen.
+
+### Tests
+`src/lib/supabase/__tests__/admin-rpcs.integration.test.ts` (läuft über
+`npm run test:rls`, wie die PROJ-1-Suite): 13 Assertions —
+`admin_list_members` (Nicht-Admin → `TS004`; Admin bekommt E-Mail + Anmeldestatus,
+`has_signed_in` für „Eingeladen" = false), deaktivieren/reaktivieren (Nicht-Admin
+→ `TS004`; Happy Path; Selbst → `TS011`; Gastgeber eines `draft`-Events →
+`TS013`), `set_member_admin` (Nicht-Admin → `TS004`; „Eingeladen" befördern →
+`TS014`; Selbst-Degradierung als letzter Admin → `TS012`; Beförderung eines
+aktiven Teilnehmers; Selbst-Degradierung mit zweitem Admin gelingt).
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (24) · `tsc` ✅
+- `npm run test:rls` — **nicht ausgeführt** (kein DB-Zugang). Muss der Nutzer nach
+  `db:push` laufen lassen.
+
+### Anwenden (durch den Nutzer, vor `/qa`)
+```
+npm run db:push        # Migration 20260828090000
+npm run db:types       # generierte RPC-Typen — src/lib/supabase/types.ts committen
+npm run test:rls       # RLS-Suite (39) + admin-rpcs (13)
+```
+Danach: `NEXT_PUBLIC_SITE_URL` in Supabase → *Auth → URL Configuration → Redirect
+URLs* muss `/auth/confirm` enthalten (sonst tote Einladungslinks); für echten
+E-Mail-Versand ein funktionierendes SMTP (Standard-Supabase-SMTP hat enge Limits)
+→ `/deploy`-Checkliste.
 
 ## QA Test Results
 _To be added by /qa_

@@ -1,14 +1,17 @@
 -- PROJ-3 · Admin – Teilnehmerverwaltung: Datenbank-Aktionen
 --
 -- Vier RPCs, alle SECURITY DEFINER + SET search_path = ''. Jede prüft die
--- Admin-Rolle des Aufrufers selbst und erzwingt die Integritätsregeln IM SELBEN
--- Schritt wie die Änderung (Zeilensperre) — zwei gleichzeitige Admin-Aktionen
--- können damit nicht beide „am letzten Admin vorbei".
+-- Admin-Rolle des Aufrufers selbst. deactivate_member und set_member_admin
+-- sperren vor der „mindestens ein aktiver Admin"-Prüfung das Ziel UND alle
+-- aktiven Admins in stabiler id-Reihenfolge — zwei gleichzeitige Aktionen können
+-- damit nicht beide am letzten Admin vorbei.
 --
 -- Custom SQLSTATEs (Klasse 'TS', siehe src/lib/errors.ts):
---   TS004 not_authorized            TS012 would_leave_no_active_admin
---   TS010 wrong_state (generisch)   TS013 host_of_non_closed_event
---   TS011 self_action_forbidden     TS014 only_active_members_promotable
+--   TS004 not_authorized / not_found
+--   TS011 self_action_forbidden
+--   TS012 would_leave_no_active_admin
+--   TS013 host_of_non_closed_event
+--   TS014 only_active_members_promotable
 
 begin;
 
@@ -44,7 +47,8 @@ begin
          (u.last_sign_in_at is not null) as has_signed_in
   from public.profiles p
   join auth.users u on u.id = p.id
-  order by lower(p.display_name), p.display_name;
+  order by lower(p.display_name), p.display_name
+  limit 1000;
 end;
 $$;
 
@@ -69,8 +73,15 @@ begin
     raise exception 'Du kannst dich nicht selbst deaktivieren.' using errcode = 'TS011';
   end if;
 
+  -- Ziel UND alle aktiven Admins sperren, in stabiler Reihenfolge (kein Deadlock,
+  -- konsistenter Zählstand gegen zwei gleichzeitige Deaktivierungen).
+  perform 1 from public.profiles
+  where id = p_target or (role = 'admin' and is_active)
+  order by id
+  for update;
+
   select role, is_active into v_role, v_active
-  from public.profiles where id = p_target for update;
+  from public.profiles where id = p_target;
   if v_role is null then
     raise exception 'Teilnehmer nicht gefunden.' using errcode = 'TS004';
   end if;
@@ -134,12 +145,17 @@ begin
     raise exception 'Dazu fehlt dir die Berechtigung.' using errcode = 'TS004';
   end if;
 
+  -- Ziel UND alle aktiven Admins sperren (siehe deactivate_member).
+  perform 1 from public.profiles
+  where id = p_target or (role = 'admin' and is_active)
+  order by id
+  for update;
+
   select p.role, p.is_active, (u.last_sign_in_at is not null)
     into v_role, v_active, v_signedin
   from public.profiles p
   join auth.users u on u.id = p.id
-  where p.id = p_target
-  for update of p;
+  where p.id = p_target;
   if v_role is null then
     raise exception 'Teilnehmer nicht gefunden.' using errcode = 'TS004';
   end if;
