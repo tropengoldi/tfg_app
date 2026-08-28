@@ -105,10 +105,6 @@ export async function updatePasswordAction(formData: FormData): Promise<FormResu
   redirect('/')
 }
 
-/** Abmelden per Formular-Button. */
-export async function signOutAction(): Promise<void> {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-  revalidatePath('/', 'layout')
-  redirect('/login?reason=signed-out')
-}
+// Abmelden läuft über die Route POST /auth/abmelden (einfaches HTML-Formular),
+// nicht über einen Server Action — das vermeidet „unexpected response"-Fälle
+// progressiver Formulare.

@@ -1,6 +1,6 @@
 # PROJ-2: Auth & Zugangskontrolle
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 

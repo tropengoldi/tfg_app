@@ -3,7 +3,6 @@ import type { Metadata } from 'next'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { signOutAction } from '@/lib/actions/auth'
 import { requireUser } from '@/lib/auth'
 
 export const metadata: Metadata = { title: 'Profil' }
@@ -39,7 +38,7 @@ export default async function ProfilPage() {
         </CardContent>
       </Card>
 
-      <form action={signOutAction} className="mt-6">
+      <form method="post" action="/auth/abmelden" className="mt-6">
         <Button type="submit" variant="outline" className="w-full">
           Abmelden
         </Button>

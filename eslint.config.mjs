@@ -13,6 +13,8 @@ const eslintConfig = [
       'node_modules/**',
       'next-env.d.ts',
       'supabase/**',
+      'playwright-report/**',
+      'test-results/**',
       // shadcn/ui: unverändert übernommene Komponenten, werden laut Projektregel
       // nicht angefasst und daher auch nicht gelintet.
       'src/components/ui/**',
