@@ -454,23 +454,6 @@ export type Database = {
       }
     }
     Functions: {
-      admin_list_members: {
-        Args: never
-        Returns: {
-          id: string
-          display_name: string
-          role: Database["public"]["Enums"]["app_role"]
-          is_active: boolean
-          email: string
-          has_signed_in: boolean
-        }[]
-      }
-      deactivate_member: { Args: { p_target: string }; Returns: undefined }
-      reactivate_member: { Args: { p_target: string }; Returns: undefined }
-      set_member_admin: {
-        Args: { p_target: string; p_make_admin: boolean }
-        Returns: undefined
-      }
       add_whisky: {
         Args: {
           p_abv?: number
@@ -486,6 +469,17 @@ export type Database = {
           p_video_url?: string
         }
         Returns: string
+      }
+      admin_list_members: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          has_signed_in: boolean
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
       }
       can_rate_whisky: { Args: { p_whisky: string }; Returns: boolean }
       close_event: { Args: { p_event: string }; Returns: undefined }
@@ -504,6 +498,7 @@ export type Database = {
         }
         Returns: string
       }
+      deactivate_member: { Args: { p_target: string }; Returns: undefined }
       event_status_of: {
         Args: { p_event: string }
         Returns: Database["public"]["Enums"]["event_status"]
@@ -520,9 +515,14 @@ export type Database = {
           whisky_position: number
         }[]
       }
+      reactivate_member: { Args: { p_target: string }; Returns: undefined }
       remove_whisky: { Args: { p_whisky: string }; Returns: undefined }
       set_event_participants: {
         Args: { p_event: string; p_profile_ids: string[] }
+        Returns: undefined
+      }
+      set_member_admin: {
+        Args: { p_make_admin: boolean; p_target: string }
         Returns: undefined
       }
       set_whisky_order: {

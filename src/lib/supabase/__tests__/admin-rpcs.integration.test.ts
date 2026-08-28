@@ -97,6 +97,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!RUN || !service) return
+  // Sicherheitsnetz: falls ein Test einen echten Admin stillgelegt hat.
+  await service.from('profiles').update({ is_active: true }).eq('role', 'admin').then(undefined, () => {})
   for (const id of createdEventIds) {
     await service.from('tasting_events').delete().eq('id', id).then(undefined, () => {})
   }
@@ -104,6 +106,14 @@ afterAll(async () => {
     await service.auth.admin.deleteUser(id).then(undefined, () => {})
   }
 })
+
+/** Alle Admins außer der übergebenen id stilllegen; gibt eine Restore-Funktion zurück. */
+async function isolateAsSoleActiveAdmin(keepId: string) {
+  await service.from('profiles').update({ is_active: false }).eq('role', 'admin').neq('id', keepId)
+  return async () => {
+    await service.from('profiles').update({ is_active: true }).eq('role', 'admin')
+  }
+}
 
 describe.skipIf(!RUN)('admin_list_members', () => {
   it('Nicht-Admin wird abgewiesen (TS004)', async () => {
@@ -177,17 +187,25 @@ describe.skipIf(!RUN)('set_member_admin', () => {
     expect(error?.code).toBe('TS014')
   })
 
-  it('Selbst-Degradierung als letzter Admin wird abgelehnt (TS012)', async () => {
-    // Aktuell ist `admin` der einzige aktive Admin.
-    const { error } = await admin.client.rpc('set_member_admin', {
-      p_target: admin.id,
-      p_make_admin: false,
-    })
-    expect(error?.code).toBe('TS012')
-    expect((await profileOf(admin.id)).role).toBe('admin')
+  it('Selbst-Degradierung als letzter aktiver Admin wird abgelehnt (TS012)', async () => {
+    await setRole(admin.id, 'admin')
+    // Der Seed-Admin ist ebenfalls admin+aktiv → für diesen Test kurz stilllegen.
+    const restore = await isolateAsSoleActiveAdmin(admin.id)
+    try {
+      const { error } = await admin.client.rpc('set_member_admin', {
+        p_target: admin.id,
+        p_make_admin: false,
+      })
+      expect(error?.code).toBe('TS012')
+      expect((await profileOf(admin.id)).role).toBe('admin')
+    } finally {
+      await restore()
+    }
   })
 
   it('Admin befördert einen aktiven, angemeldeten Teilnehmer', async () => {
+    await setRole(admin.id, 'admin')
+    await setRole(secondAdminSeed.id, 'teilnehmer')
     const { error } = await admin.client.rpc('set_member_admin', {
       p_target: secondAdminSeed.id,
       p_make_admin: true,
@@ -197,13 +215,19 @@ describe.skipIf(!RUN)('set_member_admin', () => {
   })
 
   it('Selbst-Degradierung gelingt, solange ein weiterer aktiver Admin bleibt', async () => {
-    const { error } = await admin.client.rpc('set_member_admin', {
-      p_target: admin.id,
-      p_make_admin: false,
-    })
-    expect(error).toBeNull()
-    expect((await profileOf(admin.id)).role).toBe('teilnehmer')
-    // Zustand wiederherstellen, damit `admin` weiter für Aufräum-Rechte taugt.
     await setRole(admin.id, 'admin')
+    await setRole(secondAdminSeed.id, 'admin') // zweiter aktiver Admin
+    try {
+      const { error } = await admin.client.rpc('set_member_admin', {
+        p_target: admin.id,
+        p_make_admin: false,
+      })
+      expect(error).toBeNull()
+      expect((await profileOf(admin.id)).role).toBe('teilnehmer')
+    } finally {
+      // Zustand wiederherstellen, damit `admin` die Aufräum-Rechte behält.
+      await setRole(admin.id, 'admin')
+      await setRole(secondAdminSeed.id, 'teilnehmer')
+    }
   })
 })
