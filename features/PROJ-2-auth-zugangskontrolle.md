@@ -462,17 +462,61 @@ dann Weiterleitung; Fehler → `/passwort-setzen?fehler=link`),
 - **Nicht** in dieser Session: der angemeldete Durchstich (Login → Shell →
   Bottom-Nav → Admin-Gating → Abmelden). Das schreibt `/qa` als E2E-Suite.
 
-### Für `/backend` (Härtung + Tests)
-- `verifyOtp`-Typen für Einladung (`invite`) vs. Reset (`recovery`) gegen ein
-  echtes Supabase-Verhalten prüfen; ggf. `type`-Mapping in der Confirm-Route.
-- `requestPasswordResetAction`: 429/`over_email_send_rate_limit`-Erkennung an der
-  echten Fehlerform verifizieren.
-- Deaktivierter Nutzer mit offener Session: `requireUser` → `/auth/abmelden` →
-  `/login?reason=deactivated` real durchspielen.
+## Implementation Notes (Backend)
+
+**Kein neues Schema, keine neuen `/api`-Routen** — PROJ-2 ist Auth-Glue. Der
+`/backend`-Durchlauf war Härtung + Verifikation gegen die echte Supabase-Instanz.
+
+### Änderungen
+
+- **`src/app/auth/confirm/route.ts`** unterstützt jetzt **beide** Link-Formen:
+  `?code=…` → `exchangeCodeForSession` (PKCE — `@supabase/ssr` nutzt per Default
+  `flowType: 'pkce'`, verifiziert im `node_modules`); `?token_hash=…&type=…` →
+  `verifyOtp`. Fehler → `/passwort-setzen?fehler=link`. Damit funktionieren die
+  Supabase-Default-Templates out of the box; für robustere Geräte-Wechsel siehe
+  Betrieb unten.
+- **`src/lib/safe-redirect.test.ts`** — 5 Unit-Tests für den Open-Redirect-Guard
+  (absolute URLs, `//`, `/\`, Steuerzeichen/Header-Injection, Fallback).
+
+### Verifikation gegen die Live-Instanz (Playwright-Smoke, wegwerf)
+
+Angemeldeter Durchstich mit den Seed-Konten (`hermann.hoppen@gmail.com` = admin,
+`test.teilnehmer@example.com` = teilnehmer, PW `tasting-dev-2026`):
+
+| Prüfung | Ergebnis |
+|---|---|
+| unauth `/profil` → `/login?redirect=%2Fprofil` | ✅ |
+| Teilnehmer-Login → `/`, Begrüßung, Bottom-Nav Start/Tastings/Profil | ✅ |
+| Teilnehmer: **kein** Admin-Eintrag in der Nav | ✅ |
+| Teilnehmer öffnet `/admin` → „Seite nicht gefunden" | ✅ |
+| Profil zeigt E-Mail; „Abmelden" → `/login?reason=signed-out` + Hinweis | ✅ |
+| Admin-Login → `/`, Bottom-Nav **mit** Admin-Eintrag | ✅ |
+| Admin öffnet `/admin` → Seite rendert (HTTP 200, `<h1>Admin</h1>`) | ✅ |
+| Angemeldet + `/login` → `/` | ✅ |
+
+`profiles` der Seed-Konten geprüft: Rollen/`is_active` korrekt
+(`admin`/`teilnehmer`, beide aktiv).
+
+### Betrieb / `/deploy`-Checkliste
+
+- **`NEXT_PUBLIC_SITE_URL`** ist in `.env.local` gesetzt; muss zusätzlich in
+  Supabase unter *Auth → URL Configuration → Redirect URLs* stehen (mit
+  `/auth/confirm`). Sonst laufen Einladungs-/Reset-Links ins Leere.
+- **Optionale Härtung:** E-Mail-Templates (Invite + Recovery) im Supabase-
+  Dashboard auf `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=…&next=/passwort-setzen`
+  umstellen. Dann greift der `token_hash`-Pfad der Confirm-Route und die Links
+  funktionieren auch geräteübergreifend (PKCE braucht denselben Browser).
+- **Signup OFF / anon OFF** im Dashboard (schon aus PROJ-1 FINDING-1 offen).
+
+### Offen für `/qa`
 - E2E-Suite `tests/PROJ-2-auth.spec.ts` (Chromium + Mobile Safari), ein `test()`
-  je Akzeptanzkriterium, mit Seed-Admin + Seed-Testkonto.
-- Prüfen, ob `NEXT_PUBLIC_SITE_URL` in Supabase → Redirect URLs eingetragen ist
-  (sonst Einladungs-/Reset-Links tot) — auch `/deploy`-Checkliste.
+  je Akzeptanzkriterium. Hinweis aus dem Smoke-Lauf: **mobiles Viewport** und
+  `page.waitForURL(...)` statt `waitForLoadState('networkidle')` verwenden — mit
+  Desktop-Viewport + networkidle war der Klick auf den fixierten Bottom-Nav-Link
+  flaky (App selbst korrekt).
+- Deaktivierter Nutzer mit offener Session: `requireUser` → `/auth/abmelden` →
+  `/login?reason=deactivated` gegen ein testweise deaktiviertes Konto prüfen.
+- Passwort-Reset-Link end-to-end (echte E-Mail nötig oder Supabase-Inbucket).
 
 ## QA Test Results
 _To be added by /qa_
