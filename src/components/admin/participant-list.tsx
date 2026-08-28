@@ -19,7 +19,10 @@ export function ParticipantList({
         <InviteParticipantDialog />
       </div>
 
-      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+      <ul
+        aria-label="Teilnehmerliste"
+        className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card"
+      >
         {members.map((member) => (
           <ParticipantRow
             key={member.id}

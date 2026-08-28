@@ -1,6 +1,6 @@
 # PROJ-3: Admin – Teilnehmerverwaltung
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -486,7 +486,102 @@ E-Mail-Versand ein funktionierendes SMTP (Standard-Supabase-SMTP hat enge Limits
 → `/deploy`-Checkliste.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-28
+**Tester:** QA Engineer (AI) + Red-Team
+**Setup:** Migration `20260828090000` angewendet, `db:types` neu generiert.
+E2E gegen `next build && next start` (Chromium + Mobile Safari).
+
+### Automatisierte Tests
+
+| Suite | Ergebnis |
+|-------|----------|
+| `npm run build` / `npm run lint` | ✅ |
+| `npm test` (Vitest) | ✅ **24/24** (u. a. `member-status` 4) |
+| `npm run test:rls` | ✅ **50/50** — RLS-Suite (39) + `admin-rpcs.integration` (11): `TS004` für Nicht-Admins, `TS011` Selbst-Deaktivieren, `TS013` Gastgeber eines `draft`-Events, `TS014` „Eingeladen" befördern, `TS012` Selbst-Degradierung als letzter Admin, Happy Paths |
+| `tests/PROJ-3-admin-teilnehmer.spec.ts` (E2E) | ✅ **18 passed / 4 skipped** × Chromium + Mobile Safari (skipped = SMTP-abhängige Einladungs-Happy-Paths, siehe FINDING-2) |
+| Vollständige E2E-Regression (PROJ-2 + PROJ-3) | ✅ 63 passed / 4 skipped / 3 flaky→grün |
+
+### Akzeptanzkriterien
+
+| Gruppe | Status |
+|--------|--------|
+| **Einladen** — schon vorhandene E-Mail → „schon in der Runde"; ungültige E-Mail → Validierung | ✅ E2E |
+| **Einladen** — Happy Path (Konto → „Eingeladen"-Zeile); ohne Name → E-Mail-Präfix; nach erster Anmeldung → „Aktiv" | ⚠️ **nicht E2E-verifiziert** (braucht funktionierendes SMTP; `test.fixme`). Action-Code läuft (Fehlerzweig greift), aber der Erfolgspfad ist ungeprüft — **FINDING-2** |
+| **Einladen** — E-Mail-Zustellung schlägt fehl → Fehlermeldung + Hinweis „Passwort vergessen" | ⚠️ Meldung erscheint, aber das trotzdem angelegte Konto wird nicht angezeigt — **BUG-1** |
+| **Teilnehmerliste** — Zeilen mit Name/E-Mail/Status-Badge/Admin-Kennzeichen; Admin-eigene Zeile ohne „deaktivieren" | ✅ E2E (Sortierung: implementiert, nicht separat E2E-assertiert) |
+| **Teilnehmerliste** — Ladefehler → Fehlerzustand mit „Erneut versuchen" | ✅ manuell verifiziert (Fehler-Boundary rendert, wenn die RPC fehlt) |
+| **Deaktivieren / Reaktivieren** — Happy Path mit Bestätigungsdialog; Gastgeber eines nicht abgeschlossenen Events → abgelehnt; Selbst → abgelehnt; deaktivierter Nutzer wird beim nächsten Seitenaufruf abgemeldet | ✅ E2E (Selbst/Session-Verhalten über RLS-Tests bzw. PROJ-2) |
+| **Admin-Rechte** — befördern (aktiver, angemeldeter Teilnehmer) + degradieren; „Eingeladen"/„Deaktiviert" nicht beförderbar; letzter Admin nicht degradierbar; Selbst-Degradierung nur mit zweitem Admin | ✅ E2E + DB-Tests |
+| **Sicherheit** — Nicht-Admin sieht `/admin/teilnehmer` als „nicht gefunden"; direkte Server-Anfrage eines Nicht-Admins wird abgewiesen; jede Änderung hinter Bestätigungsdialog | ✅ E2E + DB-Tests |
+| **Zustände** — Ladezustand (Skeleton), Fehler-Toast, Erfolgs-Refresh + Bestätigung | ✅ E2E (Dialog-Konsequenztext + Erfolgs-Toast assertiert) |
+
+### Security-Audit (Red-Team)
+
+| Angriff | Abwehr | Ergebnis |
+|---------|--------|----------|
+| Nicht-Admin ruft die Seite / eine Aktion / eine RPC direkt auf | 3-fach: Layout-Guard `requireAdmin` → `notFound()`; Server Action prüft `is_admin()`; RPC prüft `is_admin()` selbst (`TS004`) | ✅ (E2E + DB) |
+| Selbst-Beförderung zum Admin | Teilnehmer kann `set_member_admin` nicht aufrufen (`TS004`); Spalten-GRANT sperrt `role` direkt (PROJ-1) | ✅ |
+| Aussperren aus dem Admin-Bereich | `TS012` bei Selbst-Degradierung als letzter aktiver Admin; `perform … for update` auf Ziel + alle aktiven Admins in id-Reihenfolge → race-sicher, deadlock-frei | ✅ (DB-Test) |
+| Gastgeber eines laufenden Abends stilllegen | `deactivate_member` → `TS013` für `draft`/`active`-Events | ✅ (DB + E2E) |
+| Service-Role-Key erreichbar machen | Nur `inviteMemberAction` benutzt `createAdminClient`, und erst **nach** der Admin-Prüfung; `'use server'`-Modul, nie im Client-Bundle. Status/Rollen-RPCs brauchen den Key gar nicht | ✅ |
+| Injection über Name/E-Mail | Zod (`email`, `max 80`, `trim`); keine dynamische SQL; React-Escaping beim Rendern | ✅ |
+| Endgültiges Löschen von Historie | Kein Hard-Delete — nur `is_active` | ✅ |
+
+### Bugs Found
+
+#### BUG-1: Bei Einladungs-Zustellfehler bleibt das angelegte Konto unsichtbar
+- **Severity:** Medium
+- **Repro:** Supabase-Projekt ohne funktionierendes SMTP (oder E-Mail-Rate-Limit
+  erreicht) → Admin lädt jemanden ein → Dialog zeigt „Die Einladungs-E-Mail konnte
+  nicht verschickt werden…", **keine** neue Zeile, Dialog bleibt offen. Seite manuell
+  neu laden → das Konto ist da als „Eingeladen".
+- **Ursache:** `inviteUserByEmail` legt den Auth-Nutzer i. d. R. auch dann an, wenn
+  der Mailversand fehlschlägt. `inviteMemberAction` gibt in dem Fall nur `{error}`
+  zurück → kein `revalidate`, kein Refresh, kein Hinweis, dass das Konto existiert.
+- **Empfohlener Fix (klein, `/frontend` + `/backend`):** Im Zustellfehler-Zweig prüfen,
+  ob das Konto angelegt wurde (Lookup in `auth.users`), dann `revalidatePath` +
+  Dialog schließen + Warnhinweis „Konto angelegt, aber E-Mail nicht zugestellt — die
+  Person kann sich über „Passwort vergessen" anmelden."
+- **Nicht blockierend:** Das Konto geht nicht verloren, die Person hat den
+  „Passwort vergessen"-Weg, und mit echtem SMTP (`/deploy`-Voraussetzung) tritt der
+  Zweig selten auf.
+
+### Findings (Low)
+
+- **FINDING-1:** Spec-Widerspruch — „Teilnehmerliste"-AC („Admin-Rechte entziehen für
+  die eigene Zeile nicht auslösbar") vs. „Admin-Rechte"-AC („Selbst-Degradierung
+  gelingt, solange ein weiterer aktiver Admin bleibt"). Die Umsetzung folgt der
+  freizügigeren AC: Selbst-Deaktivieren **immer** gesperrt, Selbst-Degradierung mit
+  zweitem Admin erlaubt. Spec sollte angeglichen werden.
+- **FINDING-2:** Einladungs-Happy-Path + „ohne Name → Präfix" nicht E2E-geprüft
+  (SMTP nötig) — als `test.fixme` in der Suite hinterlegt. `email_exists`- und
+  Validierungs-Pfade sind grün.
+- **FINDING-3:** `TS012` im `deactivate_member` ist toter, defensiver Code (der
+  Aufrufer ist immer selbst aktiver Admin und zählt mit). Bleibt drin, dokumentiert.
+
+### Regression
+- Keine PROJ-1/PROJ-2-Quellen inhaltlich geändert außer `errors.ts` (+4 Codes,
+  additiv) und `types.ts` (neu generiert). RLS-Suite 39/39, PROJ-2-E2E grün.
+
+### Betrieb / `/deploy`-Gate
+- **Funktionierendes SMTP** auf dem Supabase-Projekt (Standard-SMTP hat sehr enge
+  Limits) — sonst kann niemand eingeladen werden. **Härteste Voraussetzung dieses
+  Features.**
+- `NEXT_PUBLIC_SITE_URL` in Supabase → *Auth → URL Configuration → Redirect URLs*
+  mit `/auth/confirm` (schon aus PROJ-2 offen).
+- BUG-1 vor dem ersten echten Einladungs-Schwung fixen (empfohlen).
+
+### Summary
+- **Acceptance Criteria:** Kernfunktionen (Liste, deaktivieren/reaktivieren, Rollen,
+  Zugangsschutz) ✅ vollständig E2E + DB getestet. Einladungs-Erfolgspfad nur
+  code-seitig, nicht E2E (SMTP).
+- **Bugs:** 1 Medium (BUG-1). Keine Critical/High.
+- **Findings:** 3 × Low.
+- **Security:** Red-Team bestanden — dreifache Autorisierung, race-sichere
+  Admin-Invariante, minimale Service-Key-Fläche.
+- **Production Ready:** ✅ **JA** (keine Critical/High). Auflagen: SMTP einrichten
+  (`/deploy`), BUG-1 fixen (empfohlen, klein), Spec-Widerspruch FINDING-1 angleichen.
 
 ## Deployment
 _To be added by /deploy_

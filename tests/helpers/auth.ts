@@ -6,6 +6,7 @@ export const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'hermann.hoppen@gmail
 export const TEST_EMAIL = process.env.SEED_TEST_EMAIL ?? 'test.teilnehmer@example.com'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export const hasServiceClient = Boolean(SUPABASE_URL && SERVICE)
@@ -77,6 +78,39 @@ export async function createDisposableUser(
   }
 
   return { id: data.user.id, email }
+}
+
+/** Meldet einen Nutzer einmalig an (setzt last_sign_in_at → Status „Aktiv"). */
+export async function signInOnce(email: string, password = SEED_PASSWORD) {
+  if (!SUPABASE_URL || !ANON) throw new Error('Anon-Umgebung fehlt')
+  const c = createClient(SUPABASE_URL, ANON, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { error } = await c.auth.signInWithPassword({ email, password })
+  if (error) throw error
+}
+
+export async function setRole(userId: string, role: 'admin' | 'teilnehmer') {
+  const { error } = await serviceClient()
+    .from('profiles')
+    .update({ role })
+    .eq('id', userId)
+  if (error) throw error
+}
+
+/** Löscht alle qa-Wegwerf-Nutzer, deren E-Mail mit einem Präfix beginnt. */
+export async function deleteUsersByPrefix(prefix: string) {
+  const svc = serviceClient()
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await svc.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) break
+    for (const u of data.users) {
+      if (u.email?.startsWith(prefix)) {
+        await svc.auth.admin.deleteUser(u.id).catch(() => {})
+      }
+    }
+    if (data.users.length < 200) break
+  }
 }
 
 export async function setActive(userId: string, active: boolean) {
