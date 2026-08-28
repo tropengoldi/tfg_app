@@ -1,6 +1,6 @@
 # PROJ-3: Admin – Teilnehmerverwaltung
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -231,13 +231,165 @@ Verwaltungsoberfläche und die Aktionen dahinter.
 | Rollen-/Status-Änderungen serverseitig mit erhöhten Rechten, nach Admin-Prüfung | `profiles.role` und `is_active` sind für normale Nutzer per Spalten-GRANT gesperrt (PROJ-1). Die Änderung braucht den Service-Zugang; davor wird die Admin-Rolle des Aufrufers geprüft — die einzige Stelle im Code mit dem Service-Role-Schlüssel | 2026-08-27 |
 
 ### Technical Decisions
-_To be added by /architecture_
+
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Status/Rollen-Änderungen laufen über **benannte Datenbank-Aktionen (RPCs)**, die die Admin-Rolle des Aufrufers selbst prüfen — nicht über den Service-Zugang | Eine solche Aktion läuft mit erhöhten Rechten und darf damit `profiles.role` / `is_active` schreiben (für normale Nutzer per Spalten-GRANT gesperrt, PROJ-1). Sie prüft Admin-Rolle + alle Integritätsregeln + schreibt in **einem** Schritt mit Zeilensperre → zwei gleichzeitige Admin-Aktionen können nicht beide „am letzten Admin vorbei". Kleinere Angriffsfläche als „alles über den Service-Schlüssel" | 2026-08-27 |
+| Der **Service-Zugang** (`src/lib/supabase/admin.ts`) wird nur noch für **eine** Sache gebraucht: das Einladen (Anlegen eines Auth-Kontos + Auslösen der Einladungs-E-Mail über die Auth-Admin-API) | Dafür gibt es keine SQL-/RPC-Entsprechung. Alles andere (Liste lesen inkl. E-Mail, deaktivieren, Rolle ändern) geht über RPCs. Damit bleibt der Service-Schlüssel an genau einer, klar benennbaren Stelle | 2026-08-27 |
+| Die **Teilnehmerliste inkl. E-Mail und Anmeldestatus** kommt ebenfalls über eine RPC (Admin-geprüft), nicht über einen Direktzugriff auf die Benutzerverwaltung | Die `profiles`-Tabelle hat bewusst keine E-Mail-Spalte (PROJ-1). Die E-Mail und „hat sich schon mal angemeldet?" stehen in der Benutzerverwaltung von Supabase; eine Admin-geprüfte RPC liest beides und gibt es gebündelt zurück | 2026-08-27 |
+| Der **Status ist abgeleitet, nicht gespeichert**: Deaktiviert = `is_active` falsch; sonst Eingeladen = noch nie angemeldet; sonst Aktiv | Keine zusätzliche Zustandsspalte, die mit der Realität auseinanderlaufen könnte. „Noch nie angemeldet" ergibt sich aus dem letzten Anmeldezeitpunkt in der Benutzerverwaltung | 2026-08-27 |
+| Mutationen als **Server Actions** in `src/lib/actions/admin.ts` (nicht als eigene `/api`-Route) | Konsistent mit PROJ-2; jede Aktion prüft zuerst die Admin-Rolle, ruft dann die passende RPC bzw. (nur beim Einladen) den Service-Zugang. Der Plan sprach von einem „Route Handler" — die Absicht (ein geprüfter serverseitiger Engpass) bleibt, die Form ist eine Server Action | 2026-08-27 |
+| Nach jeder erfolgreichen Aktion wird die Seite serverseitig neu geladen (`revalidate` + Refresh) | Die Liste ist immer frisch, ohne eigene Zwischenspeicher-Logik. Kein Realtime nötig — der Admin ist allein auf der Seite | 2026-08-27 |
+| Einladungslink zeigt auf `…/auth/confirm?next=/passwort-setzen` | Wiederverwendung der PROJ-2-Strecke: verifizieren → Passwort setzen → angemeldet. `NEXT_PUBLIC_SITE_URL` muss (wie schon für PROJ-2) in Supabase als Redirect-URL hinterlegt sein | 2026-08-27 |
+| Der Anzeigename wird beim Einladen als **Benutzer-Metadatum** mitgegeben | Der `handle_new_user`-Trigger aus PROJ-1 liest genau dieses Feld; ist es leer, nimmt er den Teil vor dem @. Kein Sonderpfad nötig | 2026-08-27 |
+| Keine neuen Pakete | `dropdown-menu`, `alert-dialog`, `dialog`, `badge`, `form`, `input` sind installiert | 2026-08-27 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+> **Für PMs in einem Satz:** Eine einzige neue Seite im Admin-Bereich mit einer
+> Teilnehmerliste und fünf Aktionen (einladen, deaktivieren, reaktivieren, zum Admin
+> machen, Admin-Rechte entziehen). Die heiklen Prüfungen — „nicht den letzten Admin",
+> „nicht den Gastgeber eines laufenden Abends", „nicht sich selbst" — passieren in der
+> Datenbank, nicht nur im Bildschirm.
+
+### 1. Seiten- und Komponentenstruktur
+
+```
+(admin)-Bereich  (Zugang: „nur Admins", aus PROJ-2)
+└─ /admin                    Platzhalter → bekommt einen Link „Teilnehmer verwalten"
+   └─ /admin/teilnehmer      NEU — die Teilnehmerverwaltung
+      ├─ Kopfzeile + Button „Teilnehmer einladen"
+      ├─ Einladen-Dialog
+      │   └─ Formular: E-Mail (Pflicht) · Anzeigename (optional)
+      │       → Bestätigen → Aktion „einladen"
+      ├─ Teilnehmerliste  (alphabetisch nach Anzeigename)
+      │   └─ pro Eintrag: Anzeigename · E-Mail · Status-Badge
+      │       (Eingeladen / Aktiv / Deaktiviert) · Admin-Kennzeichen ·
+      │       Aktionsmenü
+      │       └─ je nach Status/Rolle: deaktivieren · reaktivieren ·
+      │           zum Admin machen · Admin-Rechte entziehen
+      │           → jede Aktion zuerst über einen Bestätigungsdialog
+      ├─ Ladezustand:  Platzhalter-Zeilen (Skeleton)
+      ├─ Fehlerzustand: „Liste konnte nicht geladen werden" + „Erneut versuchen"
+      └─ (kein echter Leerzustand — der Admin selbst steht immer drin)
+
+Serverseitige Bausteine
+├─ src/lib/actions/admin.ts   die fünf Aktionen (Server Actions)
+├─ src/lib/schemas/admin.ts   Eingaberegeln für das Einladen-Formular
+└─ neue Datenbank-Aktionen (RPCs) für Liste lesen / deaktivieren /
+   reaktivieren / Admin-Rolle setzen
+```
+
+### 2. Datenmodell (keine neuen Tabellen)
+
+PROJ-3 legt **keine** neue Tabelle an. Es nutzt:
+
+- **`profiles` (PROJ-1):** Anzeigename, Rolle (`admin` / `teilnehmer`), Aktiv-Status
+  (`is_active`).
+- **Benutzerverwaltung von Supabase:** die E-Mail-Adresse und „hat sich schon mal
+  angemeldet?" (letzter Anmeldezeitpunkt).
+- **`tasting_events` (PROJ-1):** wer Gastgeber welches Events ist und in welchem
+  Zustand das Event ist — für die Prüfung beim Deaktivieren.
+
+**Der Status pro Teilnehmer wird berechnet, nicht gespeichert:**
+
+| Bedingung | Status |
+|-----------|--------|
+| `is_active` = falsch | **Deaktiviert** |
+| aktiv, aber noch nie angemeldet | **Eingeladen** |
+| aktiv und schon mindestens einmal angemeldet | **Aktiv** |
+
+Neue Datenbank-Aktionen (RPCs), jeweils mit eingebauter Admin-Prüfung:
+
+| Aktion | Was sie tut | Eingebaute Regeln |
+|--------|-------------|-------------------|
+| **Liste lesen** | gibt alle Profile mit E-Mail und Status gebündelt zurück | nur für Admins |
+| **deaktivieren** | setzt `is_active` = falsch | nicht man selbst; nicht Gastgeber eines Events in Vorbereitung/laufend; wenn Ziel Admin ist: es muss ein weiterer **aktiver** Admin bleiben |
+| **reaktivieren** | setzt `is_active` = wahr | nur für Admins |
+| **Admin-Rolle setzen** | schaltet Rolle zwischen `admin` und `teilnehmer` | befördern nur bei Status „Aktiv"; entziehen nicht, wenn dann kein aktiver Admin übrig bliebe; Selbst-Entzug nur bei vorhandenem zweitem aktiven Admin |
+
+### 3. Wo der Service-Schlüssel (noch) gebraucht wird
+
+Der mächtige Service-Zugang (`src/lib/supabase/admin.ts`, aus PROJ-1) wird in PROJ-3
+an **genau einer** Stelle benutzt: beim **Einladen**. Ein Auth-Konto anlegen und die
+Einladungs-E-Mail auslösen ist die Auth-Admin-API — dafür gibt es keine SQL-Aktion.
+
+Alles andere (Liste lesen inkl. E-Mail, deaktivieren, reaktivieren, Rolle ändern)
+läuft über die Datenbank-Aktionen aus Abschnitt 2. Die dürfen `role` / `is_active`
+schreiben, weil sie mit erhöhten Rechten laufen — aber jede prüft zuerst selbst, ob
+der Aufrufer Admin ist.
+
+**Damit ist der Service-Schlüssel weiterhin an einer einzigen, klar benennbaren
+Stelle** — enger als der ursprüngliche Plan („ein Route Handler für alles").
+
+### 4. Warum die Regeln in der Datenbank sitzen, nicht (nur) im Bildschirm
+
+Die Oberfläche blendet unmögliche Aktionen aus (kein „deaktivieren" in der eigenen
+Zeile usw.) — das ist Komfort, kein Schutz. Ein Admin könnte die Anfrage von Hand
+stellen. Deshalb prüft **jede** Datenbank-Aktion die Regel noch einmal selbst, und
+zwar **im selben Schritt wie die Änderung, mit einer kurzen Sperre auf den
+betroffenen Zeilen**. So können nicht zwei Admins gleichzeitig „dem jeweils anderen
+die Rechte entziehen" und am Ende steht die Runde ohne Admin da.
+
+### 5. Der Weg einer Einladung
+
+1. Admin füllt E-Mail (+ optional Name) aus, bestätigt.
+2. Die Aktion prüft: bin ich Admin? Gibt es die E-Mail schon? → sonst Abbruch mit
+   klarer Meldung.
+3. Über die Auth-Admin-API wird ein Konto angelegt (Name als Metadatum) und die
+   Einladungs-E-Mail verschickt; der Link zeigt auf die PROJ-2-Strecke
+   `…/auth/confirm → /passwort-setzen`.
+4. Der `handle_new_user`-Trigger (PROJ-1) legt automatisch das Profil an
+   (Rolle „Teilnehmer", Name aus dem Metadatum oder E-Mail-Präfix).
+5. In der Liste erscheint die Person mit Status **Eingeladen**.
+6. Sobald sie ihr Passwort gesetzt und sich angemeldet hat, zeigt die Liste beim
+   nächsten Laden **Aktiv**.
+
+Geht die E-Mail nicht raus, ist das Konto trotzdem angelegt: Der Admin bekommt eine
+Fehlermeldung, die Person kann „Passwort vergessen" nutzen.
+
+### 6. Zustände & Rückmeldungen (nach design-system)
+
+- **Laden:** Skeleton-Zeilen in der Form der echten Liste.
+- **Fehler beim Laden:** Hinweis + „Erneut versuchen", nie eine leere Seite.
+- **Aktion läuft:** Button im Ladezustand, kein Doppelklick möglich.
+- **Aktion schlägt fehl:** konkrete deutsche Meldung als kurze Einblendung, Liste
+  unverändert.
+- **Aktion gelingt:** Liste lädt sofort neu, kurze Bestätigung.
+- **Bestätigungsdialog vor jeder Änderung** mit klarer Folge
+  („kann sich nicht mehr anmelden, bisherige Bewertungen bleiben erhalten" /
+  „verliert den Admin-Bereich").
+
+### 7. Neue Pakete
+
+**Keine.** `dropdown-menu` (Aktionsmenü pro Zeile), `alert-dialog` (Bestätigungen),
+`dialog` (Einladen-Formular), `badge` (Status), `form` / `input` sind bereits
+installiert.
+
+### 8. Betriebsvoraussetzung
+
+Wie schon für PROJ-2: `NEXT_PUBLIC_SITE_URL` muss in Supabase unter *Auth → URL
+Configuration → Redirect URLs* stehen (mit `/auth/confirm`) — sonst führt der
+Einladungslink ins Leere. Für den echten Versand der Einladungs-E-Mails braucht das
+Supabase-Projekt einen funktionierenden E-Mail-Versand (Standard-SMTP von Supabase
+reicht für den Anfang, hat aber enge Limits) → `/deploy`-Checkliste.
+
+### 9. Wie der Erfolg geprüft wird
+
+- **Unit-Tests** für die abgeleitete Status-Logik und die Eingaberegeln des
+  Einladen-Formulars.
+- **Datenbank-Tests** für die RPC-Regeln in der Art der PROJ-1-Suite: letzter Admin
+  lässt sich nicht degradieren/deaktivieren; Gastgeber eines laufenden Events lässt
+  sich nicht deaktivieren; Nicht-Admin-Aufruf wird abgewiesen; „Eingeladen" lässt
+  sich nicht befördern.
+- **E2E-Tests** (Chromium + Mobile Safari): einladen → Person erscheint als
+  „Eingeladen"; deaktivieren/reaktivieren; befördern/degradieren; Selbst-Aktionen
+  und Letzter-Admin-Fälle werden geblockt; Nicht-Admin sieht die Seite als „nicht
+  gefunden".
+- `npm run build` / `npm run lint` sauber.
 
 ## QA Test Results
 _To be added by /qa_
