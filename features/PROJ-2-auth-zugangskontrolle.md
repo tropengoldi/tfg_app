@@ -1,6 +1,6 @@
 # PROJ-2: Auth & Zugangskontrolle
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -519,7 +519,101 @@ Angemeldeter Durchstich mit den Seed-Konten (`hermann.hoppen@gmail.com` = admin,
 - Passwort-Reset-Link end-to-end (echte E-Mail nötig oder Supabase-Inbucket).
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-27
+**Tester:** QA Engineer (AI) + Red-Team
+**Setup:** Playwright chromium + webkit installiert. E2E laufen gegen einen
+Produktions-Build (`next build && next start`) — der Dev-Server war unter
+WebKit/Mobile-Safari zu langsam für die Auth-Round-Trips.
+
+### Automatisierte Tests
+
+| Suite | Ergebnis |
+|-------|----------|
+| `npm run build` | ✅ |
+| `npm run lint` | ✅ (Ausschlüsse ergänzt: `test-results/`, `playwright-report/`) |
+| `npm test` (Vitest) | ✅ **20/20** — `errors` (7), `auth-rules` (8), `safe-redirect` (5) |
+| `npm run test:e2e` (`tests/PROJ-2-auth.spec.ts`) | ✅ **48/48** — 24 Tests × Chromium + Mobile Safari (iPhone 13) |
+
+### Akzeptanzkriterien
+
+| Gruppe | Kriterien | Status |
+|--------|-----------|--------|
+| **Anmeldung** | aktives Konto → Startseite; gemerkter Zielpfad; falsche Kombination → allgemeiner Fehler + E-Mail bleibt; bereits angemeldet → Startseite; Passwort ein-/ausblenden; leeres Formular → Validierung | ✅ E2E |
+| **Deaktivierte Konten** | Login abgewiesen + Session beendet + Hinweis; offene Session + nachträgliche Deaktivierung → beim Seitenaufruf raus | ✅ E2E (Wegwerf-Konten via Service-Client) |
+| **Einladung / Passwort setzen** | gültiger Einladungslink → Passwort → angemeldet; gültiger Reset-Link → neues Passwort → Login damit; ungültiger Link → Hinweis + Verweis; < 6 Zeichen abgelehnt; Passwörter müssen übereinstimmen | ✅ E2E (Links via `generateLink`) |
+| **Passwort vergessen** | unbekannte Adresse → gleiche Bestätigung (keine Enumeration) | ✅ E2E |
+| **Passwort vergessen** | Rate-Limit-Hinweis bei zu vielen Anfragen | ⚠️ Code-Review (Handler prüft 429 / `over_email_send_rate_limit`); nicht E2E — schwer reproduzierbar auslösbar |
+| **Abmelden** | „Abmelden" → `/login?reason=signed-out` + Hinweis; danach Zurück-Button auf geschützte Seite → `/login` | ✅ E2E |
+| **Geschützte Bereiche & Rollen** | unauth → `/login` mit `?redirect=`; Teilnehmer `/admin` → „Seite nicht gefunden"; Admin `/admin` → Admin-Seite; `requireHost` | ✅ E2E + `requireHost` per Unit-Test (`auth-rules`) |
+| **App-Shell & Navigation** | Bottom-Nav Start/Tastings/Profil; „Admin" nur für Admins; aktiver Eintrag markiert; fehlende Session beim Seitenwechsel → `/login` | ✅ E2E |
+| **App-Shell & Navigation** | Session-Ablauf mit erfolgreichem Hintergrund-Refresh → bleibt angemeldet | ⚠️ nur die Kehrseite getestet (Cookies gelöscht → `/login`). Der Refresh selbst ist der `@supabase/ssr`-Standardmechanismus aus PROJ-1 |
+| **Grundlage** | `npm run build`/`lint` sauber, Wache aktiv; E2E mit Seed-Admin + Seed-Testkonto | ✅ |
+
+### Security-Audit (Red-Team)
+
+| Angriff | Abwehr | Ergebnis |
+|---------|--------|----------|
+| Unangemeldet auf geschützte Seite | Wache (Redirect) **+** Layout-Guard `requireUser` (`getUser()` verifiziert das JWT, kein `getSession()`) | ✅ |
+| Gefälschtes Session-Cookie | `getUser()` fragt den Auth-Server → null → Redirect | ✅ |
+| Teilnehmer → Admin-Bereich | `requireAdmin` → `notFound()` (kein „Zugriff verweigert" → keine Existenz-Bestätigung); Admin-Nav-Eintrag serverseitig gar nicht gerendert; Rolle nicht selbst änderbar (PROJ-1 Spalten-GRANT) | ✅ E2E |
+| Deaktiviertes Konto behält Zugriff | `requireUser` liest `is_active` bei jeder Anfrage frisch; `signInAction` meldet zusätzlich sofort ab | ✅ E2E |
+| Open Redirect über `?redirect=` | `safeInternalPath` — nur pfad-relative interne Ziele, keine `//`, `/\`, Steuerzeichen (5 Unit-Tests) | ✅ |
+| Nutzer-Enumeration (Login / Passwort vergessen) | identische Meldung unabhängig davon, ob die Adresse existiert | ✅ (Timing-Seitenkanal: siehe FINDING-2) |
+| XSS über Anzeigename / URL-Parameter | React-Escaping; `reason` nur über feste Map; `redirect` nie gerendert; kein `dangerouslySetInnerHTML` | ✅ |
+| Service-Role-Key im Client-Bundle | `admin.ts` in PROJ-2 nirgends importiert; nur der Test-Helfer nutzt einen Service-Client (nicht gebündelt) | ✅ |
+| Login-Brute-Force | eingebautes Supabase-Rate-Limit (App-Throttling bewusst out of scope) | ✅ (akzeptiert) |
+
+### Bugs Found
+
+#### BUG-1: Abmelden über progressives Server-Action-Formular → „unexpected response"
+- **Severity:** Medium → **behoben** (`1e028f0`)
+- **Repro:** `/profil` → „Abmelden" (`<form action={signOutAction}>`). Sporadisch
+  (~1 von 3) Runtime-Error „An unexpected response was received from the server",
+  keine Abmeldung.
+- **Fix:** Abmelden läuft jetzt über ein einfaches `<form method="post"
+  action="/auth/abmelden">` auf den Route-Handler (POST ergänzt). `signOutAction`
+  entfernt. 48/48 E2E danach stabil grün, kein Flake mehr.
+
+### Findings (Low, dokumentiert, kein Handlungsbedarf für PROJ-2)
+
+- **FINDING-1:** `GET`/`POST /auth/abmelden` ohne CSRF-/Origin-Prüfung → Logout-CSRF
+  (ein fremder `<img src=…/auth/abmelden>` meldet den Nutzer ab). Nur Belästigung,
+  kein Datenverlust. Für den geschlossenen Freundeskreis akzeptiert; ggf. bei
+  `/deploy` eine Origin-Prüfung ergänzen.
+- **FINDING-2:** Login-Timing minimal unterschiedlich für existierende vs. nicht
+  existierende E-Mail (echter Passwort-Check + Profil-Query vs. nur Passwort-Check).
+  Inhärent an Supabase, für diesen Nutzerkreis vernachlässigbar.
+- **FINDING-3:** Ein bereits angemeldeter Nutzer kann `/passwort-setzen` aufrufen
+  und sein **eigenes** Passwort ändern (die Wache leitet nur von `/login` und
+  `/passwort-vergessen` weg). Keine Schwachstelle, kleine Abweichung vom
+  Spec-Wortlaut („oder eine andere Auth-Seite").
+- **FINDING-4:** Rate-Limit-Meldung bei „Passwort vergessen" nur per Code-Review
+  abgedeckt, nicht E2E.
+- **FINDING-5:** Der erfolgreiche stille Session-Refresh ist nicht automatisiert
+  geprüft (nur die Kehrseite: Cookies weg → `/login`).
+
+### Regression
+- Keine PROJ-1-Dateien angefasst; kein Schema-Change. `npm test` (20) grün. Die
+  RLS-Suite (`npm run test:rls`) ist DB-gebunden und war nicht Teil dieses Laufs
+  (unverändert seit PROJ-1: 39/39).
+
+### Betrieb / `/deploy`-Gate (nicht blockierend für „Approved")
+- `NEXT_PUBLIC_SITE_URL` in Supabase → *Auth → URL Configuration → Redirect URLs*
+  eintragen (mit `/auth/confirm`), sonst tote Einladungs-/Reset-Links.
+- Optional: E-Mail-Templates auf `{{ .TokenHash }}` umstellen (geräteübergreifende
+  Links; siehe Backend-Notes).
+- Signup OFF / anon OFF im Dashboard (schon aus PROJ-1 FINDING-1 offen).
+
+### Summary
+- **Acceptance Criteria:** alle automatisierbaren ✅ (E2E 48/48); 3 Teilaspekte
+  per Code-Review statt E2E (Rate-Limit-Meldung, stiller Refresh) — dokumentiert.
+- **Bugs:** 1 Medium — **behoben**. Keine Critical/High.
+- **Findings:** 5 × Low, dokumentiert/akzeptiert.
+- **Security:** Red-Team bestanden. Dreischicht-Absicherung greift, keine
+  Rollen-/Redirect-/Enumeration-Lücke.
+- **Production Ready:** ✅ **JA** — keine offenen Critical/High. Die drei
+  Betriebspunkte oben gehören in `/deploy`.
 
 ## Deployment
 _To be added by /deploy_
