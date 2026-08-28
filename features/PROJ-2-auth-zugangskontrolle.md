@@ -1,6 +1,6 @@
 # PROJ-2: Auth & Zugangskontrolle
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -393,6 +393,86 @@ ins Leere.
   erreichbar ist und für den Teilnehmer „nicht gefunden" liefert; Abmelden; Zugriff auf
   eine geschützte Seite ohne Anmeldung landet auf `/login` mit gemerktem Zielpfad.
 - `npm run build` und `npm run lint` sauber; die Wache (Middleware) ist aktiv.
+
+## Implementation Notes (Frontend)
+
+**Stand:** UI komplett gebaut und rendernd. Die serverseitigen Teile (Wache,
+Server Actions, Verifizierungs-/Abmelde-Route, Zugangs-Helfer) sind ebenfalls
+enthalten und funktionsfähig — Auth lässt sich nicht sinnvoll in „nur UI" und
+„nur Server" trennen. `/backend` konzentriert sich auf Härtung + Integrationstests
+(siehe unten).
+
+### Was gebaut wurde
+
+**Design-Grundlage**
+- `src/app/globals.css` — Token-Werte auf das Whisky-Farbschema aus
+  [docs/design-system.md](../docs/design-system.md) umgestellt (dark-first,
+  Bernstein-`--primary`), plus `--gold/--silver/--bronze/--success` und ein
+  16-px-Minimum für Eingabefelder (iOS-Zoom-Schutz).
+- `tailwind.config.ts` — `font-sans`/`font-display` (Inter / Fraunces via
+  `next/font`) und die semantischen Farben registriert.
+- `src/app/layout.tsx` — Fonts, `lang="de"`, `ThemeProvider` (fest dark),
+  `<Toaster>` (sonner) zentral. `src/components/theme-provider.tsx`.
+
+**Wache** — `src/proxy.ts` (Next 16 hat `middleware` → `proxy` umbenannt).
+Nutzt `updateSession` aus PROJ-1. Unangemeldete → `/login?redirect=<pfad>`;
+Angemeldete weg von `/login` und `/passwort-vergessen`. Keine Rollenprüfung.
+`matcher` schließt Assets aus.
+
+**Zugangs-Helfer**
+- `src/lib/auth-rules.ts` — reine Prädikate `isActiveMember` / `isAdmin` /
+  `isEventHost` / `canAccessHostArea` (kein Next-Import → isoliert testbar).
+- `src/lib/auth.ts` — `getSessionContext` / `requireUser` (prüft `is_active`,
+  bei deaktiviert → `/auth/abmelden?reason=deactivated`) / `requireAdmin`
+  (→ `notFound()`) / `requireHost(eventId)` (→ `notFound()`; Route erst PROJ-6).
+- `src/lib/auth-rules.test.ts` — 8 Unit-Tests, decken u. a. die
+  `requireHost`-Entscheidungslogik (Gastgeber vs. fremd vs. Admin vs.
+  deaktivierter Admin) ab.
+
+**Server Actions** — `src/lib/actions/auth.ts`: `signInAction` (inkl.
+`is_active`-Prüfung + `signOut` bei deaktiviert), `requestPasswordResetAction`
+(immer gleiche Antwort außer bei 429), `updatePasswordAction`, `signOutAction`.
+`src/lib/safe-redirect.ts` — `safeInternalPath` (nur pfad-relative Ziele,
+Open-Redirect-Schutz), genutzt von Wache, Actions und Confirm-Route.
+
+**Routen** — `src/app/auth/confirm/route.ts` (Token → Session via `verifyOtp`,
+dann Weiterleitung; Fehler → `/passwort-setzen?fehler=link`),
+`src/app/auth/abmelden/route.ts` (`signOut` → `/login?reason=…`).
+
+**Seiten & Shell**
+- `(auth)/` — `layout.tsx` (zentrierte Karte), `/login` (liest `reason` +
+  `redirect`), `/passwort-vergessen`, `/passwort-setzen` (zeigt „Link ungültig",
+  wenn keine Session).
+- `(app)/` — `layout.tsx` (`requireUser` + `AppShell`), `/` (Start-Platzhalter,
+  Begrüßung), `/tastings`, `/profil` (Name + E-Mail + „Abmelden"-Formular).
+- `(admin)/` — `layout.tsx` (`requireAdmin` + `AppShell`), `/admin`-Platzhalter.
+- `src/app/not-found.tsx` — deutsche 404.
+- Komponenten: `src/components/auth/{auth-card,password-input,login-form,
+  forgot-password-form,set-password-form}.tsx`,
+  `src/components/layout/{app-shell,bottom-nav,page-header}.tsx`.
+- Formulare: `react-hook-form` + `zodResolver` gegen `src/lib/schemas/auth.ts`,
+  Fehler als `Alert` + `toast`. Passwort-Feld mit Auge-Umschalter.
+- `src/app/page.tsx` (Starter-Kit-Landing) gelöscht — kollidierte mit `(app)/page.tsx`.
+
+### Verifikation in dieser Session
+- `npm run build` ✅  ·  `npm run lint` ✅  ·  `npm test` ✅ (15: 7 errors + 8 auth-rules)
+- Dev-Server-Smoke-Test: `/login`, `/passwort-vergessen`, `/passwort-setzen`
+  rendern (200); `/` und `/admin` ohne Anmeldung → `307 → /login?redirect=%2F…`;
+  keine Runtime-Fehler im Log.
+- **Nicht** in dieser Session: der angemeldete Durchstich (Login → Shell →
+  Bottom-Nav → Admin-Gating → Abmelden). Das schreibt `/qa` als E2E-Suite.
+
+### Für `/backend` (Härtung + Tests)
+- `verifyOtp`-Typen für Einladung (`invite`) vs. Reset (`recovery`) gegen ein
+  echtes Supabase-Verhalten prüfen; ggf. `type`-Mapping in der Confirm-Route.
+- `requestPasswordResetAction`: 429/`over_email_send_rate_limit`-Erkennung an der
+  echten Fehlerform verifizieren.
+- Deaktivierter Nutzer mit offener Session: `requireUser` → `/auth/abmelden` →
+  `/login?reason=deactivated` real durchspielen.
+- E2E-Suite `tests/PROJ-2-auth.spec.ts` (Chromium + Mobile Safari), ein `test()`
+  je Akzeptanzkriterium, mit Seed-Admin + Seed-Testkonto.
+- Prüfen, ob `NEXT_PUBLIC_SITE_URL` in Supabase → Redirect URLs eingetragen ist
+  (sonst Einladungs-/Reset-Links tot) — auch `/deploy`-Checkliste.
 
 ## QA Test Results
 _To be added by /qa_
