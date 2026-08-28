@@ -17,7 +17,7 @@
 |----|---------|--------|------|---------|
 | PROJ-1 | Supabase-Infrastruktur | Approved | [PROJ-1-supabase-infrastruktur.md](PROJ-1-supabase-infrastruktur.md) | 2026-08-27 |
 | PROJ-2 | Auth & Zugangskontrolle | Approved | [PROJ-2-auth-zugangskontrolle.md](PROJ-2-auth-zugangskontrolle.md) | 2026-08-27 |
-| PROJ-3 | Admin – Teilnehmerverwaltung | Architected | [PROJ-3-admin-teilnehmerverwaltung.md](PROJ-3-admin-teilnehmerverwaltung.md) | 2026-08-27 |
+| PROJ-3 | Admin – Teilnehmerverwaltung | In Progress | [PROJ-3-admin-teilnehmerverwaltung.md](PROJ-3-admin-teilnehmerverwaltung.md) | 2026-08-27 |
 | PROJ-4 | Admin – Tasting-Events verwalten | Roadmap | – | 2026-08-27 |
 | PROJ-5 | Whisky-Erfassung (blind) | Roadmap | – | 2026-08-27 |
 | PROJ-6 | Gastgeber-Steuerung & Ablauf | Roadmap | – | 2026-08-27 |

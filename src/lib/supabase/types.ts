@@ -454,6 +454,23 @@ export type Database = {
       }
     }
     Functions: {
+      admin_list_members: {
+        Args: never
+        Returns: {
+          id: string
+          display_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          is_active: boolean
+          email: string
+          has_signed_in: boolean
+        }[]
+      }
+      deactivate_member: { Args: { p_target: string }; Returns: undefined }
+      reactivate_member: { Args: { p_target: string }; Returns: undefined }
+      set_member_admin: {
+        Args: { p_target: string; p_make_admin: boolean }
+        Returns: undefined
+      }
       add_whisky: {
         Args: {
           p_abv?: number

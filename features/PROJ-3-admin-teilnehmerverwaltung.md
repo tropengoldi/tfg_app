@@ -1,6 +1,6 @@
 # PROJ-3: Admin – Teilnehmerverwaltung
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -390,6 +390,64 @@ reicht für den Anfang, hat aber enge Limits) → `/deploy`-Checkliste.
   und Letzter-Admin-Fälle werden geblockt; Nicht-Admin sieht die Seite als „nicht
   gefunden".
 - `npm run build` / `npm run lint` sauber.
+
+## Implementation Notes (Frontend)
+
+**Stand:** Seite, Komponenten, Server Actions und die RPC-Migration sind
+geschrieben. Die Migration ist **noch nicht auf der DB angewendet** (kein
+DB-Zugang in dieser Session) — bis dahin zeigt `/admin/teilnehmer` sauber den
+Fehlerzustand. `/backend` = Migration anwenden + DB-Regeltests.
+
+### Was gebaut wurde
+
+**Datenbank (neu, unangewendet)** — `supabase/migrations/20260828090000_admin_member_rpcs.sql`:
+`admin_list_members()` (Profil + E-Mail + „schon angemeldet?"), `deactivate_member`,
+`reactivate_member`, `set_member_admin` — alle `SECURITY DEFINER`, prüfen `is_admin()`
+selbst, erzwingen die Regeln mit `FOR UPDATE`-Sperre. Neue SQLSTATEs `TS011`–`TS014`
+in `src/lib/errors.ts`. `src/lib/supabase/types.ts` von Hand um die vier RPCs
+ergänzt (wird beim nächsten `npm run db:types` überschrieben).
+
+**Serverseitig**
+- `src/lib/queries/admin.ts` — `getMembers()` (RPC, wirft bei Fehler).
+- `src/lib/actions/admin.ts` — `inviteMemberAction` (einzige Stelle mit
+  `createAdminClient` → `inviteUserByEmail`, Name als Metadatum, Fehler:
+  `email_exists` → „schon in der Runde", 429, Zustellfehler), `deactivate` /
+  `reactivate` / `setMemberAdmin` (jeweils Admin-Check → RPC → `messageForDbError`).
+- `src/lib/schemas/admin.ts` — Zod fürs Einladen-Formular.
+- `src/lib/member-status.ts` (+ Test) — abgeleiteter Status
+  Deaktiviert/Eingeladen/Aktiv.
+
+**Seiten & Komponenten**
+- `(admin)/admin/teilnehmer/` — `page.tsx` (`requireAdmin` + `getMembers`),
+  `loading.tsx` (Skeleton-Zeilen), `error.tsx` (Client-Boundary mit „Erneut
+  versuchen").
+- `src/components/admin/` — `participant-list` (Container, zählt aktive Admins),
+  `participant-row` (Avatar-Initial, Name, E-Mail, Status-Badge, Admin-Badge,
+  Aktionsmenü + state-gesteuerte Bestätigungsdialoge — nicht in den DropdownMenu
+  geschachtelt, um Radix-Unmount-Probleme zu vermeiden), `invite-participant-dialog`
+  (Dialog + RHF/Zod), `member-status-badge`, `confirm-action` (`ConfirmDialog`,
+  per State gesteuert).
+- `(admin)/admin/page.tsx` — Platzhalter bekam einen Link „Teilnehmer verwalten".
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (24: +4 `member-status`)
+- Dev-Smoke: Teilnehmer → `/admin/teilnehmer` = „Seite nicht gefunden";
+  Admin → `/admin` → Link → `/admin/teilnehmer` rendert; ohne angewendete Migration
+  greift der Fehlerzustand („Die Teilnehmerliste konnte nicht geladen werden" +
+  „Erneut versuchen").
+- **Nicht** getestet (braucht die Migration): einladen / deaktivieren / Rollen,
+  Liste mit echten Daten → `/backend` + `/qa`.
+
+### Für `/backend`
+- Migration `20260828090000` anwenden (`npm run db:push`), danach `npm run db:types`
+  (die handgepflegten RPC-Typen durch die generierten ersetzen und committen).
+- DB-Regeltests in der Art der PROJ-1-Suite: Nicht-Admin-Aufruf → `TS004`;
+  letzter aktiver Admin lässt sich nicht deaktivieren/degradieren → `TS012`;
+  Gastgeber eines `draft`/`active`-Events → `TS013`; „Eingeladen" befördern → `TS014`;
+  Selbst-Deaktivieren → `TS011`.
+- `inviteUserByEmail`-Fehlerformen (`email_exists`, 429) gegen echtes Supabase prüfen.
+- E-Mail-Versand: `NEXT_PUBLIC_SITE_URL` in Supabase Redirect URLs (mit
+  `/auth/confirm`); Standard-SMTP-Limits beachten → `/deploy`.
 
 ## QA Test Results
 _To be added by /qa_

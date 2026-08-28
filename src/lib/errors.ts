@@ -25,6 +25,10 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   TS008: 'Die Ausschankreihenfolge ist unvollständig oder hat Lücken.',
   TS009: 'Ein Teilnehmer mit eingetragenen Whiskies oder Bewertungen kann nicht entfernt werden.',
   TS010: 'Diese Aktion passt nicht zum aktuellen Zustand des Tastings.',
+  TS011: 'Diese Aktion kannst du nicht auf dich selbst anwenden.',
+  TS012: 'Es muss mindestens ein aktiver Admin übrig bleiben.',
+  TS013: 'Diese Person ist Gastgeber eines noch nicht abgeschlossenen Tastings.',
+  TS014: 'Nur aktive Teilnehmer können zum Admin gemacht werden.',
 
   // --- Standard-PostgreSQL-Codes -----------------------------------------
   '23505': 'Dieser Eintrag existiert bereits.',
