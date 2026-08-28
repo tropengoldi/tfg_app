@@ -1,6 +1,6 @@
 # PROJ-2: Auth & Zugangskontrolle
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-08-27
 **Last Updated:** 2026-08-27
 
@@ -239,13 +239,160 @@ wegschickt, und Rollen-Prüfungen in den Layouts der geschützten Bereiche.
 | Kein Signup-UI; die Signup-Deaktivierung bleibt eine Dashboard-Einstellung | PRD: geschlossener Kreis, der Admin lädt ein. Der Dashboard-Schalter ist bereits als `/deploy`-Aufgabe erfasst (PROJ-1, FINDING-1) | 2026-08-27 |
 
 ### Technical Decisions
-_To be added by /architecture_
+
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Drei Route-Gruppen `(auth)` / `(app)` / `(admin)`, je mit eigenem Layout und eigener Zugangsregel | Die Prüfung „wer darf hier rein" steht damit an genau einer Stelle pro Bereich statt in jeder einzelnen Seite. Neue Seiten in einem Bereich erben die Regel automatisch | 2026-08-27 |
+| Die Middleware macht nur Session-Auffrischung + billiges Redirect für Unangemeldete — **keine** Rollenprüfung | Ein Rollen-Lookup ist ein Datenbank-Treffer. Ihn in jede Anfrage zu legen (auch für Bilder und Assets) wäre teuer. Die Rollenprüfung sitzt im Layout, das nur bei echten Seitenaufrufen läuft | 2026-08-27 |
+| Fehlende Rolle → „Seite nicht gefunden" statt „Zugriff verweigert" | „Zugriff verweigert" bestätigt, dass es den Bereich gibt. „Nicht gefunden" verrät nichts über die Existenz von `/admin` | 2026-08-27 |
+| Immer die verifizierende Nutzerabfrage (`getUser`), nie das bloße Auslesen des Session-Cookies (`getSession`) | Nur die verifizierende Variante fragt den Auth-Server und erkennt ein manipuliertes oder abgelaufenes Cookie. Das Cookie allein lässt sich fälschen | 2026-08-27 |
+| Die Middleware gibt exakt das Antwortobjekt zurück, auf das der Supabase-Client seine aufgefrischten Cookies geschrieben hat | Ein neu erzeugtes Antwortobjekt würde die gerade erneuerte Session verlieren → der Nutzer fliegt nach ~1 h grundlos raus. Der PROJ-1-Helfer `updateSession` ist bereits so gebaut | 2026-08-27 |
+| `requireUser()` prüft zusätzlich `is_active` (und behandelt „kein Profil" wie deaktiviert) | Deaktivierte Konten dürfen keinen Zugriff behalten; konsistent mit PROJ-1, wo `is_admin()` schon `is_active` verlangt | 2026-08-27 |
+| Anmelden / Passwort setzen / Abmelden als **Server Actions**, nicht als eigene API-Routen | Serverseitige Aktion mit dem nutzergebundenen Supabase-Client, kein Service-Role-Key — konsistent mit der Hausregel aus PROJ-1. Einzige Ausnahme: der Link aus der E-Mail ruft eine URL auf, das ist zwangsläufig eine Route | 2026-08-27 |
+| Einladungs-/Reset-Link → unsichtbare Verifizierungs-Route → dann `/passwort-setzen` | Der Link enthält einen Einmal-Token. Eine kleine Route tauscht ihn gegen eine Session und leitet dann auf die Passwort-Seite weiter. So braucht die Passwort-Seite selbst keine Token-Logik | 2026-08-27 |
+| `?redirect=`-Parameter nur für **pfad-relative, interne** Ziele | Rückkehr zum gewünschten Pfad nach erneutem Login — aber ein absoluter oder fremder Link im Parameter wird verworfen (Schutz gegen Weiterleitung auf fremde Seiten) | 2026-08-27 |
+| `requireHost(eventId)` als Funktion mit Unit-Tests, ohne eigene Route in PROJ-2 | Die Route `/gastgeber/[eventId]` braucht echte Events mit Gastgeber (ab PROJ-4). Die reine Prüf-Logik ist jetzt schon testbar; die Route folgt in PROJ-6 | 2026-08-27 |
+| Bottom-Navigation als eigene kleine Komponente (Links + Icons), Admin-Eintrag serverseitig bedingt gerendert | shadcn/ui bringt keine fertige mobile Tab-Leiste. Der Admin-Eintrag wird nur erzeugt, wenn die Rolle stimmt — nicht bloß per CSS versteckt | 2026-08-27 |
+| Ein Zod-Schema je Formular in `src/lib/schemas/`, geteilt von Browser-Validierung und Server Action | Eine Wahrheit für die Eingaberegeln; das Frontend kann nicht „lockerer" prüfen als der Server | 2026-08-27 |
+| Keine neuen Pakete | `@supabase/ssr`, `zod`, `react-hook-form`, `@hookform/resolvers`, `lucide-react` (Icons) und `sonner` (Toasts) sind bereits im Projekt | 2026-08-27 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+> **Für PMs in einem Satz:** PROJ-2 baut die Tür und den Flur — die Login-Seiten, die
+> unsichtbare Wache, die bei jeder Anfrage prüft „bist du angemeldet?", und die
+> App-Hülle mit der unteren Navigationsleiste. Die Räume dahinter sind vorerst leere
+> Platzhalter; sie werden in späteren Features eingerichtet.
+
+### 1. Seiten- und Bereichsstruktur
+
+```
+Unsichtbare Wache (läuft vor JEDER Anfrage)
+└─ frischt die Anmelde-Session auf; schickt Unangemeldete auf /login und merkt
+   sich den ursprünglich gewünschten Pfad. Prüft KEINE Rollen (zu teuer pro Anfrage).
+
+Öffentlicher Bereich  (ohne Anmeldung erreichbar)
+├─ /login                 E-Mail + Passwort, Auge-Symbol zum Passwort-Einblenden,
+│                         Link „Passwort vergessen?" — KEIN „Registrieren"
+├─ /passwort-vergessen    E-Mail eintragen → Reset-Link anfordern
+│                         (Antwort immer gleich, egal ob die Adresse bekannt ist)
+├─ /passwort-setzen       landet hier per Einladungs- ODER Reset-Link;
+│                         neues Passwort + Wiederholung → danach angemeldet
+├─ (Verifizierungs-Route) unsichtbar: tauscht den Link-Token gegen eine Session
+└─ (Abmelde-Route)        unsichtbar: beendet die Session → /login
+
+Angemeldeter Bereich  (gemeinsames Layout mit Zugangsregel „angemeldet + aktiv")
+├─ App-Hülle
+│  ├─ Kopfzeile (Seitentitel)
+│  └─ Untere Navigationsleiste: Start · Tastings · Profil
+│        └─ zusätzlicher Eintrag „Admin" — nur wenn die Rolle admin ist
+├─ /              Start    — Platzhalter „Willkommen, {Name}"   → echter Inhalt: PROJ-8
+├─ /tastings      Tastings — Platzhalter                         → PROJ-9
+└─ /profil        Profil   — Platzhalter mit „Abmelden"          → PROJ-10
+
+Admin-Bereich  (eigenes Layout mit zusätzlicher Regel „Rolle = admin", sonst
+               „Seite nicht gefunden")
+└─ /admin         Admin-Start — Platzhalter                      → PROJ-3 / PROJ-4
+
+Wiederverwendbare Bausteine
+├─ Zugangs-Helfer:  „nur Angemeldete" / „nur Admins" / „nur der Gastgeber dieses Events"
+│                   (der letzte als Funktion + Test, seine Seite kommt in PROJ-6)
+├─ App-Hülle, untere Navigation, Kopfzeile
+└─ ein Eingaberegel-Satz (Zod-Schema) je Formular, geteilt von Browser und Server
+```
+
+### 2. Welche Daten PROJ-2 nutzt (keine neuen Tabellen)
+
+PROJ-2 legt **kein** neues Datenmodell an. Es liest:
+
+- **aus der Anmeldeverwaltung von Supabase:** die E-Mail und die Session des Nutzers
+  (Passwörter verwaltet Supabase, die App sieht sie nie);
+- **aus der `profiles`-Tabelle (PROJ-1):** Anzeigename, Rolle (`admin` oder
+  `teilnehmer`) und den Aktiv-Status (`is_active`).
+
+Geschrieben wird nur, was die Anmeldeverwaltung selbst tut, wenn jemand auf
+`/passwort-setzen` ein Passwort vergibt.
+
+### 3. Die drei Sicherheitsschichten (Wiederholung aus dem Plan, hier eingeordnet)
+
+| Schicht | Wo | Aufgabe | Was sie NICHT tut |
+|---------|-----|---------|-------------------|
+| **1 · Wache** | läuft vor jeder Anfrage | Session auffrischen; Unangemeldete auf `/login` schicken, Zielpfad merken | keine Rollenprüfung (zu teuer pro Anfrage) |
+| **2 · Bereichs-Layout** | einmal je Bereich (`app`, `admin`) | „angemeldet + aktiv?" bzw. „Rolle = admin?"; sonst abmelden bzw. „nicht gefunden" | keine zeilengenaue Datenprüfung |
+| **3 · RLS** | Datenbank (PROJ-1) | welche Zeilen der Nutzer sehen/ändern darf | nichts über Seiten/Navigation |
+
+Kein doppeltes Umleiten: Schicht 1 kümmert sich nur um „angemeldet ja/nein", Schicht 2
+nur um Rollen. Ein Nicht-Admin, der `/admin` eintippt, ist angemeldet — also winkt
+Schicht 1 durch, und Schicht 2 antwortet „Seite nicht gefunden".
+
+### 4. Der Weg eines eingeladenen Teilnehmers
+
+1. Admin löst die Einladung aus (PROJ-3) → Supabase schickt eine E-Mail mit einem Link.
+2. Der Link zeigt auf die App (Adresse aus `NEXT_PUBLIC_SITE_URL`) und trägt einen
+   Einmal-Token.
+3. Eine **unsichtbare Verifizierungs-Route** prüft den Token und startet eine Session.
+4. Weiterleitung auf `/passwort-setzen`: neues Passwort + Wiederholung.
+5. Danach ist die Person angemeldet und landet auf der Startseite.
+
+Der Passwort-Zurücksetzen-Weg ist derselbe — nur der Anlass des Links unterscheidet
+sich. Deshalb genügt **eine** Seite `/passwort-setzen`.
+
+Ist der Link abgelaufen oder schon benutzt, zeigt die Seite „Der Link ist ungültig oder
+abgelaufen" mit Verweis auf „Passwort vergessen".
+
+### 5. Deaktivierte Konten
+
+Der Zugangs-Helfer „nur Angemeldete" prüft **zusätzlich** den Aktiv-Status. Eine
+deaktivierte Person kann sich zwar bei Supabase noch authentifizieren, wird aber sofort
+wieder abgemeldet und sieht auf `/login`: „Dein Zugang wurde deaktiviert. Wende dich an
+den Admin." Derselbe Mechanismus greift, wenn eine noch offene Session einer inzwischen
+deaktivierten Person eine geschützte Seite öffnet.
+
+### 6. Untere Navigationsleiste
+
+- Feste Einträge für alle: **Start · Tastings · Profil**.
+- **Admin** erscheint nur, wenn die Rolle stimmt — und wird serverseitig gar nicht erst
+  erzeugt, nicht bloß per Gestaltung versteckt.
+- Kein „Gastgeber"-Eintrag: Gastgeber ist man pro Event, das erreicht man vom Dashboard.
+- Berücksichtigt den unteren Sicherheitsrand des Geräts (Home-Indikator), Touch-Ziele
+  mindestens 44 px, aktiver Eintrag hervorgehoben.
+
+Aussehen und Farben kommen aus [docs/design-system.md](../docs/design-system.md)
+(dark-first, Bernstein-Akzent) — Sache von `/frontend`.
+
+### 7. Wo geschrieben wird
+
+| Aktion | Mechanismus | Warum |
+|--------|-------------|-------|
+| Anmelden | Server Action, nutzergebundener Client | kein Service-Role-Key, Hausregel PROJ-1 |
+| Passwort setzen (Einladung/Reset) | Server Action | dito |
+| Abmelden | Server Action / kleine Route | dito |
+| Link-Token verifizieren | unsichtbare Route | der Link ruft zwangsläufig eine URL auf |
+
+### 8. Neue Pakete
+
+**Keine.** `@supabase/ssr`, `zod`, `react-hook-form`, `@hookform/resolvers`,
+`lucide-react` (Icons) und `sonner` (kurze Hinweis-Einblendungen) sind bereits im
+Projekt. `sonner` wird einmal zentral eingebunden, damit Meldungen wie „Du wurdest
+abgemeldet" überall erscheinen können.
+
+### 9. Betriebsvoraussetzung (gehört in die Abnahme / `/deploy`)
+
+`NEXT_PUBLIC_SITE_URL` muss lokal in `.env.local` **und** in Supabase unter *Auth → URL
+Configuration → Redirect URLs* stehen — sonst laufen die Einladungs- und Reset-Links
+ins Leere.
+
+### 10. Wie der Erfolg geprüft wird
+
+- **Unit-Tests** für die Zugangs-Helfer (angemeldet? aktiv? Admin? Gastgeber dieses
+  Events?) — inklusive `requireHost`, obwohl dessen Seite erst in PROJ-6 entsteht.
+- **E2E-Tests** (Chromium + Mobile Safari): Anmeldung mit Seed-Admin und Seed-Testkonto,
+  Durchklicken der Platzhalterseiten, Nachweis dass `/admin` nur für den Admin
+  erreichbar ist und für den Teilnehmer „nicht gefunden" liefert; Abmelden; Zugriff auf
+  eine geschützte Seite ohne Anmeldung landet auf `/login` mit gemerktem Zielpfad.
+- `npm run build` und `npm run lint` sauber; die Wache (Middleware) ist aktiv.
 
 ## QA Test Results
 _To be added by /qa_
