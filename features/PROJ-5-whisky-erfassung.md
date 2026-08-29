@@ -498,6 +498,55 @@ Hinweistext + `canAdd`. Unit-Tests `whisky-quota.test.ts` (8).
   Entfernen im Browser, das Kontingent-Verhalten am echten Event, die
   „Eintragen geschlossen"-Ansicht, Blindheit gegenüber anderen Teilnehmern.
 
+## Implementation Notes (Backend)
+
+**Kein neues Schema, keine `/api`-Routen, keine RLS-Änderung.** Der komplette
+Schreibpfad steht aus PROJ-1; die Server Actions (`src/lib/actions/whiskies.ts`)
+entstanden im Frontend-Durchlauf. Backend = nur der neue Fehlercode.
+
+### Was geändert wurde
+
+**Migration `20260829120000_whisky_cap_error_code.sql`** — `create or replace`
+für `public.add_whisky`, byte-genau die Fassung aus
+`20260827120700_error_codes_ts_prefix.sql`, **nur** der `v_next_pos > 10`-Zweig
+wirft jetzt `TS016` statt `TS008` und mit klarer Meldung („Für diesen Abend sind
+bereits 10 Whiskys eingetragen — mehr sind nicht vorgesehen."). `create or
+replace` erhält die bestehenden EXECUTE-Grants; die Funktionssignatur ist
+unverändert.
+
+**`src/lib/errors.ts`** — `TS016` in `DB_ERROR_MESSAGES` ergänzt. Unit-Test in
+`errors.test.ts`.
+
+### Warum kein RPC fürs Bearbeiten
+`update_whisky` gibt es bewusst nicht: PROJ-1 hat mit `wd_update_own` (RLS) +
+Spalten-GRANT bereits eine spaltengenaue Schreibregel für `whisky_details` —
+nur der Bringer, nur die Sachfelder, nur im Status `draft`. `updateWhiskyAction`
+schreibt direkt und wertet „0 betroffene Zeilen" als „nicht erlaubt / nicht mehr
+Draft" aus.
+
+### Tests
+`src/lib/supabase/__tests__/whisky-entry-rpcs.integration.test.ts` (über
+`npm run test:rls`), 11 Fälle:
+- **add_whisky** — Nicht-Teilnehmer → `TS004`; nach Start → `TS005`; Limit 1 →
+  2. eigener Whisky `TS003`; Gastgeber darf bei Limit 1 zwei, der 3. → `TS003`;
+  **10 Whiskys im Abend, der 11. → `TS016`**.
+- **whisky_details bearbeiten** — Bringer ändert im Draft (1 Zeile, Name neu);
+  anderer Teilnehmer → 0 Zeilen, Name unverändert; nach Start → 0 Zeilen.
+- **remove_whisky** — Fremder → `TS004`; Bringer entfernt, Positionslücke
+  schliesst (Whisky 2 rückt auf Position 1); nach Start → `TS005`.
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (41) · `tsc` ✅ (über den Build)
+- `npm run test:rls` — **nicht ausgeführt** (kein DB-Zugang). Muss der Nutzer nach
+  `db:push` laufen lassen.
+
+### Anwenden (durch den Nutzer, vor `/qa`)
+```
+npm run db:push        # Migration 20260829120000
+npm run db:types       # add_whisky-Signatur unverändert → i. d. R. kein Diff; trotzdem prüfen/committen
+npm run test:rls       # bisher 57 + 11 neue (whisky-entry-rpcs) = 68
+```
+
 ## QA Test Results
 _To be added by /qa_
 

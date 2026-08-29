@@ -12,6 +12,10 @@ describe('messageForDbError', () => {
     expect(messageForDbError({ code: 'TS003' })).toBe(DB_ERROR_MESSAGES.TS003)
   })
 
+  it('kennt TS016 (Whisky-Obergrenze des Abends)', () => {
+    expect(messageForDbError({ code: 'TS016' })).toMatch(/10 Whiskys/)
+  })
+
   it('mappt Standard-Postgres-Codes', () => {
     expect(messageForDbError({ code: '42501' })).toBe(DB_ERROR_MESSAGES['42501'])
     expect(messageForDbError({ code: '23505' })).toBe(DB_ERROR_MESSAGES['23505'])

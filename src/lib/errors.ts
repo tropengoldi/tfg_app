@@ -30,6 +30,7 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   TS013: 'Diese Person ist Gastgeber eines noch nicht abgeschlossenen Tastings.',
   TS014: 'Nur aktive Teilnehmer können zum Admin gemacht werden.',
   TS015: 'An diesem Tasting hängen bereits Whiskies.',
+  TS016: 'Für diesen Abend sind bereits 10 Whiskys eingetragen — mehr sind nicht vorgesehen.',
 
   // --- Standard-PostgreSQL-Codes -----------------------------------------
   '23505': 'Dieser Eintrag existiert bereits.',
