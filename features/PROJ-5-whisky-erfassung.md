@@ -231,6 +231,12 @@ für alle ist PROJ-9.
 - [ ] Sollen die ausgeblendeten Zusatzfelder (v. a. **Preis**, für die spätere
       Abrechnung in der Runde) in einem eigenen späteren Durchgang nachgezogen
       werden? *(offen — nach dem ersten echten Einsatz entscheiden.)*
+- [ ] Wohin wandert der gemeinsam genutzte `ConfirmDialog` (heute unter
+      `src/components/admin/`) — `src/components/ui/` wie eine shadcn-Ergänzung oder
+      `src/components/common/`? *(Detail für `/frontend`.)*
+- [ ] Reicht für den neuen Code `TS016` ein kleiner DB-Test, oder soll ein
+      E2E-Fall mit 10 vorbefüllten Whiskys her? *(Tendenz: DB-Test — schneller und
+      robuster als 10 Einträge über die Oberfläche.)*
 
 ## Decision Log
 
@@ -253,13 +259,173 @@ für alle ist PROJ-9.
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| PROJ-5 ist Frontend-only bis auf einen neuen Fehlercode `TS016` | Schema, Schreibpfade (`add_whisky` / `remove_whisky`), Sichtbarkeits-RLS und Limit-Logik stehen komplett aus PROJ-1 | 2026-08-29 |
+| Bearbeiten läuft als direkte Änderung an `whisky_details`, nicht über eine neue RPC | PROJ-1 hat dafür bereits eine spaltengenaue Schreibregel (`wd_update_own`: nur Bringer, nur die Sachfelder, nur `draft`) — eine RPC wäre Doppelarbeit | 2026-08-29 |
+| Neuer Fehlercode `TS016` für „mehr als 10 Whiskys pro Abend" | `add_whisky` nutzt dafür heute `TS008` (= „Reihenfolge unvollständig") → im Frontend käme der falsche Hilfetext | 2026-08-29 |
+| „Meine Whiskys" fragt nur die eigenen `whisky_details`-Zeilen ab und ignoriert die `whiskies`-Positionen | Die DB gibt einem Teilnehmer ohnehin nur die eigenen Detailzeilen; die für alle sichtbaren Positionen würden die Gesamtzahl verraten (Blindheit) | 2026-08-29 |
+| Formular als Dialog (Hinzufügen / Bearbeiten), Entfernen hinter `ConfirmDialog` | Konsistent mit PROJ-3 (Einladen-Dialog) und PROJ-4 (Löschen-Dialog); 3 Felder brauchen keine eigene Seite; auf dem Handy volle Breite | 2026-08-29 |
+| `ConfirmDialog` von `src/components/admin/` an einen gemeinsamen Ort verschieben | Wird jetzt auch außerhalb des Admin-Bereichs gebraucht | 2026-08-29 |
+| „Tastings"-Liste zeigt kommende + vergangene Events des Nutzers; ein Klick führt immer zuerst auf „Meine Whiskys" | Ein Ziel pro Zeile hält PROJ-5 klein; Bewertung / Dashboard / Historie hängen sich später an | 2026-08-29 |
+| Kein Realtime in PROJ-5 | Vor dem Start bewegt sich am Zustand nichts Zeitkritisches; Live-Sync ist PROJ-8 | 2026-08-29 |
+| Lesezugriff über den nutzergebundenen Client (RLS), Schreiben über Server Actions mit Vorab-Login-Prüfung | Muster wie PROJ-4; die DB bleibt die eigentliche Schranke | 2026-08-29 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+> **Für PMs in einem Satz:** PROJ-5 ist fast reine Oberfläche. Der „Tastings"-Tab
+> wird zur echten Liste, dahinter liegt pro geplantem Abend eine Seite „Meine
+> Whiskys" mit einem kleinen Formular (Name, Video-Link, private Notiz). Speichern,
+> Ändern und Löschen laufen über die Wege, die PROJ-1 schon gebaut hat — neu ist
+> nur eine sauberere Fehlermeldung für den seltenen Fall „mehr als 10 Whiskys".
+
+### 1. Seitenstruktur
+
+```
+(app)-Bereich  (jeder angemeldete, aktive Nutzer)
+└─ /tastings                         „Tastings" (Bottom-Nav) — jetzt eine echte Liste
+   │   pro Zeile: Datum · Ort · Gastgeber · Status-Badge
+   │   Sortierung: kommende zuerst, dann vergangene
+   │   Leerzustand: „Noch bist du bei keinem Tasting eingetragen."
+   │   Ladezustand: Skeleton-Zeilen   Fehlerzustand: Hinweis + „Erneut versuchen"
+   │
+   └─ /tastings/[eventId]/whiskies   „Meine Whiskys" für diesen Abend
+      ├─ Kontingent-Hinweis   „Du kannst 1 von 1 eintragen" /
+      │                       „1 von 2 – ein Bonus als Gastgeber" / „Keine Begrenzung"
+      ├─ Liste der eigenen Whiskys
+      │   └─ pro Eintrag: Name · Video-Link-Symbol · „Bearbeiten" · „Entfernen"
+      ├─ Button „Whisky hinzufügen"   (deaktiviert, wenn Kontingent voll)
+      ├─ Dialog-Formular (Hinzufügen = Bearbeiten, dann vorbefüllt)
+      │   ├─ Name            Pflicht, Freitext (1–200 Zeichen)
+      │   ├─ Video-Link      optional, muss mit http:// oder https:// beginnen
+      │   └─ Notiz für dich  optional, Freitext (bis 2000 Zeichen), nur du siehst sie
+      ├─ Leerzustand: kurzer Erklärtext + „Whisky hinzufügen"
+      ├─ „Eintragen geschlossen": Event läuft / ist abgeschlossen → nur Anzeige
+      └─ „Seite nicht gefunden": kein Teilnehmer / Event-ID unbekannt
+```
+
+**Neue Bausteine**
+
+- Seiten: `/tastings` (ersetzt den Platzhalter) mit `loading` / `error`;
+  `/tastings/[eventId]/whiskies` mit `loading` / `error`.
+- Komponenten unter `src/components/tasting/`: Tasting-Liste + Zeile, „Meine
+  Whiskys"-Liste + Zeile, das Dialog-Formular, der Kontingent-Hinweis.
+- `ConfirmDialog` (heute `src/components/admin/confirm-action.tsx`) wandert an
+  einen gemeinsamen Ort und wird von hier wie von PROJ-3/PROJ-4 genutzt.
+- Datenzugriff: eine Lese-Datei „meine Tastings / meine Whiskys + Kontingent",
+  drei Schreib-Aktionen (hinzufügen / ändern / entfernen), ein Eingabe-Schema.
+
+### 2. Datenmodell (nichts Neues an Tabellen)
+
+PROJ-5 nutzt ausschließlich, was PROJ-1 gebaut hat:
+
+- **`whiskies`** — die *sichtbare* Hälfte: nur eine laufende Position pro Whisky.
+  Für alle Teilnehmer lesbar, in PROJ-5 aber **nicht** angezeigt (die Positionen
+  sind für den Gläserstreifen in PROJ-8 da).
+- **`whisky_details`** — die *geheime* Hälfte: Name, Video-Link, private Notiz und
+  wer den Whisky mitbringt. Die Datenbank gibt einem Teilnehmer von dieser Tabelle
+  nur die **eigenen** Zeilen heraus (der Gastgeber sieht alle, alle anderen erst
+  nach dem Abschluss). PROJ-5 muss also nicht selbst filtern.
+
+Ein Whisky besteht in PROJ-5 aus:
+- **Name** (Pflicht, 1–200 Zeichen)
+- **Video-Link** (optional, muss eine `http(s)`-Adresse sein)
+- **Private Notiz** (optional, bis 2000 Zeichen)
+- *(intern)* Bringer = der angemeldete Nutzer, Position = automatisch vergeben
+
+**Kontingent** ist eine abgeleitete Zahl, kein gespeichertes Feld: Limit des
+Abends (oder „kein Limit"), plus 1 wenn der Nutzer Gastgeber ist, minus die schon
+eingetragenen eigenen Whiskys. Dazu die harte Obergrenze von 10 Whiskys pro Abend.
+
+### 3. Wo geschrieben wird — alles über vorhandene Wege
+
+| Aktion | Mechanismus | Prüfungen (in der Datenbank, nicht im Browser) |
+|--------|-------------|-----------------------------------------------|
+| Whisky **hinzufügen** | Server-Aktion → bestehende DB-Aktion `add_whisky` (PROJ-1) | Nutzer ist Teilnehmer · Event „In Vorbereitung" · Kontingent nicht überschritten (inkl. Gastgeber-Bonus) · höchstens 10 im Event · Position wird automatisch gesetzt |
+| Whisky **bearbeiten** | Server-Aktion → direkte Änderung an `whisky_details` | DB-Regel `wd_update_own`: nur der Bringer, nur die Sachfelder (Name, Link, Notiz), nur solange „In Vorbereitung" |
+| Whisky **entfernen** | Server-Aktion → bestehende DB-Aktion `remove_whisky` (PROJ-1) | Nur Bringer oder Admin · nur „In Vorbereitung" · die Positionslücke wird automatisch geschlossen |
+
+Kein direkter Schreibzugriff auf `whiskies`; der Service-Schlüssel wird **nicht**
+gebraucht. Jede Server-Aktion prüft zusätzlich vorab die Anmeldung — die Datenbank
+bleibt aber die eigentliche Schranke (Muster wie PROJ-4).
+
+### 4. Die eine kleine Backend-Änderung: eigene Fehlermeldung für „mehr als 10"
+
+`add_whisky` meldet den Fall „mehr als 10 Whiskys pro Abend" heute mit demselben
+Fehlercode wie „Ausschankreihenfolge unvollständig" (`TS008`) — dadurch käme im
+Frontend der falsche Hilfetext. PROJ-5 gibt diesem Fall einen eigenen Code
+(`TS016`) mit klarer Meldung („Für diesen Abend sind schon 10 Whiskys eingetragen
+— mehr sind nicht vorgesehen."). Das ist eine kleine Migration plus ein Eintrag in
+der Fehlertext-Liste; sonst ändert sich am Backend nichts.
+
+*(Der Fall ist im Normalbetrieb kaum erreichbar — die Kontingent-Anzeige und die
+Limit-Prüfung greifen vorher. Die saubere Meldung ist trotzdem jetzt billiger als
+später.)*
+
+### 5. Die „Tastings"-Liste
+
+Der Tab zeigt die Abende, bei denen der Nutzer als Teilnehmer eingetragen ist —
+kommende zuerst, dann vergangene. Die Datenbank gibt einem Teilnehmer ohnehin nur
+„seine" Events heraus, eine einfache Abfrage reicht.
+
+- Klick auf ein Event **„In Vorbereitung"** → „Meine Whiskys" (bearbeitbar).
+- Klick auf ein **laufendes / abgeschlossenes** Event → vorerst ebenfalls „Meine
+  Whiskys", dann im Nur-Anzeige-Modus mit dem Hinweis „Eintragen geschlossen". Die
+  späteren Ziele (Bewertung PROJ-7, Dashboard PROJ-8, Historie PROJ-9) hängen sich
+  hier an.
+
+### 6. „Meine Whiskys" im Detail
+
+- Beim Laden: die eigenen Whisky-Einträge für diesen Abend + der Event-Status + die
+  Zahlen fürs Kontingent (Limit, bin-ich-Gastgeber, aktuelle Anzahl).
+- **Kein Teilnehmer** dieses Events oder ID unbekannt → „Seite nicht gefunden"
+  (die Datenbank liefert dann schlicht kein Event).
+- Event **nicht** „In Vorbereitung" → Formular und Aktionen sind aus, die Liste
+  bleibt als Anzeige, oben der Hinweis „Das Eintragen für diesen Abend ist
+  geschlossen."
+- Formular als **Dialog** (Hinzufügen) bzw. vorbefüllter Dialog (Bearbeiten) —
+  konsistent mit dem Einladen-Dialog aus PROJ-3, auf dem Handy volle Breite.
+- Nach jeder Aktion: kurze Bestätigung, die Liste aktualisiert sich, kein Neuladen
+  der Seite.
+
+### 7. Zustände & Rückmeldungen (nach `docs/design-system.md`)
+
+- **Laden:** Skeleton-Zeilen.
+- **Fehler beim Laden:** Hinweis + „Erneut versuchen".
+- **Aktion läuft:** Button im Ladezustand, kein Doppelklick.
+- **Aktion schlägt fehl:** konkrete deutsche Meldung, das Formular behält die
+  Eingaben.
+- **Kontingent voll:** „Hinzufügen" deaktiviert mit Hinweis „Limit erreicht —
+  entferne einen, um zu tauschen."
+- **Video-Link ohne `http(s)`:** Meldung direkt am Feld, nichts wird gespeichert.
+- **Leerzustand / Eintragen-geschlossen / Seite-nicht-gefunden** wie in Abschnitt 1.
+
+### 8. Neue Pakete
+
+Keine. Alles vorhanden (shadcn `dialog`, `form`, `input`, `button`, `card`,
+`badge`, `skeleton`, `alert-dialog`; `date-fns` aus PROJ-4 für die Datumsanzeige).
+
+*(Fehlt `textarea` als shadcn-Komponente noch, wird sie einmalig über die
+Standard-Vorlage hinzugefügt — kein echtes Paket.)*
+
+### 9. Betriebsvoraussetzung
+
+Keine neue.
+
+### 10. Wie der Erfolg geprüft wird
+
+- **Unit-Tests** für die Kontingent-Berechnung (Limit, Gastgeber-Bonus, „kein
+  Limit", 10er-Obergrenze) und die Eingaberegeln (Name Pflicht, Video-Link-Form,
+  Längen).
+- **Datenbank-Tests** (PROJ-1-Stil) für den neuen Fehlercode `TS016` und dafür,
+  dass Bearbeiten nur dem Bringer und nur im Draft gelingt, Entfernen nur
+  dem Bringer / Admin.
+- **E2E-Tests** (Chromium + Mobile Safari): hinzufügen (Pflichtfeld,
+  Video-Link-Validierung, Kontingent-Grenze, Gastgeber-Bonus), bearbeiten,
+  entfernen mit Bestätigung, „Eintragen geschlossen" nach Start, Nicht-Teilnehmer
+  sieht „nicht gefunden", ein Teilnehmer sieht die Whiskys eines anderen nicht.
+- `npm run build` / `npm run lint` sauber.
 
 ## QA Test Results
 _To be added by /qa_
