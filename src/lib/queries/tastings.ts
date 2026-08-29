@@ -8,6 +8,8 @@ export interface MyTastingRow {
   location: string
   status: EventStatus
   host_name: string
+  /** Ist der abfragende Nutzer der Gastgeber dieses Abends? (→ „Steuern"-Aktion) */
+  is_host: boolean
 }
 
 /**
@@ -55,6 +57,7 @@ export async function getMyTastings(userId: string): Promise<MyTastingRow[]> {
       location: e.location,
       status: e.status,
       host_name: hostNames.get(e.host_id) ?? 'Unbekannt',
+      is_host: e.host_id === userId,
     }))
     .sort((a, b) => {
       const aUpcoming = a.event_date >= today

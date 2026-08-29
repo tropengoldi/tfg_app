@@ -1,6 +1,6 @@
 # PROJ-6: Gastgeber-Steuerung & Ablauf
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-29
 **Last Updated:** 2026-08-29
 
@@ -450,6 +450,76 @@ Keine neue.
   bewertet"; letzter Whisky → „abschließen" wird Hauptaktion; abschließen mit
   Bestätigung → Platzhalter; Nicht-Gastgeber → „nicht gefunden".
 - `npm run build` / `npm run lint` sauber.
+
+## Implementation Notes (Frontend)
+
+**Stand:** Seite, Komponenten, Queries und die fünf Server Actions geschrieben.
+**Rein clientseitig lauffähig gegen das vorhandene PROJ-1-Backend** — alle
+Zustandsübergänge (`update_event_host_fields`, `set_whisky_order`, `start_event`,
+`close_round`, `close_event`) und `rating_progress` existieren. **Kein neuer
+Backend-Schritt nötig** → nach diesem Durchlauf direkt `/qa`.
+
+### Was gebaut wurde
+
+**Reihenfolge-/Ablauf-Logik** — `src/lib/host-order.ts` (rein, unit-getestet, 12
+Fälle in `host-order.test.ts`): `moveUp` / `moveDown` (unmutierend, Kanten
+abgefangen), `shuffle` (Fisher-Yates, injizierbares `rng`), `sameOrder`,
+`nextRoundLabel`, `isLastWhisky`.
+
+**Eingaberegeln** — `src/lib/schemas/host.ts`: `eckdatenSchema` (Thema ≤ 200,
+Essen ≤ 1000, Anmerkungen ≤ 2000, alle `''`-defaultend).
+
+**Datenzugriff** — `src/lib/queries/host-control.ts`: `getHostControlData(eventId)`
+liefert Event-Eckdaten + Status + `current_position`, die Whiskys mit Namen
+(Gastgeber-Sicht, zwei Abfragen statt Embed wegen der doppelten FK-Beziehung
+`whiskies`↔`whisky_details`) und — nur im laufenden Event — den
+Bewertungs-Fortschritt für die aktuelle Position (`rating_progress`-RPC). Der
+Zugriff ist vorher über `requireHost(eventId)` in der Seite geprüft.
+
+**Server Actions** — `src/lib/actions/host-control.ts` (`'use server'`), jede mit
+`requireHostOr(eventId)` (Login + `canAccessHostArea` = Gastgeber oder Admin) und
+`messageForDbError`, revalidiert `/tastings/[eventId]/gastgeber`:
+- `saveEckdatenAction` → `update_event_host_fields`
+- `saveWhiskyOrderAction` → `set_whisky_order`
+- `startEventAction(eventId, orderedIds?)` → optional erst `set_whisky_order`
+  (noch nicht gespeicherte Reihenfolge), dann `start_event`
+- `nextRoundAction(eventId, expectedPosition)` → `close_round` (optimistische
+  Sperre)
+- `closeEventAction` → `close_event`
+
+**Seite & Komponenten**
+- `(app)/tastings/[eventId]/gastgeber/` — `page.tsx` (`requireHost` +
+  `getHostControlData` → `notFound()` bei `null`), `loading.tsx`, `error.tsx`.
+- `src/components/host/`:
+  - `host-panel` (Server) — Status-Router: rendert `EckdatenForm` immer, dazu
+    `DraftControls` / `RunPanel` / Abschluss-Platzhalter je nach Status. Der
+    `DraftControls`-`key` hängt an der servergelieferten Whisky-Reihenfolge →
+    nach einem Speichern/Refresh frische lokale Baseline.
+  - `eckdaten-form` (Client) — RHF + Zod; `readOnly`-Modus (nur Anzeige) bei
+    abgeschlossenem Event.
+  - `whisky-order-list` (Client, präsentational) — nummerierte Liste, pro Zeile
+    „nach oben"/„nach unten" (an den Enden deaktiviert), „Zufällig mischen",
+    „Reihenfolge speichern" (nur wenn geändert); Leerzustand „Noch keine
+    Whiskys …". Wird im Lauf-Modus schreibgeschützt wiederverwendet.
+  - `draft-controls` (Client) — hält den lokalen Reihenfolge-Zustand, Start-Block
+    mit Checkliste („N Whiskys eingetragen" / „kein Whisky" → Button aus).
+  - `run-panel` (Client) — „Whisky X von Y", „R von P haben bewertet" +
+    „Aktualisieren" (Seite neu berechnen), Hauptaktion „Weiter zu Whisky N von M"
+    bzw. beim letzten Whisky „Tasting abschließen"; „Tasting abschließen" hinter
+    `ConfirmDialog` (aus `common/`).
+- `src/components/tasting/tasting-row.tsx` — die Zeile ist nicht mehr ein
+  einziger großer Link; für den Gastgeber (`row.is_host`) hängt rechts die
+  „Steuern"-Aktion → `/tastings/[id]/gastgeber`. `getMyTastings` liefert dazu
+  `is_host` mit.
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (53, davon 12 neu) · `tsc` ✅
+- Smoke gegen `next start`: `/tastings/<uuid>/gastgeber` leitet unangemeldet
+  sauber auf `/login?redirect=…` (kein 500).
+- **Nicht** getestet (braucht echte Daten / `/qa`): das Steuern im Browser
+  (Eckdaten, Umsortieren, Starten, Weiterschalten, Abschließen), der
+  Bewertungs-Fortschritt, die „Steuern"-Aktion in der Liste, Nicht-Gastgeber →
+  „nicht gefunden".
 
 ## QA Test Results
 _To be added by /qa_
