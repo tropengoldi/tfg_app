@@ -251,6 +251,12 @@ Abschluss ist **PROJ-9**.
 - [ ] Soll „Zufällig mischen" mehrfach hintereinander erlaubt sein, oder nach dem
       ersten Mischen gesperrt, bis gespeichert wurde? *(Tendenz: beliebig oft — der
       Gastgeber probiert, bis es passt.)*
+- [ ] Soll `getMyTastings` (PROJ-5) künftig generell die Gastgeber-ID mitliefern,
+      oder reicht ein abgeleitetes „istGastgeber"-Flag für die „Steuern"-Aktion?
+      *(Detail für `/frontend`.)*
+- [ ] „Aktualisieren" für den Bewertungs-Fortschritt: die ganze Seite neu
+      berechnen oder nur den Zählwert nachladen? *(Tendenz: ganze Seite — einfacher,
+      bei einem Knopfdruck egal.)*
 
 ## Decision Log
 
@@ -275,13 +281,175 @@ Abschluss ist **PROJ-9**.
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| PROJ-6 ist Frontend-only — keine neue Migration, keine RPC | Alle fünf Zustandsübergänge + der Bewertungsfortschritt stehen aus PROJ-1; `requireHost(eventId)` (= Gastgeber oder Admin) liegt aus PROJ-2 vor | 2026-08-29 |
+| Umsortieren über „nach oben / nach unten"-Buttons + „Zufällig mischen", **kein** Drag & Drop / keine DnD-Bibliothek | Mobil, einhändig, bei gedämpftem Licht sind zwei große Tap-Ziele zuverlässiger als eine Zieh-Geste; keine neue Abhängigkeit; von Haus aus barrierefrei. Weicht bewusst von der Spec-Formulierung „Drag & Drop" ab | 2026-08-29 |
+| Reihenfolge lebt bis „Speichern" nur im Browser; „Tasting starten" speichert eine noch offene Reihenfolge automatisch mit | Der Gastgeber probiert mehrere Anordnungen (v. a. mit „Zufällig mischen"); ein Speichern pro Klick wäre unnötiger Netzverkehr | 2026-08-29 |
+| `close_round` bekommt die aktuell angezeigte Position als erwarteten Wert mit | Nutzt PROJ-1s optimistische Sperre; die zweite von zwei parallelen Aktionen bekommt „bereits weitergeschaltet" statt eines Doppelsprungs | 2026-08-29 |
+| Bewertungsfortschritt per „Aktualisieren"-Button (Seite neu berechnen), kein Polling, kein Realtime | Realtime ist PROJ-8 und zieht diese Ansicht dann mit; PROJ-6 zuerst gegen echten Zustand testbar machen | 2026-08-29 |
+| Einstiegspunkt nur an der „Tastings"-Zeile des Gastgebers; kein eigener Admin-Einstieg aus `/admin/events` | Hält PROJ-6 klein; die Seite funktioniert für den Admin ohnehin per `requireHost` (direkte Adresse). Ein Admin-Link kann später ergänzt werden | 2026-08-29 |
+| Mutationen als Server Actions in `src/lib/actions/host-control.ts`, jede mit Login-/Rollen-Vorabprüfung | Konsistent mit PROJ-4 / PROJ-5 | 2026-08-29 |
+| Lesen über den nutzergebundenen Client (RLS) — Event-Eckdaten, Whiskys inkl. Namen (Gastgeber-Sicht), Bewertungsfortschritt per RPC | Kein Service-Schlüssel nötig; RLS `wd_select` gibt dem Gastgeber die Namen, die übrigen Teilnehmer sehen sie nicht | 2026-08-29 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+> **Für PMs in einem Satz:** PROJ-6 ist reine Oberfläche. Eine neue Seite pro
+> Abend, deren Inhalt sich nach dem Status richtet, dahinter die fünf
+> Steuer-Aktionen, die PROJ-1 schon gebaut hat. Neue Pakete: keine.
+
+### 1. Seitenstruktur
+
+```
+(app)-Bereich
+└─ /tastings                          (aus PROJ-5) — an der Zeile eines Abends,
+   │                                   dessen Gastgeber der Nutzer ist, zusätzlich
+   │                                   die Aktion „Steuern"
+   │
+   └─ /tastings/[eventId]/gastgeber   Steuer-Seite (Zugang: Gastgeber oder Admin)
+      │
+      ├─ Status „In Vorbereitung"
+      │   ├─ Eckdaten-Block   Thema · Info zum Essen · Anmerkungen  (+ „Speichern")
+      │   ├─ Reihenfolge-Block
+      │   │   ├─ Liste: Position · Whiskyname
+      │   │   │   └─ pro Zeile: „nach oben" / „nach unten"
+      │   │   ├─ Button „Zufällig mischen"
+      │   │   ├─ Button „Reihenfolge speichern"  (nur wenn geändert)
+      │   │   └─ Leerzustand: „Noch keine Whiskys — die Teilnehmer tragen sie ein."
+      │   └─ Start-Block
+      │       ├─ Checkliste: „N Whiskys eingetragen"
+      │       └─ Button „Tasting starten"  (deaktiviert ohne Whisky)
+      │
+      ├─ Status „läuft"
+      │   ├─ Eckdaten-Block  (weiter bearbeitbar)
+      │   └─ Lauf-Block
+      │       ├─ „Whisky 3 von 8"
+      │       ├─ „5 von 7 haben bewertet"  + Button „Aktualisieren"
+      │       ├─ Hauptaktion „Weiter zu Whisky 4 von 8"
+      │       │     bzw. beim letzten Whisky „Tasting abschließen"
+      │       ├─ Zweitaktion „Tasting abschließen"  (solange nicht letzter Whisky)
+      │       └─ Reihenfolge nur noch als Anzeige, nicht sortierbar
+      │
+      └─ Status „abgeschlossen"
+          └─ Platzhalter „Der Abend ist abgeschlossen." + Verweis auf die
+             Ergebnisse (PROJ-9)
+
+Bestätigungsdialog: nur vor „Tasting abschließen" (AlertDialog, „endgültig").
+Lade- / Fehler- / Aktion-läuft-Zustände wie in PROJ-4 / PROJ-5.
+```
+
+**Neue Bausteine**
+
+- Seite `/tastings/[eventId]/gastgeber` + `loading` + `error`.
+- Komponenten unter `src/components/host/`: der Status-Router (`host-panel`), das
+  Eckdaten-Formular, die Reihenfolge-Liste, der Start-Block, der Lauf-Block, der
+  Abschluss-Dialog.
+- Datenzugriff: eine Lese-Datei (Event-Eckdaten + Whiskys mit Namen +
+  Bewertungs-Fortschritt), fünf Schreib-Aktionen, ein Eingabe-Schema für die
+  Eckdaten.
+- In PROJ-5s „Tastings"-Liste: die Zeile bekommt für den Gastgeber die
+  „Steuern"-Aktion (die Abfrage `getMyTastings` liefert dazu die Gastgeber-ID mit).
+
+### 2. Datenmodell (nichts Neues an Tabellen)
+
+PROJ-6 nutzt ausschließlich, was PROJ-1 gebaut hat:
+
+- **`tasting_events`** — Status, aktuelle Position, Thema, Info zum Essen,
+  Anmerkungen des Gastgebers, Startzeit.
+- **`whiskies`** — Position je Whisky (die der Gastgeber umsortiert).
+- **`whisky_details`** — Name (der Gastgeber sieht ihn; die übrigen Teilnehmer
+  erst nach dem Abschluss).
+- **`ratings`** — nur **gezählt** (über die PROJ-1-Aktion „Bewertungsfortschritt"),
+  nie im Detail.
+
+Kein neues Feld, kein neuer Zustand. „Aktueller Whisky", „X von Y bewertet" und
+„letzter Whisky?" sind abgeleitete Werte aus Position, Whisky-Anzahl und den
+Zählwerten.
+
+### 3. Die fünf Steuer-Aktionen — alle aus PROJ-1
+
+| Aktion (Server Action) | ruft PROJ-1-Aktion | Regeln (in der Datenbank, nicht im Browser) |
+|---|---|---|
+| Eckdaten speichern | `update_event_host_fields` | Nur Gastgeber / Admin; Feldlängen (Thema ≤ 200, Essen ≤ 1000, Anmerkungen ≤ 2000) |
+| Reihenfolge speichern | `set_whisky_order` | Nur Gastgeber / Admin; nur solange nicht abgeschlossen; die übergebene Reihenfolge muss **genau** zu den Whiskys des Events passen → sonst abgelehnt |
+| Tasting starten | `start_event` | Nur Gastgeber / Admin; nur aus „In Vorbereitung"; ≥ 1 Whisky, lückenlose Positionen; **kein anderes Tasting darf laufen** |
+| Weiter zur nächsten Runde | `close_round` (+ erwartete Position) | Nur Gastgeber / Admin; nur im laufenden Event; stimmt die erwartete Position nicht (zweites Gerät war schneller) → „bereits weitergeschaltet"; beim letzten Whisky → „jetzt nur noch abschließen" |
+| Tasting abschließen | `close_event` | Nur Gastgeber / Admin; nur im laufenden Event |
+
+Jede Server Action prüft zusätzlich vorab die Anmeldung und die
+Gastgeber-/Admin-Rolle. Die Datenbank bleibt die eigentliche Schranke (Muster wie
+PROJ-4 / PROJ-5). Kein Service-Schlüssel.
+
+### 4. Reihenfolge umsortieren — ohne Drag-Bibliothek
+
+Pro Zeile zwei große Buttons „nach oben" / „nach unten" (die oberste Zeile hat
+kein „oben", die unterste kein „unten"). „Zufällig mischen" würfelt die
+Anzeige-Liste einmal durch. Die Änderungen leben zunächst nur im Browser;
+„Reihenfolge speichern" schickt die komplette Liste in Wunschreihenfolge an die
+Datenbank. Beim „Tasting starten" wird eine noch nicht gespeicherte Reihenfolge
+automatisch mitgespeichert.
+
+Begründung für die Pfeile statt Drag & Drop: mobil, einhändig, bei gedämpftem
+Licht sind zwei große Tap-Ziele zuverlässiger als eine Zieh-Geste; keine neue
+Abhängigkeit; von Haus aus barrierefrei. Bei 7–10 Einträgen ist der
+Komfortunterschied gering.
+
+### 5. Kein Live-Update in PROJ-6
+
+Die Seite lädt ihren Zustand serverseitig. Nach jeder Aktion wird die Seite neu
+berechnet (die Aktion markiert sie als veraltet). Der Bewertungs-Fortschritt hat
+zusätzlich einen „Aktualisieren"-Button, der genau diese Neuberechnung auslöst.
+Das automatische Mitspringen aller Geräte beim Rundenwechsel ist PROJ-8 (Realtime)
+und zieht diese Ansicht dann mit.
+
+### 6. Wer kommt auf die Seite
+
+- **Gastgeber:** über „Steuern" an der Zeile seines Abends in der
+  „Tastings"-Liste. Der Link ist für den Gastgeber in jedem Status sichtbar (im
+  Draft zum Vorbereiten, im Lauf zum Steuern, nach dem Abschluss führt er auf den
+  Platzhalter).
+- **Admin:** die Seite funktioniert für ihn per `requireHost` (= Gastgeber *oder*
+  Admin) bei jedem Event. Ist der Admin selbst Gastgeber/Teilnehmer, sieht er
+  „Steuern" ebenfalls in seiner Liste; andernfalls ruft er die Adresse direkt auf.
+  Ein eigener Admin-Einstieg aus `/admin/events` ist bewusst nicht Teil von
+  PROJ-6.
+
+### 7. Zustände & Rückmeldungen (nach `docs/design-system.md`)
+
+- **Laden:** Skeleton für Eckdaten + Liste bzw. Lauf-Block.
+- **Fehler beim Laden:** Hinweis + „Erneut versuchen".
+- **Aktion läuft:** Button im Ladezustand, kein Doppelklick.
+- **Aktion schlägt fehl:** konkrete deutsche Meldung, Zustand unverändert.
+- **Leerzustand (keine Whiskys):** Hinweis im Reihenfolge-Block, „Tasting starten"
+  deaktiviert.
+- **Nach Abschluss:** Platzhalter mit Verweis auf die Ergebnisse.
+- **Abschluss-Aktion:** `AlertDialog` mit dem Hinweis auf Endgültigkeit.
+
+### 8. Neue Pakete
+
+Keine. (`AlertDialog`, `Card`, `Button`, `Textarea`, `Input`, `Badge`,
+`Skeleton`, `Progress` sind vorhanden; `sonner` für Toasts; `date-fns` für die
+Datumsanzeige.)
+
+### 9. Betriebsvoraussetzung
+
+Keine neue.
+
+### 10. Wie der Erfolg geprüft wird
+
+- **Unit-Tests** für die reine Umsortier-Logik (nach oben/unten; „zufällig
+  mischen" ändert nur die Reihenfolge, nicht die Menge) und die Ableitungen
+  („letzter Whisky?", „Weiter"-Beschriftung, Eckdaten-Eingaberegeln).
+- **Datenbank-Tests** (PROJ-1-Stil), soweit nicht schon durch PROJ-1 abgedeckt:
+  Nicht-Gastgeber → jede Steuer-Aktion abgelehnt; `rating_progress` nur für
+  Gastgeber/Admin; die optimistische Positionssperre bei `close_round`.
+- **E2E-Tests** (Chromium + Mobile Safari): „Steuern" erscheint nur beim
+  Gastgeber; Eckdaten speichern; umsortieren + „zufällig mischen" + speichern;
+  starten (inkl. „kein Whisky" → deaktiviert); weiterschalten inkl. „X von Y
+  bewertet"; letzter Whisky → „abschließen" wird Hauptaktion; abschließen mit
+  Bestätigung → Platzhalter; Nicht-Gastgeber → „nicht gefunden".
+- `npm run build` / `npm run lint` sauber.
 
 ## QA Test Results
 _To be added by /qa_

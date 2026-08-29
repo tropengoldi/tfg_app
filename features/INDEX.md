@@ -20,7 +20,7 @@
 | PROJ-3 | Admin – Teilnehmerverwaltung | Approved | [PROJ-3-admin-teilnehmerverwaltung.md](PROJ-3-admin-teilnehmerverwaltung.md) | 2026-08-27 |
 | PROJ-4 | Admin – Tasting-Events verwalten | Approved | [PROJ-4-admin-tasting-events.md](PROJ-4-admin-tasting-events.md) | 2026-08-27 |
 | PROJ-5 | Whisky-Erfassung (blind) | Approved | [PROJ-5-whisky-erfassung.md](PROJ-5-whisky-erfassung.md) | 2026-08-27 |
-| PROJ-6 | Gastgeber-Steuerung & Ablauf | Planned | [PROJ-6-gastgeber-steuerung.md](PROJ-6-gastgeber-steuerung.md) | 2026-08-27 |
+| PROJ-6 | Gastgeber-Steuerung & Ablauf | Architected | [PROJ-6-gastgeber-steuerung.md](PROJ-6-gastgeber-steuerung.md) | 2026-08-27 |
 | PROJ-7 | Bewertungsansicht | Roadmap | – | 2026-08-27 |
 | PROJ-8 | Tasting-Dashboard mit Live-Sync | Roadmap | – | 2026-08-27 |
 | PROJ-9 | Ergebnisse & Tasting-Historie | Roadmap | – | 2026-08-27 |
