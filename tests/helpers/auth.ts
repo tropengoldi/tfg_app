@@ -162,6 +162,16 @@ export async function createEventDirect(opts: CreateEventOpts): Promise<string> 
   }
   if (status === 'closed') row.closed_at = now
 
+  // Es darf global nur EIN aktives Event geben (one_active_event_at_a_time).
+  // Ein noch offenes aus einem früheren Test vorher wegschliessen.
+  if (status === 'active') {
+    await svc
+      .from('tasting_events')
+      .update({ status: 'closed', closed_at: now })
+      .eq('status', 'active')
+      .then(undefined, () => {})
+  }
+
   const { data, error } = await svc
     .from('tasting_events')
     .insert(row)
@@ -183,6 +193,31 @@ export async function addParticipant(eventId: string, profileId: string) {
     .from('event_participants')
     .insert({ event_id: eventId, profile_id: profileId })
     .then(undefined, () => {})
+}
+
+/** Schliesst jedes gerade aktive Event (Testhygiene für die „läuft"-Fälle). */
+export async function closeAllActiveEvents() {
+  await serviceClient()
+    .from('tasting_events')
+    .update({ status: 'closed', closed_at: new Date().toISOString() })
+    .eq('status', 'active')
+    .then(undefined, () => {})
+}
+
+/** Setzt ein Event direkt auf „läuft" (schliesst ein evtl. anderes aktives weg). */
+export async function startEventDirect(eventId: string, position = 1) {
+  const svc = serviceClient()
+  const now = new Date().toISOString()
+  await svc
+    .from('tasting_events')
+    .update({ status: 'closed', closed_at: now })
+    .eq('status', 'active')
+    .then(undefined, () => {})
+  const { error } = await svc
+    .from('tasting_events')
+    .update({ status: 'active', started_at: now, current_position: position })
+    .eq('id', eventId)
+  if (error) throw error
 }
 
 export async function deleteEventsByLocationPrefix(prefix: string) {
