@@ -50,6 +50,11 @@ export async function login(
 
 export { fillField }
 
+/** Meldet den aktuellen Nutzer ab, indem die Session-Cookies gelöscht werden. */
+export async function logout(page: Page) {
+  await page.context().clearCookies()
+}
+
 export function bottomNav(page: Page) {
   return page.getByRole('navigation', { name: 'Hauptnavigation' })
 }
@@ -170,6 +175,14 @@ export async function createEventDirect(opts: CreateEventOpts): Promise<string> 
     .then(undefined, () => {})
 
   return data.id as string
+}
+
+/** Fügt einen weiteren Teilnehmer direkt zur Event-Teilnehmerliste hinzu. */
+export async function addParticipant(eventId: string, profileId: string) {
+  await serviceClient()
+    .from('event_participants')
+    .insert({ event_id: eventId, profile_id: profileId })
+    .then(undefined, () => {})
 }
 
 export async function deleteEventsByLocationPrefix(prefix: string) {

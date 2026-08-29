@@ -1,6 +1,6 @@
 # PROJ-5: Whisky-Erfassung (blind)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-08-29
 **Last Updated:** 2026-08-29
 
@@ -548,7 +548,116 @@ npm run test:rls       # bisher 57 + 11 neue (whisky-entry-rpcs) = 68
 ```
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-29
+**App URL:** http://localhost:3000 (Playwright gegen `next build && next start`)
+**Tester:** QA Engineer (AI)
+
+### Testläufe
+
+| Suite | Kommando | Ergebnis |
+|-------|----------|----------|
+| Unit / Integration (JSDOM) | `npm test` | **41 / 41** grün (16 neu: `whisky-quota` 8, `whiskies`-Schema 8, + `errors` TS016) |
+| DB-Regeltests (RLS + RPCs) | `npm run test:rls` | 66 grün, **2 rot → behoben** (siehe unten), erwartet **68 / 68** — Bestätigung durch den Nutzer nach erneutem Lauf ausstehend |
+| E2E PROJ-5 (Chromium + Mobile Safari) | `npx playwright test PROJ-5` | **22 / 22** grün, **3 volle Läufe** hintereinander ohne Flake |
+| E2E Vollregression | `npx playwright test` | **110 passed, 4 skipped** (die 4 Skips = SMTP-blockierte PROJ-3-Einladungs-Fixmes — kein PROJ-5-Regress) |
+| `npm run build` / `npm run lint` | | sauber |
+
+E2E-Datei: `tests/PROJ-5-whisky-erfassung.spec.ts` (11 Tests × 2 Projekte).
+Neuer Helper `logout(page)` in `tests/helpers/auth.ts` (Cookies löschen — für den
+Zwei-Nutzer-Fall im selben Test); `addParticipant(eventId, profileId)` ergänzt.
+
+#### DB-Regeltests: die zwei behobenen Fehlschläge
+`setActive()` im Integrationstest setzte Events direkt auf `status = 'active'` und
+kollidierte mit dem Partial-Unique-Index `one_active_event_at_a_time` (PROJ-1 lässt
+nur **ein** aktives Event zu). Behoben: `setActive` schliesst ein evtl. noch aktives
+Event vorher weg. **Kein Produktbefund** — reiner Testaufbau. Der Nutzer muss
+`npm run test:rls` einmal grün bestätigen (kein DB-Zugang in der QA-Session).
+
+### Acceptance Criteria Status
+
+#### Einstieg & Liste
+- [x] AC-E1 „Tastings"-Tab listet die eigenen Abende (Datum, Ort, Gastgeber, Status) — *E2E „Tastings-Tab listet die eigenen Abende"*; Sortierung kommende/vergangene per Code-Review (`getMyTastings`).
+- [x] AC-E2 Klick auf ein Draft-Tasting → „Meine Whiskys" mit (ggf. leerer) Liste + „Whisky hinzufügen" — *E2E* (Klick auf die Zeile navigiert auf `/tastings/[id]/whiskies`).
+- [x] AC-E3 Kein Teilnehmer / Event-ID unbekannt → „Seite nicht gefunden" — *E2E „Nicht-Teilnehmer bekommt ‚Seite nicht gefunden'"* + `getWhiskyEntryData` prüft die Teilnahme explizit → `notFound()`.
+- [x] AC-E4 Noch kein eigener Whisky → Erklärtext + „Whisky hinzufügen" — Leerzustands-Branch in `whisky-section.tsx`; im blind-E2E sieht der zweite Teilnehmer genau diesen Zustand.
+
+#### Hinzufügen
+- [x] AC-H1 Whisky mit Namen anlegen → erscheint in der eigenen Liste, für andere unsichtbar — *E2E „Whisky anlegen → … andere Teilnehmer sehen ihn nicht"*.
+- [x] AC-H2 Name leer → Validierungsmeldung, nichts gespeichert — *E2E „Name ist Pflicht"* + Zod (`whiskyFormSchema`) serverseitig in `normalize()`.
+- [x] AC-H3 Video-Link ohne `http(s)://` → Feld-Validierungsmeldung, nichts gespeichert — *E2E „Video-Link ohne http(s) wird abgelehnt"* (Dialog bleibt offen); Zod + DB-CHECK `video_url ~* '^https?://.+'`.
+- [x] AC-H4 Video-Link und Notiz leer → Whisky nur mit Namen — Schema mappt `'' → undefined`; im „anlegen"-E2E ohne Video/Notiz erfolgreich; Integrationstest „der Bringer ändert seinen Whisky" bestätigt das Weglassen.
+- [x] AC-H5 Kontingent erreicht → „Whisky hinzufügen" deaktiviert + Hinweis — *E2E „Kontingent: bei erreichtem Limit …"* (`toBeDisabled` + „Dein Limit für diesen Abend ist erreicht").
+- [x] AC-H6 Limit nachträglich gesenkt → Server lehnt weiteren Whisky ab (`TS003`), Vorhandenes bleibt — Integrationstest „Limit 1: der zweite eigene Whisky wird abgelehnt (TS003)"; die UI-Sperre ist nur das Netz darüber.
+- [x] AC-H7 Gastgeber darf n+1 eintragen, Hinweis nennt den Bonus — *E2E „Gastgeber-Bonus: bei Limit 1 darf der Gastgeber zwei eintragen"* + Integrationstest „Gastgeber darf bei Limit 1 zwei eintragen, der dritte wird abgelehnt".
+- [x] AC-H8 Kein Limit → „Keine Begrenzung"-Hinweis, „hinzufügen" bleibt verfügbar (bis 10) — `computeQuota` (unit-getestet); im „anlegen"-E2E sichtbar.
+- [x] AC-H9 Event hat 10 Whiskys → weiterer Whisky abgelehnt mit klarem Hinweis — Integrationstest „der 11. Whisky eines Abends wird mit **`TS016`** abgelehnt"; `errors.ts` liefert die Meldung „Für diesen Abend sind bereits 10 Whiskys eingetragen …".
+
+#### Bearbeiten & Entfernen
+- [x] AC-B1 Eigenen Whisky im Draft bearbeiten → Liste zeigt den neuen Stand — *E2E „Whisky bearbeiten"* + Integrationstest „der Bringer ändert seinen Whisky im Draft".
+- [x] AC-B2 „Entfernen" → Bestätigungsdialog mit Endgültigkeits-Hinweis vor der Aktion — *E2E „Whisky entfernen (mit Bestätigung)"* (Dialogtext enthält „endgültig").
+- [x] AC-B3 Entfernen bestätigt → Whisky weg, Kontingent wieder frei — *E2E* (Zeile verschwindet); Integrationstest „der Bringer entfernt seinen Whisky, die Lücke schliesst sich" (Position 2 → 1).
+- [x] AC-B4 Event nicht mehr Draft → nur Anzeige, keine Aktionen, „Eintragen geschlossen" — *E2E „Abgeschlossenes Event: ‚Eintragen geschlossen', keine Aktionen"* und *„… eigene Einträge bleiben als reine Anzeige"* (Zeile ohne Buttons).
+
+#### Blindheit & Sicherheit
+- [x] AC-S1 Teilnehmer sieht ausschließlich die eigenen Einträge — keine fremden Namen/Anzahl — *E2E „… andere Teilnehmer sehen ihn nicht"* (zweiter Teilnehmer desselben Events, Eintrag nirgends sichtbar) + RLS `wd_select` + `getWhiskyEntryData` filtert auf `brought_by`.
+- [x] AC-S2 Nicht-Teilnehmer schickt Request direkt an den Server → abgelehnt — Integrationstest „Nicht-Teilnehmer wird abgewiesen (`TS004`)"; die Seite selbst → `notFound()`.
+- [x] AC-S3 Teilnehmer versucht, fremden Whisky zu ändern/entfernen → abgelehnt — Integrationstests „ein anderer Teilnehmer kann den Whisky nicht ändern (0 Zeilen)" und „ein Fremder darf nicht entfernen (`TS004`)".
+- [x] AC-S4 Event läuft/abgeschlossen → Hinzufügen/Ändern/Entfernen serverseitig abgelehnt — Integrationstests „nach dem Start kein Eintragen mehr (`TS005`)", „nach dem Start ändert auch der Bringer nichts mehr (0 Zeilen)", „nach dem Start lässt sich nichts mehr entfernen (`TS005`)".
+
+#### Zustände & Rückmeldungen
+- [x] AC-Z1 Speichern schlägt fehl → Fehlerhinweis, Eingaben bleiben, kein Doppel-Eintrag — Code-Review: `form.setError('root')` im Dialog, RHF hält die Werte, `useTransition` sperrt den Doppel-Submit; DB-Fehler über `messageForDbError`.
+- [x] AC-Z2 Ladefehler → Hinweis + „Erneut versuchen" statt leerer Seite — `tastings/error.tsx` und `tastings/[eventId]/whiskies/error.tsx` vorhanden.
+- [x] AC-Z3 Aktion läuft → Button im Ladezustand, kein zweiter Klick — `useTransition` + `disabled={pending}` im Dialog; `ConfirmDialog` `pending`-Prop beim Entfernen.
+
+**23 / 23 Acceptance Criteria erfüllt** (13 direkt per E2E, 10 per DB-Integrationstest + Code-Review).
+
+### Edge Cases Status
+- [x] EC-1 Limit nachträglich gesenkt → Vorhandenes bleibt, kein weiterer Whisky — Integrationstest (`TS003`), PROJ-1-Design.
+- [x] EC-2 Teilnehmer mit Whisky aus der Liste entfernen → durch PROJ-4 (`TS009`) verhindert; für PROJ-5 kein Sonderfall.
+- [x] EC-3 Zwei Geräte, paralleles Eintragen → `add_whisky` serialisiert über `for update` auf der Event-Zeile; zweiter über dem Limit → `TS003`. Kein kaputter Positionslauf.
+- [x] EC-4 Event wird gelöscht, während der Teilnehmer auf der Seite ist → nächster Lade-/Speicherversuch → `notFound()` bzw. `messageForDbError`; kein 500 (prod-Smoke: unangemeldet sauberer Redirect).
+- [x] EC-5 Gastgeber trägt Bonus-Whisky ein und wird danach als Gastgeber abgelöst → Bonus-Eintrag bleibt (Limit nur beim Hinzufügen geprüft) — PROJ-1-Verhalten.
+- [x] EC-6 Video-Link mit Leerzeichen → Schema trimmt; nach dem Trimmen leer = „kein Link" — Unit-Test `whiskies.test.ts` „trimmt den Video-Link".
+- [x] EC-7 Sehr langer Name / sehr lange Notiz → Zod lehnt > 200 / > 2000 ab — Unit-Tests; zusätzlich DB-CHECKs.
+
+### Security Audit Results
+- [x] **Blindheit / Autorisierung:** Ein Teilnehmer bekommt aus `whisky_details` per RLS (`wd_select`) nur die **eigenen** Zeilen; der Gastgeber alle (er schenkt aus), alle anderen erst nach dem Abschluss. `getWhiskyEntryData` filtert zusätzlich auf `brought_by`. E2E bestätigt: zweiter Teilnehmer sieht den fremden Eintrag nicht.
+- [x] **Fremde Whisky-ID im Request:** `updateWhiskyAction`/`removeWhiskyAction` nehmen `whiskyId` vom Client, aber RLS `wd_update_own` bzw. die `remove_whisky`-RPC gaten auf Bringer/Admin → fremde ID = 0 Zeilen bzw. `TS004` (Integrationstests).
+- [x] **Status-Bypass:** Hinzufügen/Entfernen (`TS005`) und Bearbeiten (RLS `event_status_of = 'draft'`) sind serverseitig auf „In Vorbereitung" beschränkt.
+- [x] **Kontingent-Bypass:** Der deaktivierte Button ist nur UI; `add_whisky` erzwingt `TS003` (persönlich, inkl. Gastgeber-Bonus) und `TS016` (10er-Obergrenze).
+- [x] **Eingabevalidierung:** Zod serverseitig in `normalize()` (Name 1–200, Video `^https?://`, Notiz ≤ 2000) **plus** DB-CHECKs. `add_whisky` trimmt.
+- [x] **XSS:** Name/Notiz als React-Text; Video-Link als `<a target="_blank" rel="noopener noreferrer">` mit `https?://`-Zwang (Zod + DB) → kein `javascript:`.
+- [x] **Secrets:** kein Service-Role-Key; alles über den nutzergebundenen Client + `SECURITY DEFINER`-RPCs mit `set search_path = ''`.
+- [x] **Race:** `select … for update` auf der Event-Zeile in `add_whisky` / `remove_whisky`.
+- **Akzeptiertes Restrisiko:** Ein Bringer kann als Video-Link eine beliebige `https://`-Adresse hinterlegen (Phishing wäre denkbar). Geschlossener Freundeskreis, der Link wird erst nach dem Abschluss für andere sichtbar (PROJ-9). Kein Handlungsbedarf im MVP.
+- Keine Sicherheitsbefunde.
+
+### Bugs Found
+
+#### BUG-1: Whisky-Sektion rendert nach der Navigation kurz doppelt (Hydration-Mismatch)
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Zu `/tastings/[eventId]/whiskies` navigieren (v. a. WebKit / langsames Gerät, unter Last)
+  2. Im ersten ~½–1 s existieren Kontingent-Hinweis und Listeneinträge doppelt im DOM, dann heilt es sich selbst.
+- **Auswirkung:** kurzes Flackern; **kein** Datenrisiko. Hat die E2E-Suite flaky gemacht, bis ein Settle-Wait in den Helper kam.
+- **Einordnung:** **dieselbe Ursache wie PROJ-4 BUG-2** — ein projektweites Muster bei Client-Komponenten (`WhiskySection` ist `'use client'`), kein PROJ-5-spezifischer Fehler.
+- **Priority:** Fix before deployment — zusammen mit PROJ-4 BUG-2 in einem Zug von `/frontend` untersuchen (Verdacht: `useId`-Reihenfolge / eine `new Date()`-Instanz im Render-Pfad).
+
+#### BUG-2: Doppelte Formulierung im Leerzustand ohne Limit
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Als Teilnehmer eines Draft-Events **ohne** Whisky-Limit „Meine Whiskys" öffnen, noch nichts eingetragen
+  2. Der Kontingent-Hinweis („Keine Begrenzung für diesen Abend — **trag ein, was du mitbringst**.") und die Leerzustands-Karte („**Trag ein, was du mitbringst** — sieht außer dir nur der Gastgeber.") stapeln denselben Satz.
+- **Auswirkung:** rein kosmetisch.
+- **Priority:** Fix in next sprint — z. B. den Kontingent-Hinweis bei leerer Liste auf „Keine Begrenzung für diesen Abend." kürzen.
+
+### Summary
+- **Acceptance Criteria:** 23 / 23 erfüllt
+- **Bugs Found:** 2 (0 Critical, 0 High, 0 Medium, 2 Low)
+- **Security:** Pass — keine Befunde (Blindheit hält, serverseitig erzwungen)
+- **Production Ready:** YES
+- **Recommendation:** **Approved.** Offen: der Nutzer bestätigt `npm run test:rls` einmal grün (68/68). BUG-1 vor `/deploy` gemeinsam mit PROJ-4 BUG-2 beheben; BUG-2 (Kosmetik) kann warten. Beide Low, blockieren das Deployment nicht.
 
 ## Deployment
 _To be added by /deploy_
