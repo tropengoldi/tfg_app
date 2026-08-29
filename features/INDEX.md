@@ -19,16 +19,17 @@
 | PROJ-2 | Auth & Zugangskontrolle | Approved | [PROJ-2-auth-zugangskontrolle.md](PROJ-2-auth-zugangskontrolle.md) | 2026-08-27 |
 | PROJ-3 | Admin – Teilnehmerverwaltung | Approved | [PROJ-3-admin-teilnehmerverwaltung.md](PROJ-3-admin-teilnehmerverwaltung.md) | 2026-08-27 |
 | PROJ-4 | Admin – Tasting-Events verwalten | Approved | [PROJ-4-admin-tasting-events.md](PROJ-4-admin-tasting-events.md) | 2026-08-27 |
-| PROJ-5 | Whisky-Erfassung (blind) | Roadmap | – | 2026-08-27 |
+| PROJ-5 | Whisky-Erfassung (blind) | Planned | [PROJ-5-whisky-erfassung.md](PROJ-5-whisky-erfassung.md) | 2026-08-27 |
 | PROJ-6 | Gastgeber-Steuerung & Ablauf | Roadmap | – | 2026-08-27 |
 | PROJ-7 | Bewertungsansicht | Roadmap | – | 2026-08-27 |
 | PROJ-8 | Tasting-Dashboard mit Live-Sync | Roadmap | – | 2026-08-27 |
 | PROJ-9 | Ergebnisse & Tasting-Historie | Roadmap | – | 2026-08-27 |
 | PROJ-10 | Profil-Seite mit persönlicher Bilanz | Roadmap | – | 2026-08-27 |
+| PROJ-11 | Neutraler Helfer pro Event | Roadmap | – | 2026-08-29 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-11
+## Next Available ID: PROJ-12
 
 ---
 
@@ -51,6 +52,7 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-8** | **Tasting-Dashboard mit Live-Sync** | Eckdaten, Teilnehmerliste, Whiskyglas-Fortschritt, Absprünge zu Bewertung/Gastgeber/Historie, Realtime-Aktualisierung aller Geräte beim Rundenwechsel | P0 | PROJ-7 |
 | **PROJ-9** | **Ergebnisse & Tasting-Historie** | Rangliste nach Abschluss (Gesamt-, Nasen-, Geschmackspunkte) mit Link zum Verkostungsvideo je Whisky, Liste vergangener Tastings mit Datum, Gastgeber und Sieger-Whisky, Detailansicht | P1 | PROJ-7 |
 | **PROJ-10** | **Profil-Seite mit persönlicher Bilanz** | Eigene Daten bearbeiten (Anzeigename, Lieblings-Dram, Lieblingsregion, Kurzbeschreibung) plus persönliche Bilanz: Anzahl Tastings, mitgebrachte Whiskies, beste Platzierung, Ø vergebene Punkte | P2 | PROJ-9 |
+| **PROJ-11** | **Neutraler Helfer pro Event** | Optionale Rolle je Event: eine Person, die selbst nicht mitverkostet, aber Einblick in die geheimen Whisky-Details hat und den Ablauf steuern darf (Ausschankreihenfolge festlegen, Runden weiterschalten u. ä.). Ist ein Helfer für ein Event benannt, hat der Gastgeber dieses Abends nur noch die Einblicke eines normalen Teilnehmers (er verkostet dann blind mit). Betrifft Rollen-/Berechtigungsmodell (RLS, Helper-Funktionen), Event-Anlage (PROJ-4) und Gastgeber-Steuerung (PROJ-6). | P2 | PROJ-6 |
 
 ### Anmerkungen zur Aufteilung
 
@@ -70,3 +72,8 @@ Whiskies existieren und eine Runde läuft.
 - **Der Link zum Verkostungsvideo** entsteht in PROJ-5 (eingeben) und wird in PROJ-9 sichtbar
   (nach der Auflösung). Er liegt in der geheimen Whisky-Tabelle, weil eine YouTube-URL den
   Whisky verrät — vor dem Abschluss sehen ihn nur der Bringer und der Gastgeber.
+- **PROJ-11 (Neutraler Helfer)** ist bewusst nach hinten gelegt: Die P0-Kette geht davon
+  aus, dass der Gastgeber ausschenkt und deshalb die Details sieht. Der Helfer ist eine
+  Verfeinerung dieses Rollenmodells, die die Runde erst nach dem ersten echten Einsatz
+  wirklich beurteilen kann. Wird zusammen mit / nach PROJ-6 spezifiziert, weil sie dieselben
+  Berechtigungspfade (Ausschankreihenfolge, Runden schalten) betrifft.
