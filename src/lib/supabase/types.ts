@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -470,6 +470,21 @@ export type Database = {
         }
         Returns: string
       }
+      admin_list_events: {
+        Args: never
+        Returns: {
+          event_date: string
+          host_id: string
+          host_name: string
+          id: string
+          location: string
+          max_whiskies_per_participant: number
+          participant_count: number
+          status: Database["public"]["Enums"]["event_status"]
+          theme: string
+          whisky_count: number
+        }[]
+      }
       admin_list_members: {
         Args: never
         Returns: {
@@ -498,23 +513,8 @@ export type Database = {
         }
         Returns: string
       }
-      admin_list_events: {
-        Args: never
-        Returns: {
-          id: string
-          event_date: string
-          location: string
-          theme: string | null
-          host_id: string
-          host_name: string
-          status: Database["public"]["Enums"]["event_status"]
-          max_whiskies_per_participant: number | null
-          participant_count: number
-          whisky_count: number
-        }[]
-      }
-      delete_event: { Args: { p_event: string }; Returns: undefined }
       deactivate_member: { Args: { p_target: string }; Returns: undefined }
+      delete_event: { Args: { p_event: string }; Returns: undefined }
       event_status_of: {
         Args: { p_event: string }
         Returns: Database["public"]["Enums"]["event_status"]
