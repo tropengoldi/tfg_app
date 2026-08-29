@@ -413,15 +413,42 @@ beide RPCs ergänzt.
 - **Nicht** getestet (braucht die Migration): anlegen/bearbeiten/löschen mit echten
   Daten, Liste, `delete_event`-Regeln → `/backend` + `/qa`.
 
-### Für `/backend`
-- `npm run db:push` (Migration `20260828100000`), dann `npm run db:types` (die
-  handgepflegten RPC-Typen ersetzen und committen).
-- DB-Regeltests für `delete_event` (PROJ-1-Stil): Nicht-Admin → `TS004`; laufendes
-  Event → `TS005`; Event mit Whisky → `TS015`; Draft ohne alles → gelöscht (samt
-  `event_participants`).
-- `admin_list_events`-Sortierung/Zählwerte gegen echte Daten prüfen.
-- Prüfen, dass `create_event` + `set_event_participants` als Paar sauber laufen
-  (Teilentfernen eines Teilnehmers mit Whisky → `TS009` aus PROJ-1).
+## Implementation Notes (Backend)
+
+**Kein neues Schema, keine `/api`-Routen** — die zwei RPCs (Migration
+`20260828100000`, im Frontend-Durchlauf geschrieben) plus die Server Actions.
+
+### Review der RPCs
+- `delete_event` und `add_whisky` (PROJ-1) serialisieren über die Sperre auf der
+  Event-Zeile (`select … for update`) — ein gleichzeitiges „Whisky eintragen" und
+  „Event löschen" kann nicht beides durchrutschen: entweder sieht `delete_event`
+  den Whisky (→ `TS015`) oder `add_whisky` findet das Event nicht mehr (→ `TS004`).
+- Zwei gleichzeitige `delete_event` auf dasselbe Event: die zweite Sperre trifft
+  eine gelöschte Zeile → `v_status is null` → `TS004`. Sauber.
+- `delete_event` prüft **nicht** auf Bewertungen — Bewertungen können ohne Whisky
+  gar nicht existieren (zusammengesetzter FK), die Whisky-Prüfung deckt das ab.
+- `admin_list_events` sortiert heute/Zukunft aufsteigend (nächstes oben), danach
+  Vergangenheit absteigend (jüngstes oben); `limit 1000`.
+
+### Tests
+`src/lib/supabase/__tests__/admin-events-rpcs.integration.test.ts` (über
+`npm run test:rls`): 7 Assertions — `admin_list_events` (Nicht-Admin → `TS004`;
+Admin bekommt Gastgebername + `participant_count` + `whisky_count` + Status),
+`delete_event` (Nicht-Admin → `TS004`; unbekannte ID → `TS004`; Draft ohne
+Whiskies → gelöscht samt `event_participants`; Draft mit Whisky → `TS015`, Event
+bleibt; nicht-Draft-Event → `TS005`).
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (24) · `tsc` ✅
+- `npm run test:rls` — **nicht ausgeführt** (kein DB-Zugang). Muss der Nutzer nach
+  `db:push` laufen lassen.
+
+### Anwenden (durch den Nutzer, vor `/qa`)
+```
+npm run db:push        # Migration 20260828100000
+npm run db:types       # generierte RPC-Typen — src/lib/supabase/types.ts committen
+npm run test:rls       # RLS (39) + admin-rpcs (11) + admin-events-rpcs (7) = 57
+```
 
 ## QA Test Results
 _To be added by /qa_
