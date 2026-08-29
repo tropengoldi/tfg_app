@@ -1,6 +1,6 @@
 # PROJ-4: Admin – Tasting-Events verwalten
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-08-28
 **Last Updated:** 2026-08-28
 
@@ -201,13 +201,163 @@ Vorbereitung" ist**, plus löschen, solange nichts daran hängt. Whiskies eintra
 | Löschen (zerstörend) hinter AlertDialog; das Speichern eines Formulars nicht | Löschen ist endgültig; ein Formular-Submit ist selbsterklärend | 2026-08-28 |
 
 ### Technical Decisions
-_To be added by /architecture_
+
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Eigene Seiten `/admin/events`, `/admin/events/neu`, `/admin/events/[eventId]` — kein Dialog | Das Formular ist größer als das Einladen-Formular (Datumsauswahl, Mehrfach-Teilnehmerauswahl); auf dem Handy braucht das eine ganze Seite | 2026-08-28 |
+| Die Event-Liste kommt über eine neue Admin-Datenbank-Aktion `admin_list_events()` (Event + Gastgebername + Teilnehmerzahl gebündelt) | Konsistent mit PROJ-3 (`admin_list_members`), ein Aufruf statt vieler Einzelabfragen, Admin-Prüfung steckt in der Funktion | 2026-08-28 |
+| Neue Datenbank-Aktion `delete_event` — prüft Admin + Status „In Vorbereitung" + keine Whiskies/Bewertungen, dann löschen (räumt die Teilnehmer-Zuordnung mit ab) | PROJ-1 hat bewusst keine Lösch-Aktion für Events. Sie muss die Regeln aus dem Spec selbst erzwingen. Neuer Fehlercode `TS015` = „Event hat schon Whiskies" | 2026-08-28 |
+| „Datum nicht in der Vergangenheit" wird in der Server-Aktion geprüft, **nicht** in der Datenbank | Es ist eine Produktregel, die sich ändern kann (siehe Open Question „Backfill"), kein hartes Daten-Invariant. Die Server-Aktion ist der admin-geprüfte serverseitige Engpass — die Regel gilt damit serverseitig, ohne eine spätere Datenbank-Migration zu erzwingen | 2026-08-28 |
+| Anlegen = zwei aufeinanderfolgende Datenbank-Aktionen (`create_event`, dann `set_event_participants`) — nicht in einem Zug | PROJ-1s `create_event` nimmt keine Teilnehmerliste entgegen. Schlägt der zweite Schritt fehl, existiert das Event mit nur dem Gastgeber; der Admin zieht die Liste nach. Kein Datenverlust, seltener Fall | 2026-08-28 |
+| Der Teilnehmer-Picker nutzt die bestehende `admin_list_members`-Aktion (PROJ-3), clientseitig auf aktive Mitglieder gefiltert | Kein neuer Endpunkt für „aktive Mitglieder"; die Liste liefert schon Name + Status | 2026-08-28 |
+| Die Bearbeiten-Seite prüft den Status: nur „In Vorbereitung" ist editierbar, sonst zurück zur Liste | Deckt den Direktaufruf `/admin/events/[eventId]` für ein laufendes/abgeschlossenes Event ab | 2026-08-28 |
+| Mutationen als Server Actions in `src/lib/actions/admin-events.ts`, jede mit Admin-Prüfung vor dem Datenbank-Aufruf | Konsistent mit PROJ-2/PROJ-3 | 2026-08-28 |
+| Neue Pakete: `shadcn calendar` (zieht `react-day-picker` mit) + `date-fns` | Datumsauswahl mit gesperrten Vergangenheitstagen; `date-fns` für deutschsprachige Datumsformatierung und den „heute"-Vergleich | 2026-08-28 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+> **Für PMs in einem Satz:** Drei Admin-Seiten — eine Liste aller Tastings, ein
+> Formular zum Anlegen, dasselbe Formular zum Bearbeiten geplanter Abende — plus
+> eine Lösch-Aktion für versehentlich angelegte Termine. Das meiste dahinter steht
+> schon aus PROJ-1; neu sind die Oberfläche, eine Listen-Abfrage und eine
+> Lösch-Regel.
+
+### 1. Seitenstruktur
+
+```
+(admin)-Bereich  (Zugang: „nur Admins")
+└─ /admin                         Platzhalter → Link „Tastings verwalten"
+   ├─ /admin/events               Liste: alle Tastings, chronologisch nach Datum
+   │   ├─ Button „Tasting anlegen" → /admin/events/neu
+   │   ├─ pro Zeile: Datum · Ort · Gastgeber · Teilnehmerzahl · Status-Badge
+   │   │   (In Vorbereitung / Läuft / Abgeschlossen)
+   │   │   └─ bei „In Vorbereitung": Aktionen „Bearbeiten" und „Löschen"
+   │   │       (Löschen hinter Bestätigungsdialog)
+   │   ├─ Leerzustand: „Noch kein Tasting angelegt." + „Erstes Tasting anlegen"
+   │   ├─ Ladezustand: Skeleton-Zeilen
+   │   └─ Fehlerzustand: Hinweis + „Erneut versuchen"
+   │
+   ├─ /admin/events/neu           Anlege-Formular
+   └─ /admin/events/[eventId]     dasselbe Formular, vorausgefüllt
+       └─ ist das Event nicht „In Vorbereitung" → zurück zur Liste
+
+Formular (Anlegen = Bearbeiten)
+├─ Datum            Pflicht, Auswahl über einen Kalender; Tage vor heute gesperrt
+├─ Ort              Pflicht, Freitext
+├─ Gastgeber        Pflicht, Auswahl aus den aktiven Mitgliedern
+├─ Teilnehmer       Mehrfachauswahl (Häkchen) aller aktiven Mitglieder;
+│                   der Gastgeber ist gesetzt und nicht abwählbar
+├─ Max. Whiskies pro Person   optional, Zahl 1–10; leer = kein Limit
+│                   (Hinweis: „Der Gastgeber darf einen mehr.")
+└─ Thema            optional, Freitext
+```
+
+Neue Bausteine: `src/components/admin/{event-list, event-row, event-form,
+event-status-badge, participant-picker}.tsx`, ein Kalender-Datumsfeld,
+`src/lib/actions/admin-events.ts`, `src/lib/schemas/admin-events.ts`,
+`src/lib/queries/admin-events.ts`. Der Bestätigungsdialog (`ConfirmDialog`) und
+die Fehler-/Lade-Muster stammen aus PROJ-3.
+
+### 2. Datenmodell (nichts Neues an Tabellen)
+
+PROJ-4 nutzt die Tabellen aus PROJ-1:
+
+- **`tasting_events`:** Datum, Ort, Thema, Gastgeber, wer es angelegt hat, Limit,
+  Status. (Die Felder „Info zum Essen" und „Anmerkungen des Gastgebers" existieren,
+  werden hier aber **nicht** angefasst — die füllt der Gastgeber in PROJ-6.)
+- **`event_participants`:** die Zuordnung Event ⇄ Teilnehmer.
+
+**Neue Datenbank-Aktionen (RPCs), jeweils mit eingebauter Admin-Prüfung:**
+
+| Aktion | Was sie tut | Eingebaute Regeln |
+|--------|-------------|-------------------|
+| **Event-Liste lesen** | alle Events + Gastgebername + Teilnehmerzahl gebündelt | nur für Admins |
+| **Event löschen** | löscht das Event (und die Teilnehmer-Zuordnung) | nur „In Vorbereitung"; **keine** Whiskies und **keine** Bewertungen dürfen daranhängen — sonst abgelehnt |
+
+**Schon vorhanden aus PROJ-1** (PROJ-4 ruft sie nur auf):
+
+| Aktion | Rolle in PROJ-4 |
+|--------|-----------------|
+| `create_event` | legt das Event an (Status „In Vorbereitung", Gastgeber wird Teilnehmer) |
+| `update_event` | ändert die Eckdaten — **funktioniert nur, solange „In Vorbereitung"** |
+| `set_event_participants` | setzt die Teilnehmerliste; fügt den Gastgeber automatisch hinzu; **verweigert das Entfernen** von jemandem mit Whiskies oder Bewertungen |
+
+### 3. Wo geschrieben wird
+
+| Aktion | Mechanismus | Prüfung |
+|--------|-------------|---------|
+| Event anlegen | Server Action → `create_event`, danach `set_event_participants` | Admin-Rolle; Datum nicht in der Vergangenheit; Gastgeber ist aktives Mitglied (Datenbank-Aktion) |
+| Event bearbeiten | Server Action → `update_event` + `set_event_participants` | Admin-Rolle; nur „In Vorbereitung"; dieselben Feldregeln |
+| Event löschen | Server Action → `delete_event` | Admin-Rolle; nur „In Vorbereitung"; keine Whiskies/Bewertungen |
+
+Kein direkter Schreibzugriff auf die Event-Tabelle für normale Nutzer (PROJ-1).
+Der Service-Schlüssel wird in PROJ-4 **nicht** gebraucht — alles läuft über die
+Datenbank-Aktionen mit eigener Admin-Prüfung.
+
+### 4. Die „Datum nicht in der Vergangenheit"-Regel
+
+- **In der Oberfläche:** Der Kalender sperrt Tage vor heute, man kann sie gar nicht
+  erst anklicken.
+- **Serverseitig:** Die Server-Aktion vergleicht das übermittelte Datum mit „heute"
+  und lehnt Vergangenheitsdaten ab — bevor die Datenbank-Aktion aufgerufen wird.
+- **Bewusst nicht in der Datenbank:** Das ist eine Produktregel, die sich später
+  ändern kann (falls die Runde alte Papier-Abende nachtragen will, siehe Open
+  Question). Sie in einen Datenbank-Zwang zu gießen würde ein späteres
+  Backfill-Feature eine Migration kosten.
+
+### 5. Anlegen in zwei Schritten
+
+`create_event` nimmt keine Teilnehmerliste entgegen. Ablauf:
+
+1. `create_event` → Event steht (mit dem Gastgeber als einzigem Teilnehmer).
+2. Hat der Admin weitere Teilnehmer angehakt → `set_event_participants` mit der
+   vollen Liste.
+
+Schlägt Schritt 2 fehl (Netz), existiert das Event mit nur dem Gastgeber; der Admin
+öffnet es und ergänzt die Liste. Kein Datenverlust.
+
+### 6. Bearbeiten nur im Draft
+
+Ruft der Admin `/admin/events/[eventId]` für ein Event auf, das schon läuft oder
+abgeschlossen ist, leitet die Seite zurück zur Liste. Gibt es das Event nicht (oder
+ist es für den Nutzer unsichtbar), kommt „nicht gefunden". Die Liste zeigt die
+„Bearbeiten"- und „Löschen"-Aktionen ohnehin nur bei Events „In Vorbereitung".
+
+### 7. Zustände & Rückmeldungen (nach design-system)
+
+- **Laden:** Skeleton-Zeilen bzw. -Formularfelder.
+- **Fehler beim Laden:** Hinweis + „Erneut versuchen".
+- **Aktion läuft:** Button im Ladezustand, kein Doppelklick.
+- **Aktion schlägt fehl:** konkrete deutsche Meldung; das Formular behält die
+  Eingaben.
+- **Aktion gelingt:** zurück zur Liste, kurze Bestätigung.
+- **Löschen:** AlertDialog mit dem Hinweis, dass es endgültig ist.
+
+### 8. Neue Pakete
+
+| Paket | Zweck |
+|-------|-------|
+| `shadcn calendar` (zieht `react-day-picker` mit) | Datumsauswahl mit gesperrten Vergangenheitstagen |
+| `date-fns` | deutschsprachige Datumsformatierung, „heute"-Vergleich |
+
+### 9. Betriebsvoraussetzung
+
+Keine neue. (Der E-Mail-Versand aus PROJ-3 ist hier nicht betroffen.)
+
+### 10. Wie der Erfolg geprüft wird
+
+- **Unit-Tests** für die Formular-Eingaberegeln (Datum nicht in der Vergangenheit,
+  Limit 1–10 oder leer, Pflichtfelder) und die Status-Ableitung/Label.
+- **Datenbank-Tests** (PROJ-1-Stil) für `delete_event`: Nicht-Admin → abgewiesen;
+  laufendes Event → abgewiesen; Event mit Whisky → abgewiesen; Draft ohne alles →
+  gelöscht (samt Teilnehmer-Zuordnung).
+- **E2E-Tests** (Chromium + Mobile Safari): anlegen (Pflichtfelder, Vergangenheits-
+  datum, Limit-Grenzen), bearbeiten eines Drafts, laufendes Event ist nicht
+  editierbar, löschen mit Bestätigung, Nicht-Admin sieht „nicht gefunden".
+- `npm run build` / `npm run lint` sauber.
 
 ## QA Test Results
 _To be added by /qa_
