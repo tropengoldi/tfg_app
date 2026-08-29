@@ -1,23 +1,23 @@
 import type { Metadata } from 'next'
 
 import { PageHeader } from '@/components/layout/page-header'
-import { Card, CardContent } from '@/components/ui/card'
+import { TastingList } from '@/components/tasting/tasting-list'
+import { requireUser } from '@/lib/auth'
+import { getMyTastings } from '@/lib/queries/tastings'
 
 export const metadata: Metadata = { title: 'Tastings' }
 
-export default function TastingsPage() {
+export default async function TastingsPage() {
+  const { userId } = await requireUser()
+  const rows = await getMyTastings(userId)
+
   return (
     <>
       <PageHeader
         title="Tastings"
-        description="Vergangene Abende zum Nachschlagen."
+        description="Deine Abende — trag hier ein, was du mitbringst."
       />
-      <Card>
-        <CardContent className="pt-6 text-sm text-muted-foreground">
-          Die Liste der vergangenen Tastings mit Datum, Gastgeber und Sieger-Whisky
-          entsteht in einem späteren Schritt.
-        </CardContent>
-      </Card>
+      <TastingList rows={rows} />
     </>
   )
 }

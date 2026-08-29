@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
-import { ConfirmDialog } from '@/components/admin/confirm-action'
-import { EventStatusBadge } from '@/components/admin/event-status-badge'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { EventStatusBadge } from '@/components/common/event-status-badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,

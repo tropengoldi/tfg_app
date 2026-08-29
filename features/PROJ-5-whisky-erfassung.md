@@ -1,6 +1,6 @@
 # PROJ-5: Whisky-Erfassung (blind)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-29
 **Last Updated:** 2026-08-29
 
@@ -426,6 +426,77 @@ Keine neue.
   entfernen mit Bestätigung, „Eintragen geschlossen" nach Start, Nicht-Teilnehmer
   sieht „nicht gefunden", ein Teilnehmer sieht die Whiskys eines anderen nicht.
 - `npm run build` / `npm run lint` sauber.
+
+## Implementation Notes (Frontend)
+
+**Stand:** Seiten, Komponenten, Queries, Server Actions und die Eingaberegeln
+geschrieben. **Rein clientseitig lauffähig gegen das vorhandene PROJ-1-Backend** —
+`add_whisky` / `remove_whisky` / der direkte `whisky_details`-Update existieren
+bereits. Der neue Fehlercode `TS016` (aus dem Tech Design) ist **noch nicht**
+angelegt; bis dahin zeigt der äußerst seltene „>10 Whiskys"-Fall die etwas
+unpassende `TS008`-Meldung. `/backend` = `TS016`-Migration + `errors.ts`-Eintrag,
+danach `/qa`.
+
+### Was gebaut wurde
+
+**Gemeinsame Komponenten** — `ConfirmDialog` und `EventStatusBadge` von
+`src/components/admin/` nach `src/components/common/` verschoben (`git mv`), die
+zwei Admin-Importe angepasst. Kein Verhaltensunterschied.
+
+**Eingaberegeln** — `src/lib/schemas/whiskies.ts`: `whiskyFormSchema`
+(Name 1–200 Pflicht, Video-Link `''` oder `^https?://.+` bis 2048 Zeichen, Notiz
+bis 2000). Unit-Tests `whiskies.test.ts` (8).
+
+**Kontingent** — `src/lib/whisky-quota.ts`: `computeQuota()` (rein, testbar) —
+Limit + Gastgeber-Bonus − eigene Anzahl, harte 10er-Obergrenze, fertiger
+Hinweistext + `canAdd`. Unit-Tests `whisky-quota.test.ts` (8).
+
+**Datenzugriff** — `src/lib/queries/tastings.ts`:
+- `getMyTastings(userId)` — Events des Nutzers über `event_participants`
+  (RLS-gescoped), Gastgebernamen per zweiter Abfrage, Sortierung kommende
+  aufsteigend / vergangene absteigend.
+- `getWhiskyEntryData(eventId, userId)` — prüft Teilnahme explizit (kein
+  Teilnehmer → `null` → `notFound()`), lädt Event-Eckdaten, die **eigenen**
+  `whisky_details` und die Gesamt-Whiskyzahl des Events (für die Obergrenze).
+
+**Server Actions** — `src/lib/actions/whiskies.ts` (`'use server'`):
+- `addWhiskyAction(eventId, input)` → `add_whisky`-RPC.
+- `updateWhiskyAction(eventId, whiskyId, input)` → **direkter, spaltengenauer
+  `whisky_details`-Update** (RLS `wd_update_own` erzwingt Bringer + Draft); 0
+  betroffene Zeilen → verständliche Fehlermeldung.
+- `removeWhiskyAction(eventId, whiskyId)` → `remove_whisky`-RPC.
+- Jede prüft Login vorab, mappt DB-Fehler über `messageForDbError`, revalidiert
+  `/tastings/[eventId]/whiskies`.
+
+**Seiten**
+- `(app)/tastings/page.tsx` — ersetzt den Platzhalter: `requireUser` +
+  `getMyTastings` + `<TastingList>`. Dazu `loading.tsx` (Skeleton) und
+  `error.tsx` (Retry + „Zur Startseite").
+- `(app)/tastings/[eventId]/whiskies/page.tsx` — `requireUser`,
+  `getWhiskyEntryData` → `notFound()` bei `null`; `computeQuota`; „Zurück"-Link;
+  bei Status ≠ `draft` ein `Alert` „Eintragen geschlossen"; `<WhiskySection>`.
+  Dazu `loading.tsx` und `error.tsx`.
+
+**Komponenten** — `src/components/tasting/`:
+- `tasting-list` / `tasting-row` — anklickbare Zeilen (Datum · Ort · Gastgeber ·
+  Status-Badge) → `/tastings/[id]/whiskies`; Leerzustand als Karte.
+- `whisky-section` (Client) — Kontingent-Hinweis, „Whisky hinzufügen" (deaktiviert
+  bei `!canAdd`), Liste der eigenen Whiskys mit Video-Link (`target="_blank"
+  rel="noopener noreferrer"`) und Notiz, je Zeile „Bearbeiten"/„Entfernen"
+  (Entfernen hinter `ConfirmDialog`), im Nur-Anzeige-Modus ohne Aktionen. Nach
+  jeder Aktion `router.refresh()`.
+- `whisky-form-dialog` (Client) — RHF + Zod, dient Anlegen **und** Bearbeiten; der
+  Aufrufer setzt beim Moduswechsel einen anderen `key`, damit die Startwerte
+  frisch übernommen werden.
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (40, davon 16 neu) · `tsc` ✅
+  (über den Build)
+- Smoke gegen `next start`: `/tastings` und `/tastings/<uuid>/whiskies` leiten
+  unangemeldet sauber auf `/login?redirect=…` (kein 500).
+- **Nicht** getestet (braucht echte Daten / `/qa`): das Eintragen/Bearbeiten/
+  Entfernen im Browser, das Kontingent-Verhalten am echten Event, die
+  „Eintragen geschlossen"-Ansicht, Blindheit gegenüber anderen Teilnehmern.
 
 ## QA Test Results
 _To be added by /qa_

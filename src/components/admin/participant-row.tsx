@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
-import { ConfirmDialog } from '@/components/admin/confirm-action'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { MemberStatusBadge } from '@/components/admin/member-status-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
