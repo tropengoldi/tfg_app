@@ -127,6 +127,76 @@ export async function deleteUser(userId: string) {
     .catch(() => {})
 }
 
+// --- Events (PROJ-4) ---------------------------------------------------------
+
+interface CreateEventOpts {
+  hostId: string
+  createdBy: string
+  location: string
+  eventDate?: string
+  status?: 'draft' | 'active' | 'closed'
+  maxWhiskies?: number
+}
+
+/** Legt ein Event direkt an (Service-Client, umgeht die Server Action). */
+export async function createEventDirect(opts: CreateEventOpts): Promise<string> {
+  const svc = serviceClient()
+  const now = new Date().toISOString()
+  const status = opts.status ?? 'draft'
+  const row: Record<string, unknown> = {
+    event_date: opts.eventDate ?? '2026-12-24',
+    location: opts.location,
+    host_id: opts.hostId,
+    created_by: opts.createdBy,
+    status,
+    max_whiskies_per_participant: opts.maxWhiskies ?? null,
+  }
+  if (status !== 'draft') {
+    row.started_at = now
+    row.current_position = 1
+  }
+  if (status === 'closed') row.closed_at = now
+
+  const { data, error } = await svc
+    .from('tasting_events')
+    .insert(row)
+    .select('id')
+    .single()
+  if (error) throw error
+
+  await svc
+    .from('event_participants')
+    .insert({ event_id: data.id, profile_id: opts.hostId })
+    .then(undefined, () => {})
+
+  return data.id as string
+}
+
+export async function deleteEventsByLocationPrefix(prefix: string) {
+  await serviceClient()
+    .from('tasting_events')
+    .delete()
+    .like('location', `${prefix}%`)
+    .then(undefined, () => {})
+}
+
+/** Meldet einen Nutzer an und ruft `add_whisky` — für „Event mit Whisky"-Fälle. */
+export async function addWhiskyAs(
+  email: string,
+  eventId: string,
+  name: string,
+  password = SEED_PASSWORD,
+) {
+  if (!SUPABASE_URL || !ANON) throw new Error('Anon-Umgebung fehlt')
+  const c = createClient(SUPABASE_URL, ANON, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const s = await c.auth.signInWithPassword({ email, password })
+  if (s.error) throw s.error
+  const { error } = await c.rpc('add_whisky', { p_event: eventId, p_name: name })
+  if (error) throw error
+}
+
 /**
  * Erzeugt einen Einladungs-/Reset-Link und gibt token_hash + type zurück.
  * Bei `invite` legt Supabase den Nutzer dabei an — dessen id kommt mit zurück,
