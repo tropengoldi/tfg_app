@@ -32,7 +32,7 @@ Handy bedient — mit einem Glas in der anderen Hand, oft bei gedämpftem Licht.
 | P0 (MVP) | Admin – Teilnehmerverwaltung | Planned |
 | P0 (MVP) | Admin – Tasting-Events verwalten | Planned |
 | P0 (MVP) | Whisky-Erfassung (blind) | Planned |
-| P0 (MVP) | Gastgeber-Steuerung & Ablauf | Roadmap |
+| P0 (MVP) | Gastgeber-Steuerung & Ablauf | Planned |
 | P0 (MVP) | Bewertungsansicht | Roadmap |
 | P0 (MVP) | Tasting-Dashboard mit Live-Sync | Roadmap |
 | P1 | Ergebnisse & Tasting-Historie | Roadmap |
