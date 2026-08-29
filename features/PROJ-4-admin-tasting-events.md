@@ -1,6 +1,6 @@
 # PROJ-4: Admin – Tasting-Events verwalten
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-08-28
 **Last Updated:** 2026-08-28
 
@@ -358,6 +358,70 @@ Keine neue. (Der E-Mail-Versand aus PROJ-3 ist hier nicht betroffen.)
   datum, Limit-Grenzen), bearbeiten eines Drafts, laufendes Event ist nicht
   editierbar, löschen mit Bestätigung, Nicht-Admin sieht „nicht gefunden".
 - `npm run build` / `npm run lint` sauber.
+
+## Implementation Notes (Frontend)
+
+**Stand:** Seiten, Komponenten, Server Actions und die RPC-Migration geschrieben.
+Migration `20260828100000` ist **noch nicht angewendet** — bis dahin zeigt
+`/admin/events` sauber den Fehlerzustand. `/backend` = Migration anwenden +
+DB-Regeltests.
+
+### Was gebaut wurde
+
+**Datenbank (neu, unangewendet)** — `supabase/migrations/20260828100000_admin_event_rpcs.sql`:
+`admin_list_events()` (Event + Gastgebername + Teilnehmer-/Whisky-Anzahl, sortiert
+heute/Zukunft zuerst) und `delete_event(uuid)` (Admin + Status `draft` + keine
+Whiskies → sonst `TS015`). `TS015` in `src/lib/errors.ts`. `types.ts` von Hand um
+beide RPCs ergänzt.
+
+**Neue Pakete** — `date-fns`, `react-day-picker` (über `npx shadcn add calendar`).
+
+**Serverseitig**
+- `src/lib/queries/admin-events.ts` — `getEvents()` (RPC), `getEventForEdit(id)`
+  (Event + Teilnehmer-IDs über den nutzergebundenen Client).
+- `src/lib/actions/admin-events.ts` — `createEventAction` (`create_event` →
+  `set_event_participants`), `updateEventAction`, `deleteEventAction`. Jede prüft
+  Admin, validiert per Zod, prüft „Datum nicht in Vergangenheit" **in der Aktion**
+  (nicht in der DB). `create_event` + `set_event_participants` sind zwei Schritte;
+  scheitert der zweite, steht das Event mit nur dem Gastgeber.
+- `src/lib/schemas/admin-events.ts` — `eventFormSchema` (Datum, Ort, Gastgeber
+  Pflicht; Limit „" oder 1–10; Datum ≥ heute per `refine`).
+- `src/lib/dates.ts` — `todayISO`, `formatEventDate` (deutsch), `toISODate`.
+
+**Seiten & Komponenten**
+- `(admin)/admin/events/` — `page.tsx` (`requireAdmin` + `getEvents`),
+  `loading.tsx` (Skeleton), `error.tsx` (generisch: „schiefgelaufen" + Retry +
+  „Zur Liste").
+- `(admin)/admin/events/neu/page.tsx` — leeres Formular.
+- `(admin)/admin/events/[eventId]/page.tsx` — `getEventForEdit`; `notFound()` wenn
+  weg, `redirect('/admin/events')` wenn nicht mehr `draft`; hält den aktuellen
+  Gastgeber sicher in der Auswahl.
+- `src/components/admin/` — `event-list` / `event-row` (Datum · Ort · Gastgeber ·
+  Zahlen · Status-Badge; bei `draft` Menü „Bearbeiten"/„Löschen" mit
+  Bestätigungsdialog), `event-form` (RHF + Zod: Kalender-Datumsfeld,
+  `Select`-Gastgeber, Checkbox-Teilnehmer-Picker mit gesperrtem Gastgeber,
+  Zahl-Feld Limit, Thema), `event-date-field` (Popover + `Calendar`, Tage vor
+  heute gesperrt), `event-status-badge`, `participant-picker`.
+- `(admin)/admin/page.tsx` — zweiter Link „Tastings verwalten".
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (24)
+- Dev-Smoke: Teilnehmer → `/admin/events` = „Seite nicht gefunden"; Admin →
+  `/admin` hat beide Links; `/admin/events` ohne Migration → Fehlerzustand;
+  `/admin/events/neu` rendert das komplette Formular (Datum, Ort, Gastgeber,
+  6 Teilnehmer-Checkboxen, Limit, Thema, Absenden).
+- **Nicht** getestet (braucht die Migration): anlegen/bearbeiten/löschen mit echten
+  Daten, Liste, `delete_event`-Regeln → `/backend` + `/qa`.
+
+### Für `/backend`
+- `npm run db:push` (Migration `20260828100000`), dann `npm run db:types` (die
+  handgepflegten RPC-Typen ersetzen und committen).
+- DB-Regeltests für `delete_event` (PROJ-1-Stil): Nicht-Admin → `TS004`; laufendes
+  Event → `TS005`; Event mit Whisky → `TS015`; Draft ohne alles → gelöscht (samt
+  `event_participants`).
+- `admin_list_events`-Sortierung/Zählwerte gegen echte Daten prüfen.
+- Prüfen, dass `create_event` + `set_event_participants` als Paar sauber laufen
+  (Teilentfernen eines Teilnehmers mit Whisky → `TS009` aus PROJ-1).
 
 ## QA Test Results
 _To be added by /qa_

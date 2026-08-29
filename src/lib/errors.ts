@@ -29,6 +29,7 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   TS012: 'Es muss mindestens ein aktiver Admin übrig bleiben.',
   TS013: 'Diese Person ist Gastgeber eines noch nicht abgeschlossenen Tastings.',
   TS014: 'Nur aktive Teilnehmer können zum Admin gemacht werden.',
+  TS015: 'An diesem Tasting hängen bereits Whiskies.',
 
   // --- Standard-PostgreSQL-Codes -----------------------------------------
   '23505': 'Dieser Eintrag existiert bereits.',

@@ -498,6 +498,22 @@ export type Database = {
         }
         Returns: string
       }
+      admin_list_events: {
+        Args: never
+        Returns: {
+          id: string
+          event_date: string
+          location: string
+          theme: string | null
+          host_id: string
+          host_name: string
+          status: Database["public"]["Enums"]["event_status"]
+          max_whiskies_per_participant: number | null
+          participant_count: number
+          whisky_count: number
+        }[]
+      }
+      delete_event: { Args: { p_event: string }; Returns: undefined }
       deactivate_member: { Args: { p_target: string }; Returns: undefined }
       event_status_of: {
         Args: { p_event: string }
