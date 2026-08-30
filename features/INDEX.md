@@ -24,7 +24,7 @@
 | PROJ-7 | Bewertungsansicht | Approved | [PROJ-7-bewertungsansicht.md](PROJ-7-bewertungsansicht.md) | 2026-08-27 |
 | PROJ-8 | Tasting-Dashboard mit Live-Sync | Approved | [PROJ-8-tasting-dashboard.md](PROJ-8-tasting-dashboard.md) | 2026-08-27 |
 | PROJ-9 | Ergebnisse & Tasting-Historie | Approved | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
-| PROJ-10 | Profil-Seite mit persönlicher Bilanz | Architected | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
+| PROJ-10 | Profil-Seite mit persönlicher Bilanz | In Progress | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
 | PROJ-11 | Neutraler Helfer pro Event | Roadmap | – | 2026-08-29 |
 
 <!-- Add features above this line -->

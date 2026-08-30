@@ -1,6 +1,6 @@
 # PROJ-10: Profil-Seite mit persönlicher Bilanz
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-30
 **Last Updated:** 2026-08-30
 
@@ -354,6 +354,52 @@ Keine.
   Leerzeichen ⇒ Pflichtfehler.
 - **Kein Realtime, kein Cross-Device-Zustand** — die Seite ist statisch pro
   Aufruf.
+
+## Implementation Notes (Frontend)
+
+**Stand:** UI komplett. **Kein Backend** — bearbeitet über die bestehende RLS
+(`profiles_update_own` + Spalten-GRANT aus PROJ-1), Bilanz aus Lesezugriffen auf
+Bestehendes. Keine Migration, kein RPC, keine `types.ts`-Änderung.
+
+### Was gebaut wurde
+
+**Ableitungslogik** — `src/lib/personal-balance.ts` (rein, 9 Unit-Tests in
+`personal-balance.test.ts`): `formatAvgGiven` (Ø der Gesamtpunkte, eine
+Nachkommastelle mit Komma, `null` bei 0), `pickBestPlacement` (kleinster Rang
+unter Whiskys mit `ratingCount > 0`, bei Gleichstand jüngstes Datum),
+`ordinalPlace` („{n}. Platz"). Typen `PersonalBalance` / `BestPlacement` /
+`RankingRowLike`.
+
+**Datenzugriff** — `src/lib/queries/profile.ts`: `getPersonalBalance(userId)` →
+drei parallele Reads (`event_participants` eigene, `whisky_rankings` gefiltert
+`brought_by`, `ratings` eigene) + ein `tasting_events`-Lookup (Datum + Status)
+für die Vereinigungsmenge der Event-IDs. Anzahl Tastings = eigene Teilnahmen an
+abgeschlossenen Events; mitgebrachte Whiskys = Zeilen in `whisky_rankings` (die
+View ist bereits closed-only); Ø = Mittel der `total_points` über eigene
+Bewertungen in abgeschlossenen Events. Wirft bei Lesefehler.
+
+**Stammdaten** — `src/lib/schemas/profile.ts` (`profileFormSchema`: displayName
+1–80 Pflicht, favoriteDram/favoriteRegion ≤120, bio ≤500, optionale `''` →
+serverseitig `null`) · `src/lib/actions/profile.ts` (`updateProfileAction` —
+spaltengenauer Direkt-`update` auf `profiles`, `data.length === 0` → „bitte neu
+anmelden", `messageForDbError`, `revalidatePath('/profil')`).
+
+**Komponenten** — `src/components/profile/profile-form.tsx` (Client, spiegelt
+`eckdaten-form`: RHF + Zod-Resolver, `useTransition`, Toast „Profil
+gespeichert.", roter Sammel-Fehler, `maxLength` je Feld) ·
+`src/components/profile/balance-card.tsx` (Server: 2×2-Raster mit großen Zahlen
+in Display-Schrift; `bestPlacement === null` → „—" / „noch keine Platzierung";
+`avgPointsGiven === null` → „—"; `isFresh` → Hinweis „füllt sich …"; `balance ===
+null` → „Bilanz gerade nicht verfügbar.").
+
+**Seite** — `src/app/(app)/profil/page.tsx` von Platzhalter zu
+Formular + Konto-Karte (E-Mail / Rolle, nicht editierbar) + Bilanz-Karte +
+„Abmelden" (unverändert). `getPersonalBalance` in `try/catch` → Fehler blockiert
+die Seite nicht, nur die Karte. Dazu `loading.tsx` / `error.tsx`.
+
+### Checks
+- `npm test` → 108/108 (12 Dateien; +9 aus `personal-balance.test.ts`).
+- `npx tsc --noEmit` · `eslint .` · `npm run build` → alle sauber.
 
 ## QA Test Results
 _To be added by /qa_
