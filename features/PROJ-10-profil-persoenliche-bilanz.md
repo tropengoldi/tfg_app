@@ -171,18 +171,18 @@ Zahlen nicht mitten im Tasting verschiebt.
 
 ## Open Questions
 
-- [ ] Zählt ein mitgebrachter Whisky aus einem Tasting **ganz ohne Bewertungen**
-      bei „Mitgebrachte Whiskys" / „Beste Platzierung" mit? (Vorschlag: ja bei
-      „Mitgebrachte Whiskys"; bei „Beste Platzierung" nur Ränge aus Tastings, in
-      denen überhaupt bewertet wurde — sonst wäre ein „1. Platz" ohne jede
-      Bewertung irreführend. Für `/architecture` zu präzisieren.)
-- [ ] Braucht die Bilanz eine eigene DB-View / RPC, oder lässt sie sich aus
-      wenigen gezielten Lesezugriffen auf `event_participants` /
-      `whisky_details` / `whisky_rankings` / `ratings` zusammensetzen?
-      (Architektur-Frage.)
-- [ ] „Ø vergebene Punkte" — einfacher Mittelwert über alle Bewertungszeilen,
-      oder erst je Tasting mitteln und dann über die Tastings? (Vorschlag:
-      einfacher Mittelwert über alle Zeilen — verständlicher.)
+- [x] ~~Zählt ein mitgebrachter Whisky aus einem Tasting ganz ohne Bewertungen
+      mit?~~ **Gelöst (`/architecture`):** „Mitgebrachte Whiskys" zählt **jeden**
+      eigenen Whisky in einem abgeschlossenen Tasting. „Beste Platzierung"
+      berücksichtigt nur Ränge von Whiskys mit **mindestens einer Bewertung**
+      (`rating_count > 0`) — ein „1. Platz" ohne jede Bewertung wäre hohl.
+- [x] ~~Eigene DB-View / RPC nötig?~~ **Gelöst:** nein. Die Bilanz setzt sich
+      aus vier RLS-abgesicherten Lesezugriffen zusammen (Teilnahme-Zähler,
+      `whisky_rankings` gefiltert auf `brought_by`, `ratings` gefiltert auf die
+      eigene Person mit `!inner`-Verknüpfung auf abgeschlossene Events, ein
+      Datums-Lookup fürs beste Ergebnis). **Keine Migration.**
+- [x] ~~Ø über alle Zeilen oder je Tasting?~~ **Gelöst:** einfacher Mittelwert
+      über alle eigenen Bewertungszeilen in abgeschlossenen Tastings.
 
 ## Decision Log
 
@@ -202,13 +202,158 @@ Zahlen nicht mitten im Tasting verschiebt.
 | Optionale Felder leer → als NULL speichern, nicht als leerer String | Saubere Daten; „nicht gesetzt" und „leer eingegeben" sind dasselbe | 2026-08-30 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| **Kein Backend** — keine Migration, keine RPC, keine neue View | Die vier Schreibfelder haben seit PROJ-1 die Policy `profiles_update_own` + einen Spalten-GRANT genau auf `display_name` / `favorite_dram` / `favorite_region` / `bio`; die Bilanz-Zahlen lesen bestehende Tabellen und die `whisky_rankings`-View (seit PROJ-9 für jedes aktive Mitglied lesbar) | 2026-08-30 |
+| Speichern über eine **Server Action mit direktem, spaltenbeschränktem `profiles`-Update** (kein RPC) | Identisches Muster wie `updateWhiskyAction` (PROJ-5): RLS erzwingt die eigene Zeile, der GRANT erzwingt die Spalten, `updated_at` setzt der Trigger. Ein RPC brächte keinen Sicherheitsgewinn | 2026-08-30 |
+| Bilanz als **Serverkomponenten-Query aus vier Lesezugriffen**, Aggregation (Ø, min-Rang) in JavaScript | PostgREST kann `count` (Head-Request), aber nicht `avg` / `min` ohne RPC/View. Die Datenmengen sind winzig (ein Mitglied: ~1–2 Whiskys und ~8 Bewertungen pro Abend, wenige Abende/Jahr) — ein paar hundert Zeilen im Mittel. JS-Aggregation ist einfacher und testbar | 2026-08-30 |
+| „Beste Platzierung" nur aus Whiskys mit `rating_count > 0`; bei Ranggleichheit der **jüngste** Abend | Ein „1. Platz" ohne jede Bewertung wäre irreführend; die Kontextzeile soll den überzeugendsten realen Auftritt zeigen | 2026-08-30 |
+| Abschlussfilter für „Ø vergebene Punkte" über einen **`!inner`-Embed** `ratings → tasting_events(status = 'closed')` | Ein Lesezugriff statt zwei; `ratings` selbst trägt keinen Status | 2026-08-30 |
+| Bilanz-Ladefehler wird in der **Seite abgefangen** (try/catch um die Query); nur die Bilanz-Karte zeigt dann „nicht verfügbar" | Das Bearbeiten der Stammdaten darf nicht an einem klemmenden Auswertungs-Read hängen (Spec-AC) | 2026-08-30 |
+| Formular clientseitig mit **react-hook-form + Zod** (`profileFormSchema`), serverseitig dieselbe Schema-Prüfung, DB-CHECK als letzte Instanz | Projektstandard (Eckdaten PROJ-6, Bewertung PROJ-7); dreifache Absicherung | 2026-08-30 |
+| Optionale Felder: leerer/geleerter Wert wird als **NULL** gespeichert (Server Action bildet `'' → null` ab) | „nicht gesetzt" und „leer eingegeben" sind dasselbe; verhindert leere Strings in der DB | 2026-08-30 |
+| Keine neuen npm-Pakete | react-hook-form, zod, @hookform/resolvers und die shadcn-Bausteine (`form`, `input`, `textarea`, `card`, `alert`) sind alle vorhanden | 2026-08-30 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+
+PROJ-10 ist **reine Frontend-Arbeit**. Es gibt keine Datenbank-Änderung:
+
+- Die vier bearbeitbaren Felder sind seit PROJ-1 genau so vorgesehen — eine
+  Sicherheitsregel „nur die eigene Zeile" und eine Spalten-Freigabe genau auf
+  `display_name`, `favorite_dram`, `favorite_region`, `bio`. `role` und der
+  Aktiv-Status sind darüber **nicht** erreichbar, ein Selbst-Upgrade zum Admin
+  also ausgeschlossen.
+- Die vier Bilanz-Zahlen ergeben sich aus Lesezugriffen auf schon vorhandene
+  Daten: die Teilnahmeliste, die Ranglisten-View aus PROJ-9 und die eigenen
+  Bewertungen.
+
+Kein API-Endpunkt, kein RPC, keine neue View, keine neuen Pakete.
+
+### A) Seiten- und Komponentenstruktur
+
+```
+/profil  (ersetzt den Platzhalter)
+├─ Seitenkopf  „Profil"
+├─ Stammdaten-Formular  (Client)
+│   ├─ Anzeigename          Pflicht, 1–80
+│   ├─ Lieblings-Dram       optional, ≤120
+│   ├─ Lieblingsregion      optional, ≤120
+│   ├─ Kurzbeschreibung     optional, ≤500, mehrzeilig
+│   ├─ Fehler-Hinweis (rot) bei Speicherfehler, Eingaben bleiben stehen
+│   └─ „Speichern"          gesperrt / „Wird gespeichert…" während der Anfrage
+├─ Konto-Anzeige  (nicht editierbar)
+│   ├─ E-Mail
+│   └─ Rolle  (Admin / Teilnehmer)
+├─ Persönliche Bilanz  (Server)
+│   ├─ Zustand „vorhanden"
+│   │   ├─ Anzahl Tastings        (Zahl, groß)
+│   │   ├─ Mitgebrachte Whiskys   (Zahl, groß)
+│   │   ├─ Beste Platzierung      „{n}. Platz" + Whisky · Datum  /  „noch keine Platzierung"
+│   │   └─ Ø vergebene Punkte     „Ø 11,4"  + „aus K Bewertungen"  /  „—"
+│   ├─ Zustand „neu"  (alle Werte 0 / —)  → zusätzlich der Hinweis
+│   │     „Deine Bilanz füllt sich, sobald dein erstes Tasting abgeschlossen ist."
+│   └─ Zustand „Ladefehler"  → „Bilanz gerade nicht verfügbar"
+├─ „Abmelden"  (bestehender Button, unverändert)
+├─ Laden        → Skelett
+└─ Ladefehler (Formular)  → Hinweis + „Erneut versuchen"
+```
+
+**Neue Bausteine**
+
+- `src/app/(app)/profil/page.tsx` — Umbau von Platzhalter zu Formular + Konto +
+  Bilanz; dazu `loading.tsx` / `error.tsx` (gleiche Konvention wie die anderen
+  Routen).
+- `src/components/profile/profile-form.tsx` (Client) — spiegelt
+  `eckdaten-form.tsx`: react-hook-form + Zod-Resolver, `useTransition`,
+  Server-Action-Aufruf, Erfolgs-Toast, roter Sammel-Fehler.
+- `src/components/profile/balance-card.tsx` (Server) — die vier Kennzahlen,
+  der „neu"-Hinweis und die „nicht verfügbar"-Variante.
+- `src/lib/schemas/profile.ts` — `profileFormSchema`.
+- `src/lib/actions/profile.ts` — `updateProfileAction`.
+- `src/lib/queries/profile.ts` — `getPersonalBalance(userId)`.
+- `src/lib/personal-balance.ts` (+ `personal-balance.test.ts`) — reine
+  Ableitungen (Ø formatieren, besten Rang wählen, „neu"-Erkennung).
+- Wiederverwendet: `PageHeader`, `Form`/`Input`/`Textarea`/`Card`/`Alert`,
+  `formatEventDate`, `messageForDbError`, `getSessionContext` / `requireUser`.
+
+### B) Woher die Daten kommen
+
+| Anzeige | Quelle | Zugriff |
+|---|---|---|
+| Formular-Startwerte, E-Mail, Rolle | `requireUser()` (Profil + Session, bereits geladen) | eigene Zeile |
+| Speichern | direkter, spaltenbeschränkter `profiles`-Update (`display_name`, `favorite_dram`, `favorite_region`, `bio`) | `profiles_update_own` + Spalten-GRANT |
+| Anzahl Tastings | `event_participants` (`profile_id` = ich) mit Pflicht-Verknüpfung auf `tasting_events` (Status „abgeschlossen") — Head-Zähler | RLS: eigene Teilnahme sichtbar |
+| Mitgebrachte Whiskys · Beste Platzierung | View `whisky_rankings`, gefiltert `brought_by` = ich (liefert je Whisky: Rang, Anzahl Bewertungen, Name, Position, Event-ID) | seit PROJ-9 für aktive Mitglieder lesbar |
+| Datum zum besten Ergebnis | ein `tasting_events`-Lookup auf die eine Event-ID | RLS: Teilnehmer |
+| Ø vergebene Punkte | `ratings` (`profile_id` = ich) mit Pflicht-Verknüpfung auf `tasting_events` (Status „abgeschlossen"), Feld Gesamtpunkte + Zähler | `ratings_select` = eigene Zeilen |
+
+Alle Bilanz-Reads laufen in der Serverkomponente; die Mittelung und die
+Auswahl des besten Rangs passieren in JavaScript (die Zeilenmengen sind sehr
+klein). Schlägt einer dieser Reads fehl, fängt die Seite das ab und rendert
+statt der Karte den „nicht verfügbar"-Hinweis — das Formular bleibt nutzbar.
+
+### C) Datenmodell
+
+**Keine Änderung.** Genutzt werden bestehende Strukturen:
+
+- `profiles`: `display_name` (1–80), `favorite_dram` (≤120), `favorite_region`
+  (≤120), `bio` (≤500) — alle mit DB-CHECK; die letzten drei dürfen NULL sein.
+- `event_participants` (Zuordnung ich ⇄ Event), `tasting_events.status`
+  (Filter „abgeschlossen").
+- `whisky_rankings` (PROJ-1/PROJ-9): pro Whisky eines abgeschlossenen Events —
+  `brought_by`, `rank`, `rating_count`, `name`, `position`, `event_id`.
+- `ratings`: `total_points` (generiert = Nase + Geschmack) der eigenen Zeilen.
+
+**Ableitungen (`src/lib/personal-balance.ts`, unit-getestet):**
+
+- **Ø vergebene Punkte:** Summe der Gesamtpunkte ÷ Anzahl der eigenen
+  Bewertungszeilen (abgeschlossene Events), eine Nachkommastelle, Komma; bei 0
+  Zeilen → `null` (Anzeige „—").
+- **Beste Platzierung:** unter den eigenen `whisky_rankings`-Zeilen mit
+  `rating_count > 0` die mit dem kleinsten `rank`; bei Gleichstand die mit dem
+  jüngsten Event-Datum. Ergebnis: Rang + Whisky-Name + Datum; keine solche
+  Zeile → `null` (Anzeige „noch keine Platzierung").
+- **„Neu"-Erkennung:** Anzahl Tastings = 0 **und** mitgebrachte Whiskys = 0
+  **und** keine Bewertungen → zeigt den „füllt sich"-Hinweis.
+
+### D) Backend-Bedarf
+
+**Keiner.** Bearbeiten läuft über RLS + Spalten-GRANT (seit PROJ-1), die
+Bilanz über Lesezugriffe auf Bestehendes. Es gibt keine Migration, kein RPC,
+keine neue View, keine Realtime-Anbindung (die Profilseite ist nicht live).
+
+### E) Auswirkungen auf bereits gebaute Teile
+
+- `src/app/(app)/profil/page.tsx` wird ersetzt (der bisherige Platzhalter-Text
+  „… in einem späteren Schritt bearbeiten" entfällt).
+- Der **Anzeigename** wirkt rückwirkend: Teilnehmerlisten (PROJ-8), „mitgebracht
+  von" und Einzelbewertungen (PROJ-9), Gastgeber-Name in der Historie — alle
+  lesen `profiles.display_name` live, es gibt nichts anzupassen.
+- Kein anderer Screen ändert sich.
+
+### F) Neue Pakete
+
+Keine.
+
+### G) Sicherheits- und Datenschutz-Betrachtung
+
+- **Schreibgrenze:** Nur die eigene Profilzeile, nur die vier freigegebenen
+  Spalten. `role` / Aktiv-Status sind über den Client-Pfad nicht setzbar
+  (Spalten-GRANT), zusätzlich prüft die Server Action die angemeldete Person.
+- **Bilanz liest nur Eigenes bzw. ohnehin Sichtbares:** eigene Teilnahmen,
+  eigene Bewertungen, und `whisky_rankings` (nur abgeschlossene Events, für jedes
+  aktive Mitglied — die Blindheit ist dort schon gewahrt). Kein Zugriff auf
+  fremde Rohbewertungen oder fremde Notizen.
+- **Validierung** dreifach: Zod im Client, dieselbe Prüfung in der Server
+  Action, DB-CHECK als letzte Instanz. Anzeigename wird getrimmt; nur
+  Leerzeichen ⇒ Pflichtfehler.
+- **Kein Realtime, kein Cross-Device-Zustand** — die Seite ist statisch pro
+  Aufruf.
 
 ## QA Test Results
 _To be added by /qa_
