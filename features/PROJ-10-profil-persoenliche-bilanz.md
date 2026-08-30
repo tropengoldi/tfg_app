@@ -402,7 +402,81 @@ die Seite nicht, nur die Karte. Dazu `loading.tsx` / `error.tsx`.
 - `npx tsc --noEmit` · `eslint .` · `npm run build` → alle sauber.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-30
+**App URL:** http://localhost:3000 (prod-Build)
+**Tester:** QA Engineer (AI)
+
+### Automatisierte Suiten
+
+| Suite | Ergebnis |
+|-------|----------|
+| `npm test` (Vitest Unit) | **108/108** (12 Dateien; +9 aus `personal-balance.test.ts`) |
+| `npm run test:rls` (Integration) | **90/90** — unverändert, kein Regress (PROJ-10 fasst keine RLS/DB an) |
+| `tests/PROJ-10-profil-bilanz.spec.ts` | **18/18** über `chromium` + `Mobile Safari` (9 Tests je Projekt) |
+| `tsc --noEmit` · `eslint .` · `npm run build` | alle sauber; Route `/profil` erzeugt |
+| Regression `tests/PROJ-2-auth.spec.ts` | **24/24** nach Fix von BUG-1 (3 veraltete Assertions) |
+
+### Acceptance Criteria Status — 16/16 bestanden
+
+#### Stammdaten bearbeiten
+- [x] Formular mit gespeicherten Werten vorbefüllt; E-Mail + Rolle als nicht editierbare Anzeige (E2E)
+- [x] Ändern + „Speichern" → „Profil gespeichert.", DB aktualisiert (E2E, Read-Back per Service-Client)
+- [x] Leerer / nur-Leerzeichen-Anzeigename → „Anzeigename ist erforderlich", nichts gespeichert (E2E)
+- [x] Feld über Limit → Zeichenlimit-Hinweis, nichts gespeichert (Zod `.max()` im Client **und** Server; `maxLength` am Input; DB-CHECK + `messageForDbError('23514')` als Backstop)
+- [x] Optionales Feld geleert → als NULL gespeichert (E2E, Read-Back zeigt `null`)
+- [x] Während des Speicherns Button gesperrt / „Wird gespeichert…" (`disabled={pending}` + Label-Wechsel; kein Doppel-Submit)
+- [x] Speichern schlägt fehl → Fehlermeldung, Eingaben bleiben (`form.setError('root')`, RHF behält die Werte)
+- [x] Anzeigename wirkt rückwirkend — neuer Name in einem abgeschlossenen Tasting (E2E: geänderter Name erscheint als „mitgebracht von …" auf der PROJ-9-Ergebnisseite)
+
+#### Persönliche Bilanz
+- [x] Anzahl Tastings = abgeschlossene Teilnahmen (E2E: Veteran = 2; laufende/vorbereitete zählen nicht)
+- [x] Mitgebrachte Whiskys = eigene Einträge in abgeschlossenen Tastings (E2E: Veteran = 3)
+- [x] Beste Platzierung als „{n}. Platz" + Whisky-Name + Datum (E2E: „1. Platz" · Ardbeg Uigeadail)
+- [x] Nie mitgebracht → „noch keine Platzierung" (E2E: Rookie)
+- [x] Ø vergebene Punkte = Mittel der Gesamtpunkte, eine Nachkommastelle mit Komma, + „aus K Bewertungen" (E2E: „Ø 10,0" · „aus 2 Bewertungen")
+- [x] Keine Bewertung abgegeben → „—" / „noch nichts bewertet" (E2E: Rookie)
+- [x] Neues Mitglied → „0"/„—" + Hinweis „Deine Bilanz füllt sich, sobald dein erstes Tasting abgeschlossen ist." (E2E: Rookie)
+- [x] Bilanz-Ladefehler → Formular bleibt bedienbar, nur die Karte zeigt „Bilanz gerade nicht verfügbar." (`try/catch` in `page.tsx` → `balance === null`-Zweig in `BalanceCard`; in allen 18 E2E-Läufen rendert die Seite fehlerfrei, der Catch-Pfad ist codeseitig verifiziert)
+
+### Edge Cases Status
+- [x] Nur-Leerzeichen-Anzeigename → getrimmt, dann Pflichtfehler (E2E)
+- [x] Trailing-Whitespace in optionalen Feldern → `z.string().trim()` im Schema
+- [x] Feld über Limit trotz Client-`maxlength` → Server-Zod + DB-CHECK, verständliche Meldung
+- [x] Speichern fehlgeschlagen → Sammel-Fehler, Eingaben stehen
+- [x] Dasselbe Profil in zwei Tabs → letzter Schreibvorgang gewinnt (Direkt-`update`, kein optimistisches Sperren) — kein Konflikt-Dialog, gewollt
+- [x] Bilanz wirft, Formular lädt → `try/catch`, Seite bleibt nutzbar
+- [x] Anzeigename während laufendem Tasting ändern → erlaubt, rückwirkend; Bilanz-Zahlen unberührt (nur abgeschlossene Events)
+- [x] Deaktiviertes Mitglied → kommt nicht bis `/profil` (`requireUser` → Abmelde-Route; PROJ-2, unverändert)
+- [x] Mitgebrachter Whisky aus einem Tasting **ganz ohne Bewertungen** → zählt bei „Mitgebrachte Whiskys" mit, aber **nicht** bei „Beste Platzierung" (E2E: der ungewertete „Talisker 10" auf Rang 1 stellt die beste Platzierung nicht — es bleibt „1. Platz · Ardbeg")
+
+### Security Audit Results
+- [x] **Auth:** `/profil` erfordert Login (`requireUser`); nicht angemeldet → `/login` mit gemerktem Zielpfad (PROJ-2)
+- [x] **Schreibgrenze:** `updateProfileAction` schreibt `profiles` direkt mit `.eq('id', session.userId)`; RLS `profiles_update_own` + Spalten-GRANT auf genau `display_name` / `favorite_dram` / `favorite_region` / `bio`. `role` / `is_active` sind weder im Payload noch grantbar → **kein Selbst-Upgrade zum Admin**. Die DB-Ebene ist per `rls.integration` („Teilnehmer A kann sich nicht selbst zum Admin machen" → `42501") abgesichert
+- [x] **Bilanz liest nur Eigenes bzw. ohnehin Sichtbares:** eigene Teilnahmen, eigene `ratings`, `whisky_rankings` (nur abgeschlossene Events, seit PROJ-9 runden-sichtbar). Kein Zugriff auf fremde Rohbewertungen oder fremde Notizen
+- [x] **XSS:** `display_name` / `bio` / `favorite_*` werden als React-Text gerendert (auto-escaped); `bio` erscheint nur als `<Textarea value>`, nirgends als Markup
+- [x] **Eingabevalidierung:** dreifach — Zod im Client, dieselbe Prüfung in der Server Action, DB-CHECK als letzte Instanz
+- [x] **Keine sensiblen Daten im Response:** die Bilanz-Query liefert nur skalare Zähler / Punkte
+
+### Bugs Found
+
+#### BUG-1: Drei veraltete Assertions in `tests/PROJ-2-auth.spec.ts` (in diesem Durchlauf behoben)
+- **Severity:** Low
+- **Ursache:** PROJ-8 hat die Dashboard-Begrüßung von „Willkommen, …" auf „Hallo, {Name}" umbenannt; drei Auth-E2E-Tests (Login, Einladungslink, Reset-Link) prüften weiter auf `/Willkommen,/`. Im vollen `playwright test`-Lauf der PROJ-8-QA gingen sie in der Last-Flakiness unter.
+- **Kein Produktdefekt** — das Dashboard funktioniert, nur der Erwartungstext im Test war alt.
+- **Fix:** `/Willkommen,/` → `/Hallo,/` in `tests/PROJ-2-auth.spec.ts` (nur Test, kein Produktcode). `tests/PROJ-2-auth.spec.ts` danach 24/24.
+- **Priorität:** erledigt.
+
+#### BUG-2: (projektweit, bekannt) Voll-Parallel-E2E-Last-Flakiness + Hydration-Doppelrender
+- **Severity:** Low
+- Nicht PROJ-10-spezifisch; steht auf der `/deploy`-Liste (Specs sharden / `--workers=1`).
+
+### Summary
+- **Acceptance Criteria:** 16/16 bestanden (11 per E2E verifiziert, 5 per Code-/Schema-Inspektion, wo E2E unpraktisch ist: Button-Sperre während des Speicherns, Server-Fehlerpfad, Limit-Backstop, „—"-Anzeige, Bilanz-Ladefehler)
+- **Bugs Found:** 2 total (0 Critical, 0 High, 0 Medium, 2 Low) — BUG-1 in diesem Durchlauf behoben, BUG-2 ist die stehende Test-Infra-Notiz
+- **Security:** Pass — Schreibzugriff strikt auf die eigene Zeile und die vier freigegebenen Felder, kein Selbst-Upgrade, Bilanz liest nur Eigenes
+- **Production Ready:** **YES** — kein Critical/High
+- **Recommendation:** **Approved.**
 
 ## Deployment
 _To be added by /deploy_

@@ -22,7 +22,7 @@ import {
 test.describe('Anmeldung', () => {
   test('aktives Konto: Login führt auf die Startseite', async ({ page }) => {
     await login(page, TEST_EMAIL)
-    await expect(page.getByText(/Willkommen,/)).toBeVisible()
+    await expect(page.getByText(/Hallo,/)).toBeVisible()
   })
 
   test('Login mit gemerktem Zielpfad landet dort', async ({ page }) => {
@@ -131,7 +131,7 @@ test.describe('Einladung & Passwort setzen', () => {
       await fillField(page, 'Passwort wiederholen', 'neuespasswort1')
       await page.getByRole('button', { name: 'Passwort speichern' }).click()
       await page.waitForURL((u) => new URL(u).pathname === '/')
-      await expect(page.getByText(/Willkommen,/)).toBeVisible()
+      await expect(page.getByText(/Hallo,/)).toBeVisible()
     } finally {
       if (link.userId) await deleteUser(link.userId)
     }
@@ -151,7 +151,7 @@ test.describe('Einladung & Passwort setzen', () => {
       await page.goto('/auth/abmelden')
       await page.waitForURL(/\/login/)
       await login(page, user.email, newPw)
-      await expect(page.getByText(/Willkommen,/)).toBeVisible()
+      await expect(page.getByText(/Hallo,/)).toBeVisible()
     } finally {
       await deleteUser(user.id)
     }
