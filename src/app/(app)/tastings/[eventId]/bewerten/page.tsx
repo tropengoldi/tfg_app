@@ -81,7 +81,10 @@ export default async function BewertenPage({
             <Lock className="h-4 w-4" />
             <AlertDescription>
               Der Abend ist abgeschlossen — Bewertungen sind eingefroren.{' '}
-              <Link href="/tastings" className="font-medium text-primary hover:underline">
+              <Link
+                href={`/tastings/${eventId}/ergebnisse`}
+                className="font-medium text-primary hover:underline"
+              >
                 Zu den Ergebnissen
               </Link>
             </AlertDescription>

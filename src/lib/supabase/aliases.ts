@@ -21,6 +21,8 @@ export type RatingUpdate = TablesUpdate<'ratings'>
 export type WhiskyDetailUpdate = TablesUpdate<'whisky_details'>
 export type ProfileUpdate = TablesUpdate<'profiles'>
 
-// whisky_rankings / past_tastings sind Views — Tables<> deckt Views mit ab.
+// whisky_rankings / past_tastings / whisky_score_breakdown sind Views —
+// Tables<> deckt Views mit ab.
 export type WhiskyRanking = Tables<'whisky_rankings'>
 export type PastTasting = Tables<'past_tastings'>
+export type WhiskyScoreBreakdown = Tables<'whisky_score_breakdown'>

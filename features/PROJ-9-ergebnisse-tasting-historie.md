@@ -1,6 +1,6 @@
 # PROJ-9: Ergebnisse & Tasting-Historie
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-30
 **Last Updated:** 2026-08-30
 
@@ -468,6 +468,84 @@ Keine. `accordion`, `collapsible`, `table`, `badge` sind bereits installiert;
 - **Video-Link:** unverändertes, in PROJ-5 akzeptiertes Restrisiko (beliebige
   `https://`-Adresse im geschlossenen Kreis); Öffnen in neuem Tab mit
   `rel="noopener noreferrer"`, kein eingebetteter Player.
+
+## Implementation Notes (Frontend)
+
+**Stand:** UI komplett geschrieben (zwei Screens + die zwei Platzhalter-Absprünge
+verdrahtet). **Backend steht noch aus** — die PROJ-9-Migration (Sichtbarkeit
+weiten, `ratings`-Zugriff verengen, View `whisky_score_breakdown`,
+`past_tastings.closed_at`) und die angepassten RLS-Tests kommen in `/backend`.
+Bis dahin liefert die Ergebnisseite für Nicht-Teilnehmer leere Ranglisten und die
+Historie zeigt nur die eigenen abgeschlossenen Abende.
+
+### Was gebaut wurde
+
+**Ableitungslogik** — `src/lib/results.ts` (rein, unit-getestet, 19 Fälle in
+`results.test.ts`): `resultsPhase` (`closed` / `pending` / `missing` aus dem
+Event-Status), `formatAverage` (Gesamt ÷ Anzahl, eine Nachkommastelle mit Komma,
+`null` bei 0), `tieRanks` (Ränge mit punktgleichem Nachbarn), `isWinner`
+(Rang 1 **und** mindestens eine Bewertung), `medalClass` (`text-gold/silver/bronze`
+für 1–3), `sortBreakdown` (Gesamt ↓, Name ↑), `whiskySearchUrl` (YouTube-Suche
+„Whisky.de <Name>").
+
+**Datenzugriff** — `src/lib/queries/results.ts`:
+- `getPastTastings()` → alle Zeilen der View `past_tastings`, Datum ↓, bei
+  Gleichstand `closed_at` ↓. Feld `winner_name` `null` → „— kein Sieger".
+- `getEventResults(eventId, userId)` → `null` (Event unbekannt → 404) /
+  `{ phase: 'pending' }` (läuft noch → Hinweis) / volle `EventResults`. Der
+  Status kommt aus dem bestehenden RPC `event_status_of`. Für den Abschluss-Fall
+  werden `past_tastings` (Kopf), `event_participants`, `whisky_rankings`,
+  `whisky_score_breakdown` und die **eigenen** `ratings`-Zeilen (nur `notes`)
+  parallel geladen; Bringer- und Teilnehmernamen in einer `profiles`-Abfrage
+  aufgelöst; die Einzelbewertungen werden je Whisky gebündelt und die eigene
+  Notiz zugeordnet. Fremde Notizen werden nirgends selektiert.
+
+**Historien-Liste** — `src/components/results/past-tastings-section.tsx`
+(Abschnitt „Vergangene Tastings" mit Leerzustand) + `past-tasting-row.tsx`
+(Datum · Ort · Gastgeber · 🏆 Sieger bzw. „— kein Sieger", ganze Zeile Link →
+`…/ergebnisse`). Eingehängt in `src/app/(app)/tastings/page.tsx`: die obere
+Liste („Deine Abende") zeigt jetzt nur noch nicht-abgeschlossene Abende,
+`getMyTastings` selbst bleibt unverändert.
+
+**Ergebnisseite** — `src/app/(app)/tastings/[eventId]/ergebnisse/` mit
+`page.tsx` (+ `loading.tsx`, `error.tsx`):
+- `src/components/results/results-header.tsx` — Datum, Status-Badge
+  „Abgeschlossen", Ort, Thema (falls gesetzt), Gastgeber, „Wer war dabei" mit
+  markiertem Gastgeber.
+- `src/components/results/ranking-list.tsx` (Server) — berechnet `tieRanks`
+  einmalig, zeigt bei 0 Bewertungen einen Hinweis über der Liste, rendert
+  `<ol aria-label="Rangliste">`.
+- `src/components/results/ranking-row.tsx` (Client, wegen Aufklappen) — Rang groß
+  in Medaillenfarbe, Whisky-Name in Display-Schrift, Distillery · Region,
+  „mitgebracht von …", „Sieger des Abends" bei Rang 1, Gesamtpunkte groß rechts,
+  Zeile „Nase n · Geschmack m · Ø x,y · k von m Bewertungen · punktgleich",
+  Video-Zeile, eigene Notiz (falls vorhanden, ruhige kursive Box),
+  `Collapsible` „Einzelbewertungen (n)" mit Punkten je Person.
+
+**Video-Zeile** (`VideoRow` in `ranking-row.tsx`) — folgt bewusst dem
+**Design-System**, nicht der Spec-AC: mit hinterlegtem Link „Video ansehen",
+**ohne** Link „Auf Whisky.de suchen" (YouTube-Suche). Beide `target="_blank"`
++ `rel="noopener noreferrer"` + SR-Hinweis „öffnet YouTube". Abweichung von
+AC „kein Video-Element ohne Link" ist mit dem Nutzer abgestimmt (Design-System
+gewinnt) — **für QA vermerken**.
+
+**Platzhalter-Absprünge verdrahtet:**
+- `src/components/dashboard/dashboard-view.tsx` — „Zur Rangliste" zeigt jetzt auf
+  `/tastings/<id>/ergebnisse`.
+- `src/app/(app)/tastings/[eventId]/bewerten/page.tsx` — „Zu den Ergebnissen" im
+  eingefrorenen Zustand zeigt jetzt auf `/tastings/<id>/ergebnisse`.
+
+**Typen vorgezogen** — `src/lib/supabase/types.ts` von Hand um
+`past_tastings.closed_at` und die View `whisky_score_breakdown` ergänzt, dazu
+`WhiskyScoreBreakdown` in `aliases.ts`. `/backend` überschreibt `types.ts` per
+`npm run db:types` nach der Migration — die Handeinträge entsprechen dem
+Zielzustand.
+
+### Checks
+- `npm test` → 99/99 (11 Dateien; +19 aus `results.test.ts`).
+- `npx tsc --noEmit` → sauber.
+- `npm run build` → sauber; Route `/tastings/[eventId]/ergebnisse` erzeugt.
+- `eslint` auf allen berührten Pfaden → sauber.
 
 ## QA Test Results
 _To be added by /qa_

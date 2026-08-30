@@ -53,7 +53,7 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
               Meine Whiskys
             </Jump>
             {closed ? (
-              <Jump href="/tastings" icon={Trophy}>
+              <Jump href={`/tastings/${event.id}/ergebnisse`} icon={Trophy}>
                 Zur Rangliste
               </Jump>
             ) : null}

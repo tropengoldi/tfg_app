@@ -392,6 +392,7 @@ export type Database = {
     Views: {
       past_tastings: {
         Row: {
+          closed_at: string | null
           event_date: string | null
           event_id: string | null
           host_id: string | null
@@ -409,6 +410,26 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      whisky_score_breakdown: {
+        Row: {
+          event_id: string | null
+          nose_points: number | null
+          rater_id: string | null
+          rater_name: string | null
+          taste_points: number | null
+          total_points: number | null
+          whisky_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id"]
           },
         ]
       }
