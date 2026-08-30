@@ -15,16 +15,16 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| PROJ-1 | Supabase-Infrastruktur | Approved | [PROJ-1-supabase-infrastruktur.md](PROJ-1-supabase-infrastruktur.md) | 2026-08-27 |
-| PROJ-2 | Auth & Zugangskontrolle | Approved | [PROJ-2-auth-zugangskontrolle.md](PROJ-2-auth-zugangskontrolle.md) | 2026-08-27 |
-| PROJ-3 | Admin – Teilnehmerverwaltung | Approved | [PROJ-3-admin-teilnehmerverwaltung.md](PROJ-3-admin-teilnehmerverwaltung.md) | 2026-08-27 |
-| PROJ-4 | Admin – Tasting-Events verwalten | Approved | [PROJ-4-admin-tasting-events.md](PROJ-4-admin-tasting-events.md) | 2026-08-27 |
-| PROJ-5 | Whisky-Erfassung (blind) | Approved | [PROJ-5-whisky-erfassung.md](PROJ-5-whisky-erfassung.md) | 2026-08-27 |
-| PROJ-6 | Gastgeber-Steuerung & Ablauf | Approved | [PROJ-6-gastgeber-steuerung.md](PROJ-6-gastgeber-steuerung.md) | 2026-08-27 |
-| PROJ-7 | Bewertungsansicht | Approved | [PROJ-7-bewertungsansicht.md](PROJ-7-bewertungsansicht.md) | 2026-08-27 |
-| PROJ-8 | Tasting-Dashboard mit Live-Sync | Approved | [PROJ-8-tasting-dashboard.md](PROJ-8-tasting-dashboard.md) | 2026-08-27 |
-| PROJ-9 | Ergebnisse & Tasting-Historie | Approved | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
-| PROJ-10 | Profil-Seite mit persönlicher Bilanz | Approved | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
+| PROJ-1 | Supabase-Infrastruktur | Deployed | [PROJ-1-supabase-infrastruktur.md](PROJ-1-supabase-infrastruktur.md) | 2026-08-27 |
+| PROJ-2 | Auth & Zugangskontrolle | Deployed | [PROJ-2-auth-zugangskontrolle.md](PROJ-2-auth-zugangskontrolle.md) | 2026-08-27 |
+| PROJ-3 | Admin – Teilnehmerverwaltung | Deployed | [PROJ-3-admin-teilnehmerverwaltung.md](PROJ-3-admin-teilnehmerverwaltung.md) | 2026-08-27 |
+| PROJ-4 | Admin – Tasting-Events verwalten | Deployed | [PROJ-4-admin-tasting-events.md](PROJ-4-admin-tasting-events.md) | 2026-08-27 |
+| PROJ-5 | Whisky-Erfassung (blind) | Deployed | [PROJ-5-whisky-erfassung.md](PROJ-5-whisky-erfassung.md) | 2026-08-27 |
+| PROJ-6 | Gastgeber-Steuerung & Ablauf | Deployed | [PROJ-6-gastgeber-steuerung.md](PROJ-6-gastgeber-steuerung.md) | 2026-08-27 |
+| PROJ-7 | Bewertungsansicht | Deployed | [PROJ-7-bewertungsansicht.md](PROJ-7-bewertungsansicht.md) | 2026-08-27 |
+| PROJ-8 | Tasting-Dashboard mit Live-Sync | Deployed | [PROJ-8-tasting-dashboard.md](PROJ-8-tasting-dashboard.md) | 2026-08-27 |
+| PROJ-9 | Ergebnisse & Tasting-Historie | Deployed | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
+| PROJ-10 | Profil-Seite mit persönlicher Bilanz | Deployed | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
 | PROJ-11 | Neutraler Helfer pro Event | Roadmap | – | 2026-08-29 |
 
 <!-- Add features above this line -->

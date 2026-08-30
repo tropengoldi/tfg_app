@@ -562,4 +562,18 @@ E2E-Datei: `tests/PROJ-4-admin-events.spec.ts` (11 Tests × 2 Projekte).
 - **Recommendation:** **Approved.** BUG-2 (Hydration-Doppelrender) vor `/deploy` von `/frontend` beheben lassen, BUG-1 (Kalender-Locale) am besten gleich mit. Beide sind Low und blockieren das Deployment nicht formal.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-08-30 · **Production URL:** https://tfg-app-self.vercel.app · **Tag:** `v1.0.0`
+
+Gebündeltes Erst-Deployment von PROJ-1–10. Hosting: Vercel (Auto-Deploy aus `main`).
+Backend: Supabase `ogwuwisutgaxxpknkgpg` (eu-central-1), Migrationen bis `20260830120000`.
+
+Beim Deploy erledigt: Security-Header (`next.config.ts`), Vercel-Env-Vars, Supabase
+Auth (Site URL + Redirect-Allowlist `/**` auf die Prod-Domain, Signup OFF, anonyme
+Anmeldung OFF), Admin-Passwort vom Seed-Wert gelöst (`npm run admin:password`).
+
+Folgeschritte (nicht blockierend): Custom SMTP statt eingebautem Supabase-Mailer
+(rate-limitiert, nicht produktionstauglich); Sentry / Error-Tracking; Supabase
+Advisors (Security/Performance) im Dashboard gegenprüfen; alten Supabase Personal
+Access Token widerrufen; Test-Konto `test.teilnehmer@example.com` deaktivieren;
+E2E-Specs in CI sharden / `--workers=1` (BUG-2).
