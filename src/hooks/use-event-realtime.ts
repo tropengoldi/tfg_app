@@ -44,53 +44,67 @@ export function useEventRealtime(eventId: string | null) {
     if (!eventId) return
 
     const supabase = createClient()
-    const channel = supabase.channel(eventChannelName(eventId), {
-      config: { broadcast: { self: false } },
-    })
-    channelRef.current = channel
-
-    channel
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasting_events', filter: `id=eq.${eventId}` },
-        scheduleRefresh,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'whiskies', filter: `event_id=eq.${eventId}` },
-        scheduleRefresh,
-      )
-      .on('broadcast', { event: 'touch' }, scheduleRefresh)
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          clearTimeout(hintTimer.current)
-          if (!wasLiveRef.current) doRefresh() // Reconnect → einmal nachziehen
-          wasLiveRef.current = true
-          setIsLive(true)
-        } else if (
-          status === 'CHANNEL_ERROR' ||
-          status === 'TIMED_OUT' ||
-          status === 'CLOSED'
-        ) {
-          clearTimeout(hintTimer.current)
-          hintTimer.current = setTimeout(() => {
-            wasLiveRef.current = false
-            setIsLive(false)
-          }, OFFLINE_HINT_DELAY)
-        }
-      })
+    let channel: RealtimeChannel | null = null
+    let cancelled = false
 
     function onVisible() {
       if (document.visibilityState === 'visible') doRefresh()
     }
     document.addEventListener('visibilitychange', onVisible)
 
+    void (async () => {
+      // Erst den Auth-Token auf die Realtime-Verbindung setzen — sonst greift die
+      // RLS auf `postgres_changes` und der Client bekommt gar keine Zeilen.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (cancelled) return
+      if (session?.access_token) supabase.realtime.setAuth(session.access_token)
+
+      channel = supabase.channel(eventChannelName(eventId), {
+        config: { broadcast: { self: false } },
+      })
+      channelRef.current = channel
+
+      channel
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'tasting_events', filter: `id=eq.${eventId}` },
+          scheduleRefresh,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'whiskies', filter: `event_id=eq.${eventId}` },
+          scheduleRefresh,
+        )
+        .on('broadcast', { event: 'touch' }, scheduleRefresh)
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            clearTimeout(hintTimer.current)
+            if (!wasLiveRef.current) doRefresh() // Reconnect → einmal nachziehen
+            wasLiveRef.current = true
+            setIsLive(true)
+          } else if (
+            status === 'CHANNEL_ERROR' ||
+            status === 'TIMED_OUT' ||
+            status === 'CLOSED'
+          ) {
+            clearTimeout(hintTimer.current)
+            hintTimer.current = setTimeout(() => {
+              wasLiveRef.current = false
+              setIsLive(false)
+            }, OFFLINE_HINT_DELAY)
+          }
+        })
+    })()
+
     return () => {
+      cancelled = true
       clearTimeout(refreshTimer.current)
       clearTimeout(hintTimer.current)
       document.removeEventListener('visibilitychange', onVisible)
       channelRef.current = null
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
     }
   }, [eventId, scheduleRefresh, doRefresh])
 
