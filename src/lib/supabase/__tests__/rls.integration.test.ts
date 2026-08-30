@@ -358,13 +358,29 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
     expect(error!.code).toBe('TS004')
   })
 
-  it('Nach Abschluss sieht Teilnehmer A die Bewertungen von B', async () => {
+  it('Auch nach Abschluss sieht Teilnehmer A die ratings-Zeilen von B NICHT (PROJ-9: nur eigene Zeilen)', async () => {
     const { data } = await userA.client
       .from('ratings')
       .select('id')
       .eq('event_id', closedEvent.id)
       .eq('profile_id', userB.id)
-    expect(data).toHaveLength(1)
+    expect(data ?? []).toHaveLength(0)
+  })
+
+  it('Nach Abschluss liefert whisky_score_breakdown die Punkte von B — ohne notes-Spalte', async () => {
+    const { data, error } = await userA.client
+      .from('whisky_score_breakdown')
+      .select('whisky_id, rater_id, nose_points, taste_points, total_points')
+      .eq('event_id', closedEvent.id)
+    expect(error).toBeNull()
+    expect((data ?? []).some((r) => r.rater_id === userB.id)).toBe(true)
+
+    const withNotes = await userA.client
+      .from('whisky_score_breakdown')
+      .select('notes' as '*')
+      .eq('event_id', closedEvent.id)
+    expect(withNotes.error).toBeTruthy()
+    expect(withNotes.error!.code).toBe('42703') // undefined_column
   })
 
   // --- Rangliste --------------------------------------------------------
@@ -383,6 +399,64 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
       .eq('event_id', closedEvent.id)
     expect(data).toHaveLength(3)
     expect(data!.map((r) => r.rank).sort()).toEqual([1, 2, 3])
+  })
+
+  // --- PROJ-9: volle Runden-Historie für aktive Nicht-Teilnehmer --------
+  it('Aktives Mitglied ohne Teilnahme sieht die whisky_rankings des abgeschlossenen Events', async () => {
+    const { data, error } = await outsider.client
+      .from('whisky_rankings')
+      .select('rank, total_points, name, brought_by')
+      .eq('event_id', closedEvent.id)
+    expect(error).toBeNull()
+    expect(data).toHaveLength(3)
+    expect(data!.map((r) => r.rank).sort()).toEqual([1, 2, 3])
+  })
+
+  it('Aktives Mitglied ohne Teilnahme sieht die past_tastings-Zeile inkl. closed_at und Sieger', async () => {
+    const { data, error } = await outsider.client
+      .from('past_tastings')
+      .select('event_id, event_date, closed_at, host_name, winner_name')
+      .eq('event_id', closedEvent.id)
+      .maybeSingle()
+    expect(error).toBeNull()
+    expect(data?.event_id).toBe(closedEvent.id)
+    expect(data?.closed_at).toBeTruthy()
+    expect(data?.winner_name).toBeTruthy()
+  })
+
+  it('Aktives Mitglied ohne Teilnahme sieht die Einzelbewertungen (whisky_score_breakdown)', async () => {
+    const { data, error } = await outsider.client
+      .from('whisky_score_breakdown')
+      .select('rater_id, total_points')
+      .eq('event_id', closedEvent.id)
+    expect(error).toBeNull()
+    expect((data ?? []).length).toBeGreaterThan(0)
+  })
+
+  it('Aktives Mitglied ohne Teilnahme sieht die Teilnehmerliste des abgeschlossenen Events', async () => {
+    const { data, error } = await outsider.client
+      .from('event_participants')
+      .select('profile_id')
+      .eq('event_id', closedEvent.id)
+    expect(error).toBeNull()
+    expect((data ?? []).length).toBeGreaterThan(0)
+  })
+
+  it('Aktives Mitglied ohne Teilnahme kommt NICHT an die rohen ratings-Zeilen des abgeschlossenen Events', async () => {
+    const { data } = await outsider.client
+      .from('ratings')
+      .select('id')
+      .eq('event_id', closedEvent.id)
+    expect(data ?? []).toHaveLength(0)
+  })
+
+  it('Die Blindheit hält: das aktive Event bleibt für das Nicht-Teilnehmer-Mitglied unsichtbar', async () => {
+    const [rankings, parts] = await Promise.all([
+      outsider.client.from('whisky_rankings').select('rank').eq('event_id', activeEvent.id),
+      outsider.client.from('event_participants').select('profile_id').eq('event_id', activeEvent.id),
+    ])
+    expect(rankings.data ?? []).toHaveLength(0)
+    expect(parts.data ?? []).toHaveLength(0)
   })
 
   // --- Rollen & Ablaufsteuerung ---------------------------------------

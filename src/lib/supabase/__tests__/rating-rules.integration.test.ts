@@ -3,7 +3,8 @@
  *   - nur ausgeschenkte Whiskys sind bewertbar (can_rate_whisky)
  *   - nur die eigene Bewertung ist les-/schreibbar (vor dem Abschluss)
  *   - Event-Abschluss friert ein (TS001), Rundenabschluss nicht
- *   - nach dem Abschluss sieht die Runde alle Bewertungen
+ *   - nach dem Abschluss kommen die Punkte der Runde aus whisky_score_breakdown
+ *     (PROJ-9), die rohe ratings-Zeile bleibt privat; die eigene Notiz auch
  *
  * Ausführen:  npm run test:rls
  */
@@ -256,16 +257,61 @@ describe.skipIf(!RUN)('Sperre', () => {
     expect(error).toBeNull()
   })
 
-  it('nach dem Abschluss sieht die Runde alle Bewertungen', async () => {
+  it('nach dem Abschluss: die Punkte der Runde kommen aus der Aufschlüsselungs-View, NICHT aus der ratings-Tabelle', async () => {
     const ev = await runningEvent(`RT-reveal-${stamp}`, 2, 1)
     const [w1] = await whiskyIds(ev)
     expect((await rate(pa, ev, w1, 4, 8)).error).toBeNull()
     expect((await host.client.rpc('close_event', { p_event: ev })).error).toBeNull()
 
-    const { data: asPb } = await pb.client
+    // Roh: pb sieht die fremde ratings-Zeile von pa auch nach dem Abschluss nicht.
+    const { data: asPbRaw } = await pb.client
       .from('ratings')
       .select('whisky_id, profile_id')
       .eq('event_id', ev)
-    expect((asPb ?? []).some((r) => r.profile_id === pa.id)).toBe(true)
+    expect((asPbRaw ?? []).some((r) => r.profile_id === pa.id)).toBe(false)
+
+    // Geteilte Sicht: über whisky_score_breakdown sind die Punkte von pa da.
+    const { data: asPbView, error } = await pb.client
+      .from('whisky_score_breakdown')
+      .select('whisky_id, rater_id, total_points')
+      .eq('event_id', ev)
+    expect(error).toBeNull()
+    expect((asPbView ?? []).some((r) => r.rater_id === pa.id && r.total_points === 12)).toBe(true)
+  })
+
+  it('nach dem Abschluss bleibt die eigene Notiz für den Verfasser lesbar, für andere nicht', async () => {
+    const ev = await runningEvent(`RT-note-${stamp}`, 2, 1)
+    const [w1] = await whiskyIds(ev)
+    expect(
+      (
+        await pa.client.from('ratings').upsert(
+          {
+            whisky_id: w1,
+            event_id: ev,
+            profile_id: pa.id,
+            nose_points: 3,
+            taste_points: 6,
+            notes: 'Torf und Seetang',
+          },
+          { onConflict: 'whisky_id,profile_id' },
+        )
+      ).error,
+    ).toBeNull()
+    expect((await host.client.rpc('close_event', { p_event: ev })).error).toBeNull()
+
+    const { data: mine } = await pa.client
+      .from('ratings')
+      .select('notes')
+      .eq('whisky_id', w1)
+      .eq('profile_id', pa.id)
+      .single()
+    expect(mine!.notes).toBe('Torf und Seetang')
+
+    const { data: theirs } = await pb.client
+      .from('ratings')
+      .select('notes')
+      .eq('whisky_id', w1)
+      .eq('profile_id', pa.id)
+    expect(theirs ?? []).toHaveLength(0)
   })
 })

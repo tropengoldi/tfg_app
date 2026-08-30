@@ -547,6 +547,65 @@ Zielzustand.
 - `npm run build` → sauber; Route `/tastings/[eventId]/ergebnisse` erzeugt.
 - `eslint` auf allen berührten Pfaden → sauber.
 
+## Implementation Notes (Backend)
+
+**Stand:** Eine Migration (`supabase/migrations/20260830120000_results_visibility.sql`)
+plus die überarbeiteten RLS-Integrationstests. **Claude hat hier keinen
+DB-Zugriff** → der Nutzer spielt ein und bestätigt:
+`npm run db:push && npm run db:types && npm run test:rls`.
+
+### Migration
+
+1. **`is_active_member()`** — neuer `security definer`-Helfer: `true`, wenn der
+   Aufrufer ein nicht-deaktiviertes Profil hat (jede Rolle). `execute` nur für
+   `authenticated`.
+2. **`whisky_rankings` neu** — ohne `security_invoker` (läuft mit Owner-Rechten,
+   `force row level security` ist projektweit aus). Filter unverändert
+   `status = 'closed'` (Join) **plus** `where public.is_active_member()`. Spalten,
+   Rangfolge, `rank()`-Fenster identisch zu PROJ-1. Weiterhin **keine** Notiz.
+3. **`past_tastings` neu** — selbes Owner-Rechte-+-`is_active_member()`-Muster.
+   **Neu:** Spalte `closed_at` (Zweitsortierschlüssel der Historie).
+4. **`whisky_score_breakdown` neu** — eine Zeile pro Bewerter pro Whisky
+   (`event_id, whisky_id, rater_id, rater_name, nose_points, taste_points,
+   total_points`). **Bewusst ohne `notes`.** Join auf `status = 'closed'` +
+   `where is_active_member()`. `select` für `authenticated`, nichts für `anon`.
+5. **`participants_select_same_event` geweitet** — zusätzlich
+   `is_active_member() AND is_event_closed(event_id)`. Laufende / vorbereitete
+   Events unverändert.
+6. **`ratings_select` verengt** — von „Teilnehmer + (eigene Zeile ODER Event
+   abgeschlossen)" auf **`is_admin() OR profile_id = auth.uid()`**. Damit sind
+   fremde Notizen strukturell unerreichbar; die geteilte Sicht liefern die Views
+   aus 2/4 ohne Notiz-Spalte. `insert` / `update` / `delete` unverändert.
+
+Realtime-Publication: **keine Änderung** (Views werden nicht publiziert; `ratings`
+war und bleibt draußen).
+
+### Angepasste Tests
+
+- **`rls.integration.test.ts`:**
+  - „Nach Abschluss sieht Teilnehmer A die Bewertungen von B" **invertiert** →
+    sieht die rohen `ratings`-Zeilen jetzt **nicht** (0), dafür neuer Fall:
+    `whisky_score_breakdown` liefert Bs Punkte, und `select('notes')` darauf →
+    `42703` (Spalte existiert nicht).
+  - **Neu** (nutzt den vorhandenen `outsider` = aktives Mitglied ohne Teilnahme):
+    sieht `whisky_rankings` / `past_tastings` (inkl. `closed_at`, Sieger) /
+    `whisky_score_breakdown` / Teilnehmerliste des **abgeschlossenen** Events;
+    kommt **nicht** an die rohen `ratings`; das **aktive** Event bleibt komplett
+    unsichtbar (Blindheit hält).
+- **`rating-rules.integration.test.ts`:**
+  - Letzter Test umgestellt: `pb` sieht Pas rohe `ratings`-Zeile nach dem
+    Abschluss **nicht**, wohl aber Pas Punkte über `whisky_score_breakdown`.
+  - **Neu:** die eigene Notiz bleibt für den Verfasser nach dem Abschluss
+    lesbar, für andere `ratings`-Leser nicht (0 Zeilen).
+
+### Ausstehende Bestätigung durch den Nutzer
+- [ ] `npm run db:push` — Migration eingespielt
+- [ ] `npm run db:types` — `types.ts` neu generiert (die Handeinträge aus
+      `/frontend` sollten deckungsgleich verschwinden/ersetzt werden)
+- [ ] `npm run test:rls` — grün (inkl. der o. g. angepassten + neuen Fälle sowie
+      der PROJ-5/6/7-Suiten `whisky-entry-rpcs` / `host-control-rpcs` /
+      `rating-rules`)
+
 ## QA Test Results
 _To be added by /qa_
 
