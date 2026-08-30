@@ -26,10 +26,36 @@
 | PROJ-9 | Ergebnisse & Tasting-Historie | Deployed | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
 | PROJ-10 | Profil-Seite mit persönlicher Bilanz | Deployed | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
 | PROJ-11 | Neutraler Helfer pro Event | Roadmap | – | 2026-08-29 |
+| PROJ-12 | App-Icon & Homescreen | Roadmap | – | 2026-08-30 |
+| PROJ-13 | Marken-Auftritt (Whizzky) | Roadmap | – | 2026-08-30 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-12
+## Next Available ID: PROJ-14
+
+## Nächste Umsetzung (vor PROJ-11)
+
+Reihenfolge: **PROJ-12 → PROJ-13**. Beides ist rein visuell/Frontend, keine
+DB-Änderung. PROJ-11 (Neutraler Helfer) folgt danach.
+
+## Post-Deploy-Backlog (Betrieb)
+
+Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
+`/write-spec` nötig — Konfiguration bzw. kleine Chores.
+
+- [ ] **Custom SMTP** einrichten (Supabase → Auth → Emails → SMTP Settings) —
+      der eingebaute Mailer ist hart rate-limitiert; „Einladung" und „Passwort
+      vergessen" sind bis dahin nur eingeschränkt nutzbar. *(in Arbeit)*
+- [ ] **Sentry / Error-Tracking** — siehe `docs/production/error-tracking.md`
+- [ ] **Supabase Advisors** (Security + Performance) im Dashboard prüfen;
+      Leaked-Password-Protection einschalten. Die „Security Definer View"-Warnung
+      für `whisky_rankings` / `past_tastings` / `whisky_score_breakdown` ist
+      gewollt (PROJ-9).
+- [ ] **Alten Supabase Personal Access Token widerrufen** (steckte in `.mcp.json`)
+- [ ] **Test-Konto `test.teilnehmer@example.com` deaktivieren** (Admin →
+      Teilnehmer) — vor der ersten echten Runde
+- [ ] **E2E-Specs in CI sharden / `--workers=1`** (BUG-2) plus der projektweite
+      transiente Hydration-Doppelrender
 
 ---
 
@@ -53,6 +79,8 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-9** | **Ergebnisse & Tasting-Historie** | Rangliste nach Abschluss (Gesamt-, Nasen-, Geschmackspunkte) mit Link zum Verkostungsvideo je Whisky, Liste vergangener Tastings mit Datum, Gastgeber und Sieger-Whisky, Detailansicht | P1 | PROJ-7 |
 | **PROJ-10** | **Profil-Seite mit persönlicher Bilanz** | Eigene Daten bearbeiten (Anzeigename, Lieblings-Dram, Lieblingsregion, Kurzbeschreibung) plus persönliche Bilanz: Anzahl Tastings, mitgebrachte Whiskies, beste Platzierung, Ø vergebene Punkte | P2 | PROJ-9 |
 | **PROJ-11** | **Neutraler Helfer pro Event** | Optionale Rolle je Event: eine Person, die selbst nicht mitverkostet, aber Einblick in die geheimen Whisky-Details hat und den Ablauf steuern darf (Ausschankreihenfolge festlegen, Runden weiterschalten u. ä.). Ist ein Helfer für ein Event benannt, hat der Gastgeber dieses Abends nur noch die Einblicke eines normalen Teilnehmers (er verkostet dann blind mit). Betrifft Rollen-/Berechtigungsmodell (RLS, Helper-Funktionen), Event-Anlage (PROJ-4) und Gastgeber-Steuerung (PROJ-6). | P2 | PROJ-6 |
+| **PROJ-12** | **App-Icon & Homescreen** | Icon-Set für „Zum Startbildschirm hinzufügen" auf dem Handy: Web-App-Manifest (`manifest.webmanifest`), `apple-touch-icon`, Favicon-Varianten, `theme-color`. Kein Service-Worker / keine Offline-Fähigkeit (PRD-Non-Goal), nur das Icon + der Name auf dem Homescreen. | P2 | PROJ-2 |
+| **PROJ-13** | **Marken-Auftritt (Whizzky)** | Bündelt zwei visuelle Änderungen an denselben Bausteinen (Auth-Layout, App-Shell-Header, `PageHeader`): (a) Haupt-Überschrift auf **„Whizzky"** mit kleinerer Unterzeile **„Treffpunkt feiner Geister"** statt „Whisky Tasting"; (b) ein dezentes, thematisch passendes Hintergrundbild in der Anmelde-Maske und hinter den Seiten-Überschriften. Rein Frontend, keine DB-Änderung. Assets liegen unter `public/`. | P2 | PROJ-2 |
 
 ### Anmerkungen zur Aufteilung
 
