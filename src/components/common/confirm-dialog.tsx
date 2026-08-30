@@ -20,6 +20,7 @@ interface ConfirmDialogProps {
   title: string
   description: React.ReactNode
   confirmLabel: string
+  cancelLabel?: string
   destructive?: boolean
   pending?: boolean
   onConfirm: () => void
@@ -32,6 +33,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  cancelLabel = 'Abbrechen',
   destructive,
   pending,
   onConfirm,
@@ -44,7 +46,7 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Abbrechen</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending}
             className={cn(

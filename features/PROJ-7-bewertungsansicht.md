@@ -1,6 +1,6 @@
 # PROJ-7: Bewertungsansicht
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-29
 **Last Updated:** 2026-08-29
 
@@ -432,6 +432,73 @@ Keine neue.
   Anzeige; Nicht-Teilnehmer → „nicht gefunden"; ein Teilnehmer sieht die Werte
   eines anderen nicht.
 - `npm run build` / `npm run lint` sauber.
+
+## Implementation Notes (Frontend)
+
+**Stand:** Seite, Komponenten, Query und die Upsert-Server-Action geschrieben.
+**Rein clientseitig lauffähig gegen das vorhandene PROJ-1-Backend** — die
+`ratings`-Tabelle inkl. Upsert-Schreibrechten (Migration `20260827120800`),
+`can_rate_whisky` und der `ratings_lock`-Trigger existieren. **Kein
+Backend-Schritt nötig** → nach diesem Durchlauf direkt `/qa`.
+
+### Was gebaut wurde
+
+**Neues Paket** — `shadcn slider` (`@radix-ui/react-slider`), einmalig via
+`npx shadcn add slider`.
+
+**Ableitungslogik** — `src/lib/rating-view.ts` (rein, unit-getestet):
+`pourablePositions` (1..currentPosition, begrenzt auf die Whisky-Zahl),
+`initialFocus` (aktuelle Position, geklemmt auf 1..total), `ratedPositions`
+(Positionen mit eigener Bewertung), `ratingsKey` (stabiler Inhalts-Schlüssel für
+den Re-Sync-Effekt).
+
+**Eingaberegeln** — `src/lib/schemas/rating.ts`: `ratingFormSchema` (Nase 1–5,
+Geschmack 1–10, beide ganzzahlig Pflicht; Notiz ≤ 2000, `''`-defaultend).
+
+**Datenzugriff** — `src/lib/queries/ratings.ts`: `getRatingViewData(eventId,
+userId)` — explizite Teilnahme-Prüfung (kein Teilnehmer → `null` → `notFound()`),
+Event-Status + `current_position`, die Whisky-**Positionen** (keine Namen) und
+**nur die eigenen** Bewertungen.
+
+**Server Action** — `src/lib/actions/ratings.ts`: `saveRatingAction(eventId,
+whiskyId, input)` → ein `upsert` auf `ratings` (`onConflict:
+whisky_id,profile_id`) über den nutzergebundenen Client, Login-Vorabprüfung,
+`messageForDbError`, revalidiert `/tastings/[eventId]/bewerten`.
+
+**Seite & Komponenten**
+- `(app)/tastings/[eventId]/bewerten/` — `page.tsx` (`requireUser` +
+  `getRatingViewData` → `notFound()` bei `null`), `loading.tsx`, `error.tsx`.
+  Die Seite verzweigt nach Status: „In Vorbereitung" → Hinweis + Link;
+  „läuft, Position 0" → „Gleich geht's los …"; „läuft, Position ≥ 1" →
+  `<RatingView editable>`; „abgeschlossen" → „eingefroren"-Alert +
+  `<RatingView editable={false}>` (bzw. „nichts bewertet"-Karte).
+- `src/components/rating/`:
+  - `position-bar` (Client) — `1…N` Kreise; ausgeschenkt = anklickbar (Haken bei
+    bewertet), aktuell = Ring, Fokus = gefüllt, nicht ausgeschenkt =
+    deaktiviert/gestrichelt.
+  - `rating-view` (Client) — Fokus-Position im State (Default = aktuelle),
+    Nase-Slider 1–5 + Geschmack-Slider 1–10 (großer Zahlenwert), Notizfeld,
+    „Speichern", „Aktualisieren". Ein Effekt auf `[focus, ratingsKey]` übernimmt
+    die Serverwerte in die Slider (setzt `dirty` zurück); ein Effekt auf
+    `[currentPosition]` springt den Fokus auf den neuen aktuellen Whisky —
+    **nur wenn nichts Ungespeichertes offen ist** (`dirtyRef`). Positionswechsel
+    über die Leiste bei ungespeicherter Änderung → `ConfirmDialog` („Wechseln" /
+    „Hier bleiben"). Bei `editable={false}` sind die Slider gesperrt.
+- `src/components/common/confirm-dialog.tsx` — optionales `cancelLabel`
+  (Default „Abbrechen"), damit der Dialog „Hier bleiben" zeigen kann.
+- `src/components/tasting/tasting-row.tsx` — bei laufendem Event ist der
+  Haupt-Klick der Zeile `/bewerten`; „Whiskys" wird zum Zweitlink (neben
+  „Steuern" für den Gastgeber). Die Zweitlinks stehen in einer schmalen Spalte
+  mit linkem Rand.
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (69, davon 16 neu) · `tsc` ✅
+- Smoke gegen `next start`: `/tastings/<uuid>/bewerten` leitet unangemeldet
+  sauber auf `/login?redirect=…` (kein 500).
+- **Nicht** getestet (braucht echte Daten / `/qa`): Bewerten + Speichern im
+  Browser, Positionsleiste/Zurückspringen, „Aktualisieren", der
+  Ungespeichert-Dialog, der „eingefroren"-Zustand, Nicht-Teilnehmer →
+  „nicht gefunden", Blindheit gegenüber fremden Bewertungen.
 
 ## QA Test Results
 _To be added by /qa_

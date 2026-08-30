@@ -1,15 +1,32 @@
 import Link from 'next/link'
-import { ChevronRight, MapPin, SlidersHorizontal, UserRound } from 'lucide-react'
+import { ChevronRight, MapPin, SlidersHorizontal, UserRound, Wine } from 'lucide-react'
 
 import { EventStatusBadge } from '@/components/common/event-status-badge'
 import { formatEventDate } from '@/lib/dates'
 import type { MyTastingRow } from '@/lib/queries/tastings'
 
 export function TastingRow({ row }: { row: MyTastingRow }) {
+  const running = row.status === 'active'
+  const primaryHref = running
+    ? `/tastings/${row.id}/bewerten`
+    : `/tastings/${row.id}/whiskies`
+
+  const secondary: { href: string; label: string; icon: typeof Wine }[] = []
+  if (running) {
+    secondary.push({ href: `/tastings/${row.id}/whiskies`, label: 'Whiskys', icon: Wine })
+  }
+  if (row.is_host) {
+    secondary.push({
+      href: `/tastings/${row.id}/gastgeber`,
+      label: 'Steuern',
+      icon: SlidersHorizontal,
+    })
+  }
+
   return (
     <li className="flex items-stretch">
       <Link
-        href={`/tastings/${row.id}/whiskies`}
+        href={primaryHref}
         className="flex flex-1 items-center gap-3 p-4 transition-colors hover:bg-accent"
       >
         <div className="min-w-0 flex-1 space-y-1">
@@ -26,19 +43,27 @@ export function TastingRow({ row }: { row: MyTastingRow }) {
             Gastgeber: {row.host_name}
           </p>
         </div>
-        {!row.is_host ? (
+        {secondary.length === 0 ? (
           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
         ) : null}
       </Link>
 
-      {row.is_host ? (
-        <Link
-          href={`/tastings/${row.id}/gastgeber`}
-          className="flex shrink-0 items-center gap-1.5 border-l border-border px-4 text-sm font-medium text-primary transition-colors hover:bg-accent"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          Steuern
-        </Link>
+      {secondary.length > 0 ? (
+        <div className="flex shrink-0 flex-col divide-y divide-border border-l border-border">
+          {secondary.map((s) => {
+            const Icon = s.icon
+            return (
+              <Link
+                key={s.href}
+                href={s.href}
+                className="flex flex-1 items-center gap-1.5 px-4 text-sm font-medium text-primary transition-colors hover:bg-accent"
+              >
+                <Icon className="h-4 w-4" />
+                {s.label}
+              </Link>
+            )
+          })}
+        </div>
       ) : null}
     </li>
   )
