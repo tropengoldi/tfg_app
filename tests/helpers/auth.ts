@@ -220,6 +220,39 @@ export async function startEventDirect(eventId: string, position = 1) {
   if (error) throw error
 }
 
+/** Gibt die Whisky-IDs eines Events in Positionsreihenfolge zurück. */
+export async function whiskyIdsByPosition(eventId: string): Promise<string[]> {
+  const { data } = await serviceClient()
+    .from('whiskies')
+    .select('id, position')
+    .eq('event_id', eventId)
+    .order('position', { ascending: true })
+  return (data ?? []).map((w) => w.id as string)
+}
+
+/** Schreibt eine Bewertung direkt (Service-Client, umgeht RLS). */
+export async function insertRatingDirect(opts: {
+  whiskyId: string
+  eventId: string
+  profileId: string
+  nose: number
+  taste: number
+  notes?: string | null
+}) {
+  const { error } = await serviceClient().from('ratings').upsert(
+    {
+      whisky_id: opts.whiskyId,
+      event_id: opts.eventId,
+      profile_id: opts.profileId,
+      nose_points: opts.nose,
+      taste_points: opts.taste,
+      notes: opts.notes ?? null,
+    },
+    { onConflict: 'whisky_id,profile_id' },
+  )
+  if (error) throw error
+}
+
 export async function deleteEventsByLocationPrefix(prefix: string) {
   await serviceClient()
     .from('tasting_events')

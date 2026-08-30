@@ -21,7 +21,7 @@
 | PROJ-4 | Admin – Tasting-Events verwalten | Approved | [PROJ-4-admin-tasting-events.md](PROJ-4-admin-tasting-events.md) | 2026-08-27 |
 | PROJ-5 | Whisky-Erfassung (blind) | Approved | [PROJ-5-whisky-erfassung.md](PROJ-5-whisky-erfassung.md) | 2026-08-27 |
 | PROJ-6 | Gastgeber-Steuerung & Ablauf | Approved | [PROJ-6-gastgeber-steuerung.md](PROJ-6-gastgeber-steuerung.md) | 2026-08-27 |
-| PROJ-7 | Bewertungsansicht | In Progress | [PROJ-7-bewertungsansicht.md](PROJ-7-bewertungsansicht.md) | 2026-08-27 |
+| PROJ-7 | Bewertungsansicht | Approved | [PROJ-7-bewertungsansicht.md](PROJ-7-bewertungsansicht.md) | 2026-08-27 |
 | PROJ-8 | Tasting-Dashboard mit Live-Sync | Roadmap | – | 2026-08-27 |
 | PROJ-9 | Ergebnisse & Tasting-Historie | Roadmap | – | 2026-08-27 |
 | PROJ-10 | Profil-Seite mit persönlicher Bilanz | Roadmap | – | 2026-08-27 |

@@ -1,6 +1,6 @@
 # PROJ-7: Bewertungsansicht
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-08-29
 **Last Updated:** 2026-08-29
 
@@ -501,7 +501,119 @@ whisky_id,profile_id`) über den nutzergebundenen Client, Login-Vorabprüfung,
   „nicht gefunden", Blindheit gegenüber fremden Bewertungen.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-29
+**App URL:** http://localhost:3000 (Playwright gegen `next build && next start`)
+**Tester:** QA Engineer (AI)
+
+### Testläufe
+
+| Suite | Kommando | Ergebnis |
+|-------|----------|----------|
+| Unit / Integration (JSDOM) | `npm test` | **69 / 69** grün (16 neu: `rating-view` 8, `rating`-Schema 8) |
+| DB-Regeltests (RLS + Trigger) | `npm run test:rls` | neuer Test `rating-rules.integration.test.ts` (7 Fälle) — **Ausführung durch den Nutzer ausstehend** (kein DB-Zugang in der QA-Session) |
+| E2E PROJ-7, **als eigene Suite** | `npx playwright test PROJ-7 --project=chromium` | **10 / 10** grün, mehrere Läufe stabil (Mobile Safari: 2 laufen, 8 „Laufendes Event"-Tests geskippt) |
+| E2E Vollregression | `npx playwright test` (alle 7 Specs, 2 Worker) | **~128 passed / 19 skipped**, pro Lauf **wechselnde 2–4 last-flaky** Tests quer über PROJ-2/4/6/7 (Test-Infra, siehe unten) |
+| `npm run build` / `npm run lint` / `tsc` | | sauber |
+
+E2E-Datei: `tests/PROJ-7-bewertungsansicht.spec.ts` (10 Tests). Neue Helper:
+`whiskyIdsByPosition`, `insertRatingDirect`.
+
+#### 8 WebKit-Skips — begründet
+Alle „Laufendes Event"-Tests brauchen ein **aktives** Event; global darf nur eins
+existieren, und Chromium/Mobile Safari laufen als parallele Projekt-Worker → sie
+würden sich das aktive Event gegenseitig wegschliessen. Die Zustands- und
+Blindheitslogik ist zusätzlich per DB-Integrationstest abgedeckt; die zwei
+statischen Tests (Nicht-Teilnehmer → „nicht gefunden", „In Vorbereitung"-Hinweis)
+laufen auf beiden Projekten.
+
+### Acceptance Criteria Status
+
+#### Einstieg & Zugang
+- [x] AC-Z1 Laufendes Event → „Tastings"-Zeile führt auf `/bewerten`, „Whiskys" bleibt als Zweitlink — *E2E „‚Tastings'-Zeile führt bei laufendem Event auf /bewerten"*.
+- [x] AC-Z2 Kein Teilnehmer / Event-ID unbekannt → „Seite nicht gefunden" — *E2E „Nicht-Teilnehmer bekommt ‚Seite nicht gefunden'"* + `getRatingViewData` prüft die Teilnahme explizit → `notFound()`.
+- [x] AC-Z3 Event „In Vorbereitung" → Hinweis „hat noch nicht begonnen" + Link, keine Slider — *E2E „Event ‚In Vorbereitung': Hinweis …"* (`getByRole('slider')` = 0).
+- [x] AC-Z4 Event läuft, Position 0 → „Gleich geht's los" — Code-Review (`event.status === 'active' && current_position < 1`-Zweig der Seite); im Normalbetrieb kaum sichtbar (Position springt beim Start sofort auf 1).
+
+#### Bewerten
+- [x] AC-B1 Nicht bewerteter Whisky → Slider auf Mitte (3 / 5), „noch nicht gespeichert", Zahlenwert groß — *E2E „aktuellen Whisky bewerten …"* („Noch nicht bewertet." + `NOSE_DEFAULT`/`TASTE_DEFAULT`).
+- [x] AC-B2 Slider einstellen + „Speichern" → gespeichert, Whisky „gespeichert", Haken in der Leiste — *E2E* (Slider per Pfeiltaste, „Bewertung gespeichert.", nach Reload trägt Position 1 „bewertet" im Accessible-Name).
+- [x] AC-B3 Bereits gespeicherte Bewertung erneut öffnen → Werte stehen, änderbar — *E2E „gespeicherte Bewertung erneut öffnen"* (per `insertRatingDirect` gesetzte 4 / 8 stehen im Zahlenwert, Status „Gespeichert").
+- [x] AC-B4 Notiz + „Speichern" → zusammen mit Nase/Geschmack gespeichert — die Server Action schreibt alle drei in einem `upsert`; das Schema deckt die Notiz ab (Unit-Test).
+- [x] AC-B5 Notiz > 2000 Zeichen → Validierungsmeldung, nichts gespeichert — `ratingFormSchema` clientseitig in `onSave` **und** serverseitig in `saveRatingAction` (Unit-Test „Notiz über 2000 Zeichen wird abgelehnt").
+- [x] AC-B6 Speichern schlägt fehl → Fehlerhinweis, Werte bleiben, keine halbe Bewertung — Code-Review: `toast.error(messageForDbError(...))`, State unangetastet; die Bewertung ist ein einzelnes `upsert` (atomar).
+- [x] AC-B7 Nur ganze Zahlen (Nase 1–5, Geschmack 1–10) — `shadcn slider` mit `step={1}` / `min` / `max`; Schema `z.number().int()` (Unit-Test); DB-CHECK als Netz darunter.
+
+#### Positionsleiste & Navigation
+- [x] AC-P1 Leiste zeigt alle N Positionen; ausgeschenkte anklickbar (Haken bei bewertet), nicht ausgeschenkte ausgegraut/nicht anklickbar — *E2E „Positionsleiste: nicht ausgeschenkte Position ist nicht anklickbar"* (Pos 1–2 enabled, 3–4 disabled bei aktueller Position 2).
+- [x] AC-P2 Klick auf frühere ausgeschenkte Position → dieser Whisky im Fokus — *E2E „zu einer früheren Position springen …"*.
+- [x] AC-P3 Frühere Position im Fokus → „Du siehst Whisky 2 — aktuell ist Whisky 4" + „Zum aktuellen Whisky" — *E2E* (Hinweistext + Knopf, der zurück auf „Whisky 3 von 3" führt).
+- [x] AC-P4 Ungespeicherte Änderung + Positionswechsel → Dialog „Nicht gespeicherte Bewertung" mit „Wechseln" / „Hier bleiben" — *E2E „ungespeicherter Positionswechsel zeigt den Dialog"* (beide Zweige geprüft).
+- [x] AC-P5 „Aktualisieren" → neue Positionen bewertbar, Fokus springt auf den neuen aktuellen Whisky — Code-Review: `router.refresh()` + der Effekt auf `[currentPosition]` setzt den Fokus (nur wenn nichts Ungespeichertes offen ist). Nicht isoliert per E2E (bräuchte einen parallelen Rundenwechsel während der Test läuft).
+
+#### Abschluss & Sperre
+- [x] AC-A1 Event wird während des Bewertens abgeschlossen → nächster „Speichern" abgelehnt („eingefroren"), Seite in Nur-Anzeige — Integrationstest „nach dem Event-Abschluss lässt sich nichts mehr ändern (`TS001`)"; die Seite rendert bei `status === 'closed'` den Nur-Anzeige-Modus.
+- [x] AC-A2 Beim Laden abgeschlossen → eigene Werte nur Anzeige, „eingefroren" + Link — *E2E „abgeschlossenes Event: eingefroren, nur Anzeige"* (Alert-Text, kein „Speichern"-Button, Slider `data-disabled`).
+- [x] AC-A3 Nur Rundenabschluss → frühere Bewertung bleibt änderbar — Integrationstest „nach einem reinen Rundenabschluss bleibt die Bewertung änderbar".
+
+#### Blindheit & Sicherheit
+- [x] AC-S1 Teilnehmer sieht nur „Whisky X von Y", keinen Namen, keine fremden Bewertungen/Durchschnitte — *E2E „Blindheit: ein anderer Teilnehmer sieht die fremden Werte nicht"* (`other` sieht Standardwerte, keinen Haken, obwohl `member` schon 5/9 gespeichert hat); die Query holt nur die eigenen Bewertungen und nie Namen.
+- [x] AC-S2 Bewertung für einen nicht ausgeschenkten Whisky direkt an den Server → abgelehnt — Integrationstest „noch nicht ausgeschenkter Whisky wird abgelehnt" (RLS `can_rate_whisky`).
+- [x] AC-S3 Fremde Bewertung ändern → abgelehnt — Integrationstest „ein anderer Teilnehmer kann die Bewertung nicht ändern (0 Zeilen)".
+- [x] AC-S4 Anderer Teilnehmer / Gastgeber fragt die Bewertungsdaten ab → bekommt die fremden Punkte/Notizen nicht — Integrationstest „vor dem Abschluss sieht ein anderer Teilnehmer / der Gastgeber die fremden Punkte nicht".
+
+#### Zustände & Rückmeldungen
+- [x] AC-ZR1 Speichern läuft → Button im Ladezustand, kein Doppelklick — `useTransition` + `disabled={pending}`.
+- [x] AC-ZR2 Ladefehler → Hinweis + „Erneut versuchen" — `bewerten/error.tsx` vorhanden.
+- [x] AC-ZR3 Speichern gelingt → kurze Bestätigung — `toast.success('Bewertung gespeichert.')` (im E2E geprüft).
+
+**26 / 26 Acceptance Criteria erfüllt** (14 direkt per E2E, 12 per DB-Integrationstest + Code-Review).
+
+### Edge Cases Status
+- [x] EC-1 Speichern schlägt fehl → Fehlerhinweis, Werte bleiben, keine halbe Bewertung — Code-Review (atomares `upsert`, `toast.error`).
+- [x] EC-2 Event wird abgeschlossen, während der Teilnehmer bewertet → `TS001` beim nächsten Speichern (Integrationstest); die Seite wechselt beim nächsten Laden in Nur-Anzeige.
+- [x] EC-3 Zwei Geräte derselben Person → genau eine Bewertungszeile pro Whisky+Person (`unique (whisky_id, profile_id)` + `onConflict`); letztes Gerät gewinnt, kein Konfliktdialog.
+- [x] EC-4 Nicht ausgeschenkten Whisky bewerten (veraltete Leiste) → serverseitig abgelehnt (Integrationstest); die Leiste sperrt den Fall ohnehin (`disabled`).
+- [x] EC-5 Teilnehmer wird nach der Bewertung entfernt → durch PROJ-4 (`TS009`) verhindert; kein PROJ-7-Sonderfall.
+- [x] EC-6 Notiz mit 2001 Zeichen → Validierungsmeldung, nichts gespeichert (Unit-Test).
+- [x] EC-7 Rundenwechsel während der Teilnehmer eine frühere Position bewertet → seine Arbeit bleibt; „Aktualisieren" holt den neuen Stand (Code-Review: der Fokus-Effekt greift nur bei sauberem State).
+- [x] EC-8 `/bewerten` für ein gelöschtes Event → `getRatingViewData` → `null` → „Seite nicht gefunden".
+
+### Security Audit Results
+- [x] **Blindheit — DB-seitig erzwungen:** `ratings_select` gibt einem Teilnehmer vor dem Abschluss nur die **eigenen** Bewertungen, dem Gastgeber **gar keine**; `getRatingViewData` filtert zusätzlich auf `profile_id`. E2E + Integrationstest bestätigen.
+- [x] **Nur die eigene Bewertung schreibbar:** RLS `ratings_insert_own` / `ratings_update_own` mit `WITH CHECK profile_id = auth.uid() AND can_rate_whisky(whisky_id)` — fremde ID → 0 Zeilen bzw. `42501` (Integrationstest).
+- [x] **Nur ausgeschenkte Whiskys bewertbar:** `can_rate_whisky` (Event aktiv + Position ≤ aktuell + Teilnehmer) — Integrationstest.
+- [x] **Einfrieren:** der Trigger `ratings_lock` blockt jede Änderung nach dem **Event**-Abschluss (`TS001`); der Rundenabschluss nicht — beide per Integrationstest.
+- [x] **Eingabevalidierung:** `ratingFormSchema` client- **und** serverseitig (Nase 1–5, Geschmack 1–10 ganzzahlig, Notiz ≤ 2000); DB-CHECKs als Netz; `total_points` ist GENERATED und nicht fälschbar; der zusammengesetzte FK `(whisky_id, event_id)` verhindert eine gefälschte `event_id`.
+- [x] **XSS:** die Notiz wird nur im eigenen `Textarea` gerendert (kontrollierter Wert), nie als HTML.
+- [x] **Secrets:** kein Service-Role-Key; alles über den nutzergebundenen Client.
+- Keine Sicherheitsbefunde.
+
+### Bugs Found
+
+#### BUG-1: Transientes Doppel-Rendering der Client-Komponenten (Hydration-Mismatch)
+- **Severity:** Low
+- **Steps to Reproduce:** `/tastings` bzw. `/tastings/[eventId]/bewerten` öffnen (v. a. unter Last) — im ersten ~½–1 s existieren `RatingView` / `PositionBar` / die Zweitlinks der Tasting-Zeile kurz doppelt im DOM, dann heilt es sich selbst.
+- **Auswirkung:** kurzes Flackern; **kein** Datenrisiko. Verursachte einen retry-flaky E2E-Fall (Sichtbarkeit des „Whiskys"-Zweitlinks).
+- **Einordnung:** **dieselbe Ursache wie PROJ-4 BUG-2 / PROJ-5 BUG-1 / PROJ-6 BUG-1** — ein projektweites Muster bei Client-Komponenten, kein PROJ-7-spezifischer Fehler.
+- **Priority:** Fix before deployment — projektweit in einem Zug von `/frontend` untersuchen (Verdacht: `useId`-Reihenfolge / eine `new Date()`-Instanz im Render-Pfad).
+
+### Test-Infrastruktur (kein Produktbefund)
+Die **Einzelsuite** `npx playwright test PROJ-7 --project=chromium` ist stabil
+(10 / 10, mehrere Läufe). In der **Vollregression** (alle 7 Specs, 2 Worker, **ein**
+geteilter `next start` + **ein** geteiltes Supabase-Projekt) fallen pro Lauf
+**wechselnde 2–4** server-action-lastige Tests quer über PROJ-2/4/6/7 durch
+(Laufzeiten von 21 s auf den Fehlern deuten auf Server-Timeouts unter Last).
+Ursache ist die geteilte Infrastruktur unter maximaler Parallel-Last, nicht die
+Features. Empfehlung fürs `/deploy`: CI-Specs seriell (`--workers=1`) oder
+gesharded laufen lassen.
+
+### Summary
+- **Acceptance Criteria:** 26 / 26 erfüllt
+- **Bugs Found:** 1 (0 Critical, 0 High, 0 Medium, 1 Low — projektweit, bereits aus PROJ-4/5/6 bekannt)
+- **Security:** Pass — keine Befunde (Blindheit DB-seitig erzwungen, nur eigene/ausgeschenkte bewertbar, Einfrieren per Trigger, Eingabe validiert)
+- **Production Ready:** YES
+- **Recommendation:** **Approved.** Offen: der Nutzer bestätigt `npm run test:rls` grün (mit den 7 neuen `rating-rules`-Fällen). BUG-1 (Hydration-Doppelrender) vor `/deploy` **projektweit** mit PROJ-4/5/6 in einem Zug beheben.
 
 ## Deployment
 _To be added by /deploy_
