@@ -236,6 +236,9 @@ einen „Aktualisieren"-Knopf. Die Auflösung der Namen und die Rangliste sind
 - [ ] Nach dem Abschluss: in PROJ-7 direkt einen Link „Zu den Ergebnissen" zeigen
       (führt bis PROJ-9 auf einen Platzhalter) oder den Hinweis ohne Link lassen?
       *(Tendenz: Link auf `/tastings` bzw. den späteren Ergebnis-Pfad.)*
+- [ ] Soll die Seite den `42501`-Fehler (RLS: Whisky noch nicht ausgeschenkt) in
+      eine freundlichere Meldung übersetzen, oder reicht die generische „fehlende
+      Berechtigung"? *(Selten, weil die Positionsleiste den Fall verhindert.)*
 
 ## Decision Log
 
@@ -259,13 +262,176 @@ einen „Aktualisieren"-Knopf. Die Auflösung der Namen und die Rangliste sind
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| PROJ-7 ist Frontend-only — keine Migration, keine RPC | `ratings` inkl. Upsert-Schreibrechten, `can_rate_whisky` und der `ratings_lock`-Trigger stehen aus PROJ-1 (Migration `20260827120800` hat den Upsert-Pfad bereits vorbereitet) | 2026-08-29 |
+| Speichern als „Upsert" (anlegen **oder** ändern in einem) über den nutzergebundenen Client, gekapselt in einer Server Action | Genau eine Bewertungszeile pro Whisky+Person; RLS (`ratings_insert_own` / `ratings_update_own` + `can_rate_whisky`), der zusammengesetzte FK und die GENERATED-Spalte `total_points` sichern sie ab; Server Action konsistent mit PROJ-5/6 | 2026-08-29 |
+| Lesen über den nutzergebundenen Client (RLS) — Event-Status + Position, Whisky-**Positionen**, **nur die eigenen** Bewertungen | Kein Service-Schlüssel; die DB gibt einem Teilnehmer vor dem Abschluss ohnehin keine fremden Bewertungen und keine Whisky-Namen heraus | 2026-08-29 |
+| Neues Paket: `shadcn slider` (`@radix-ui/react-slider`) | Kein Slider im Projekt; der Radix-Slider ist touch- und tastaturbedienbar mit fester Schrittweite (Nase 1–5, Geschmack 1–10) | 2026-08-29 |
+| „Aktualisieren" = die ganze Seite neu berechnen (`router.refresh`), kein Polling, kein Realtime | Realtime ist PROJ-8; der Teilnehmer ist nie blockiert, weil er alle ausgeschenkten Whiskys bewerten darf | 2026-08-29 |
+| Warnung vor Datenverlust nur beim Positionswechsel über die Leiste (Dialog), nicht bei „Aktualisieren" / Seitenwechsel | Häufigster Verlustfall; die übrigen sind selten und die Werte schnell wieder gesetzt | 2026-08-29 |
+| Mutation als Server Action in `src/lib/actions/ratings.ts`, mit Login-Vorabprüfung | Konsistent mit PROJ-4 / PROJ-5 / PROJ-6 | 2026-08-29 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+> **Für PMs in einem Satz:** PROJ-7 ist reine Oberfläche. Eine neue Seite pro
+> Abend mit zwei großen Slidern und einem Notizfeld; das Speichern schreibt
+> direkt in die Bewertungs-Tabelle, die PROJ-1 schon mit allen Sicherheitsregeln
+> vorbereitet hat. Ein neues Paket: der Slider-Baustein von shadcn.
+
+### 1. Seitenstruktur
+
+```
+(app)-Bereich
+└─ /tastings                          (aus PROJ-5/6) — bei laufendem Event führt
+   │                                   der Haupt-Klick der Zeile auf „bewerten",
+   │                                   „Meine Whiskys" bleibt als kleiner Zweitlink
+   │
+   └─ /tastings/[eventId]/bewerten    Bewertungsansicht (Zugang: Teilnehmer)
+      │
+      ├─ Positionsleiste  1 2 [3] 4 5 6 7 8
+      │     ausgeschenkt = anklickbar, Haken bei „schon bewertet"
+      │     noch nicht ausgeschenkt = ausgegraut / nicht anklickbar
+      │
+      ├─ Fokus-Whisky  „Whisky 3 von 8"
+      │   ├─ (bei früherer Position im Fokus)
+      │   │     Hinweis „Du siehst Whisky 2 — aktuell ist Whisky 4"
+      │   │     + Knopf „Zum aktuellen Whisky"
+      │   ├─ Nase       Slider 1–5   + großer Zahlenwert
+      │   ├─ Geschmack  Slider 1–10  + großer Zahlenwert
+      │   ├─ Notiz      Freitext (bis 2000 Zeichen), nur für dich
+      │   ├─ Status     „noch nicht gespeichert" / „gespeichert"
+      │   └─ Knopf „Speichern"  ·  Knopf „Aktualisieren"
+      │
+      ├─ Zustand „In Vorbereitung"   „Der Abend hat noch nicht begonnen." + Link
+      ├─ Zustand „läuft, Position 0" „Gleich geht's los — warte auf den ersten Whisky."
+      ├─ Zustand „abgeschlossen"     eigene Werte nur Anzeige, „eingefroren" + Link
+      ├─ „Seite nicht gefunden"      kein Teilnehmer / ID unbekannt
+      └─ Lade- / Fehler- / Speichern-Zustände wie in PROJ-5 / 6
+
+Dialog „Nicht gespeicherte Bewertung — trotzdem wechseln?" nur beim
+Positionswechsel über die Leiste.
+```
+
+**Neue Bausteine**
+
+- Seite `/tastings/[eventId]/bewerten` + `loading` + `error`.
+- Komponenten unter `src/components/rating/`: die Positionsleiste, der
+  Fokus-Bewertungsblock (zwei Slider + Notiz + Speichern + Aktualisieren), der
+  „ungespeichert"-Dialog (nutzt `ConfirmDialog` aus `common/`).
+- Datenzugriff: eine Lese-Datei (Event-Status + Position + Whisky-Positionen +
+  eigene Bewertungen), eine Schreib-Aktion, ein Eingabe-Schema.
+- In PROJ-5s „Tastings"-Liste: bei laufendem Event zeigt die Zeile den
+  „bewerten"-Haupt-Klick, „Meine Whiskys" als Zweitlink (der Gastgeber-Zweitlink
+  „Steuern" aus PROJ-6 bleibt unberührt).
+
+### 2. Datenmodell (nichts Neues an Tabellen)
+
+PROJ-7 nutzt ausschließlich, was PROJ-1 gebaut hat:
+
+- **`ratings`** — eine Zeile pro Whisky + Person: Nase (1–5), Geschmack (1–10),
+  Gesamt (automatisch = Nase + Geschmack), Notiz. Eindeutig pro (Whisky, Person).
+- **`whiskies`** — nur die Position (für die Positionsleiste); Namen bleiben
+  verborgen.
+- **`tasting_events`** — Status und aktuelle Position.
+
+Eine Bewertung in PROJ-7:
+- **Nase** (Pflicht, ganze Zahl 1–5)
+- **Geschmack** (Pflicht, ganze Zahl 1–10)
+- **Notiz** (optional, bis 2000 Zeichen, privat)
+- *(intern)* Person = der angemeldete Nutzer, Whisky/Event aus dem Kontext,
+  „Gesamt" rechnet die Datenbank.
+
+„Aktueller Whisky", „schon bewertet?", „ausgeschenkt?" sind abgeleitete Werte aus
+Position, Whisky-Anzahl und den vorhandenen eigenen Bewertungen.
+
+### 3. Wo geschrieben wird — direkt in die Bewertungs-Tabelle
+
+| Aktion | Mechanismus | Prüfungen (in der Datenbank, nicht im Browser) |
+|---|---|---|
+| Bewertung speichern (anlegen **oder** ändern) | Server Action → ein „Upsert" auf `ratings` | RLS: nur unter **eigenem** Namen; nur für einen **bereits ausgeschenkten** Whisky eines **laufenden** Events, bei dem der Nutzer Teilnehmer ist (`can_rate_whisky`); nach dem Event-Abschluss blockt der Trigger `ratings_lock` jede Änderung („eingefroren", `TS001`); „Gesamt" wird automatisch gerechnet |
+
+Kein neuer Endpunkt, keine neue Datenbank-Aktion — PROJ-1 hat den Upsert-Pfad
+inkl. der nötigen Spalten-Schreibrechte bereits vorbereitet (Migration
+`20260827120800`). Kein Service-Schlüssel. Die Server Action prüft zusätzlich
+vorab die Anmeldung; die Datenbank bleibt die eigentliche Schranke (Muster wie
+PROJ-5 / 6).
+
+### 4. Was der Teilnehmer sieht — und was nicht
+
+- **Sieht:** „Whisky X von Y", seine eigenen Slider-Werte und seine eigene
+  Notiz, die Haken in der Positionsleiste für seine bewerteten Whiskys.
+- **Sieht nicht:** Whisky-Namen, fremde Bewertungen, Durchschnitte, irgendeine
+  Aggregat-Zahl. Die Lese-Abfrage holt gezielt nur die eigenen Bewertungen; die
+  Datenbank gäbe einem Teilnehmer vor dem Abschluss ohnehin keine fremden heraus.
+
+### 5. Kein Live-Update in PROJ-7
+
+Die Seite lädt ihren Stand beim Öffnen. Schaltet der Gastgeber weiter, merkt der
+Teilnehmer das erst über den **„Aktualisieren"-Knopf** — der die Seite neu
+berechnet, die neu ausgeschenkten Positionen freischaltet und (wenn keine
+ungespeicherte Änderung offen ist) den Fokus auf den neuen aktuellen Whisky
+setzt. Das automatische Mitspringen aller Geräte ist PROJ-8.
+
+### 6. Ungespeicherte Änderungen
+
+Hat der Teilnehmer an einem Slider oder der Notiz gedreht und noch nicht
+gespeichert, kommt beim **Positionswechsel über die Leiste** ein Dialog „Nicht
+gespeicherte Bewertung — trotzdem wechseln?" mit „Wechseln" / „Hier bleiben".
+Beim „Aktualisieren" oder Verlassen der Seite gibt es diesen Hinweis bewusst
+nicht.
+
+### 7. Einstieg über die „Tastings"-Liste
+
+Die Zeile eines Events, bei dem der Nutzer Teilnehmer ist, verhält sich je nach
+Status: „In Vorbereitung" → Haupt-Klick auf „Meine Whiskys"; **„läuft" →
+Haupt-Klick auf „bewerten"**, „Meine Whiskys" als kleiner Zweitlink;
+„abgeschlossen" → später auf die Ergebnisse (PROJ-9). Der Gastgeber-Zweitlink
+„Steuern" (PROJ-6) bleibt unabhängig davon bestehen.
+
+### 8. Zustände & Rückmeldungen (nach `docs/design-system.md`)
+
+- **Laden:** Skeleton für Leiste + Fokus-Block.
+- **Fehler beim Laden:** Hinweis + „Erneut versuchen".
+- **Speichern läuft:** Knopf im Ladezustand, kein Doppelklick.
+- **Speichern gelingt:** kurze Bestätigung, Status wechselt auf „gespeichert".
+- **Speichern schlägt fehl:** konkrete deutsche Meldung; die eingestellten Werte
+  bleiben; keine halbe Bewertung.
+- **„Eingefroren" (Event abgeschlossen):** Slider gesperrt, Hinweis + Link zu den
+  Ergebnissen.
+- **„Noch nicht begonnen" / „Gleich geht's los" / „Seite nicht gefunden".**
+
+### 9. Neue Pakete
+
+| Paket | Zweck |
+|-------|-------|
+| `shadcn slider` (zieht `@radix-ui/react-slider` mit) | die beiden Bewertungs-Slider; touch- und tastaturbedienbar, feste Schrittweite |
+
+Sonst nichts (`AlertDialog`, `Textarea`, `Card`, `Button`, `Badge`, `Skeleton`
+sind vorhanden; `sonner` für Toasts; `date-fns` für die Datumsanzeige).
+
+### 10. Betriebsvoraussetzung
+
+Keine neue.
+
+### 11. Wie der Erfolg geprüft wird
+
+- **Unit-Tests** für die abgeleitete Logik (welche Positionen sind bewertbar,
+  welche haben einen Haken, „aktueller Whisky", Fokus-Vorauswahl) und die
+  Eingaberegeln (Nase 1–5 / Geschmack 1–10 ganzzahlig, Notiz ≤ 2000).
+- **Datenbank-Tests** (PROJ-1-Stil), soweit nicht schon abgedeckt: Bewertung für
+  einen **nicht ausgeschenkten** Whisky → abgelehnt; fremde Bewertung ändern →
+  abgelehnt; nach Event-Abschluss speichern → `TS001`; nach reinem
+  Rundenabschluss speichern → klappt; ein anderer Teilnehmer / der Gastgeber
+  sieht die fremden Punkte **nicht**.
+- **E2E-Tests** (Chromium + Mobile Safari): aktuellen Whisky bewerten + speichern
+  (Haken erscheint); erneut öffnen → Werte stehen; zu einer früheren Position
+  springen und ändern; „Aktualisieren" schaltet eine neue Position frei;
+  ungespeicherter Positionswechsel → Dialog; abgeschlossenes Event → nur
+  Anzeige; Nicht-Teilnehmer → „nicht gefunden"; ein Teilnehmer sieht die Werte
+  eines anderen nicht.
+- `npm run build` / `npm run lint` sauber.
 
 ## QA Test Results
 _To be added by /qa_
