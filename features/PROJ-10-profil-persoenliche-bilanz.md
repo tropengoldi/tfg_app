@@ -1,6 +1,6 @@
 # PROJ-10: Profil-Seite mit persönlicher Bilanz
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-08-30
 **Last Updated:** 2026-08-30
 
