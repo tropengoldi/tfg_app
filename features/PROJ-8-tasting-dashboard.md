@@ -224,7 +224,13 @@ PROJ-4 bis PROJ-7 schon gebaut haben, plus die Realtime-Schicht.
       damit der „Zur Rangliste"-Absprung präsent bleibt.)*
 - [ ] Braucht die Vorschau-Karte für den nächsten Abend eine eigene kleine
       Query oder lässt sie sich aus der „Meine Tastings"-Liste (PROJ-5) ableiten?
-      *(Detail für `/architecture`.)*
+      *(Tendenz: die PROJ-5-Abfrage wiederverwenden — nächstes Draft-Event.)*
+- [ ] Kanalname: pro Event fix aus der Event-ID gebildet — bestätigen, dass
+      Dashboard, Bewertungsansicht und Gastgeber-Steuerung exakt denselben Namen
+      bilden. *(Detail für `/frontend`.)*
+- [ ] Debounce-Fenster fürs Neu-Berechnen (Vorschlag 300–500 ms) und Zeit ohne
+      Verbindung, bis der „Nicht live"-Streifen erscheint (Vorschlag ~5 s).
+      *(Detail für `/frontend`.)*
 
 ## Decision Log
 
@@ -247,13 +253,179 @@ PROJ-4 bis PROJ-7 schon gebaut haben, plus die Realtime-Schicht.
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| PROJ-8 ist Frontend-only — keine Migration, kein neues Publish | Realtime auf `tasting_events` / `whiskies` (`replica identity full`) liegt seit PROJ-1; die Blindheits-Regel „kein Geheimnis über den Kanal" bleibt unangetastet | 2026-08-29 |
+| Auf ein Realtime-Ereignis reagiert die Seite mit „sich neu berechnen" (derselbe RLS-Lesepfad), nicht mit Payload-Deltas im Browser | Der Server bleibt die einzige Wahrheit; die Datenmenge ist winzig; robust gegen verpasste / umsortierte Ereignisse. Konsistent mit dem `router.refresh`-Muster aus PROJ-5 / 6 / 7 | 2026-08-29 |
+| Ein geteilter Kanal pro Event (`src/hooks/use-event-realtime.ts`), den Dashboard + Bewertungsansicht + Gastgeber-Steuerung gemeinsam abonnieren | Ein Abonnement-Baustein statt drei Insellösungen; alle hören auf dieselben Zeilenänderungen | 2026-08-29 |
+| Für den Gastgeber-Fortschritt: der speichernde Client sendet einen **inhaltslosen Broadcast-Ping** auf den Kanal (kein DB-Publish von `ratings`) | Der Fortschritt zieht live nach, ohne dass je ein Punkt / Name über den Draht geht; rein clientseitig, keine Backend-Änderung | 2026-08-29 |
+| „Nicht live"-Streifen + manuelles Nachladen; Auto-Nachziehen bei Reconnect und bei Rückkehr aus dem Standby | Ein Tasting-Abend hat WLAN-Hänger; die App wird nie leer, der Nutzer weiß aber, wann der Stand alt sein könnte | 2026-08-29 |
+| Die „Aktualisieren"-Knöpfe aus PROJ-6 / 7 bleiben als stiller Fallback | Für den „Nicht live"-Fall braucht es weiter einen manuellen Weg | 2026-08-29 |
+| Kurzes Bündeln (Debounce) der Neu-Berechnung bei schnellen Mehrfach-Ereignissen | Fünf Weiterschalt-Klicks in Folge sollen einen Refresh auslösen, nicht fünf | 2026-08-29 |
+| Dashboard-Zustand („aktiv" / „Vorschau" / „nichts") aus **einem** RLS-gefilterten Lesen abgeleitet | Ein Nicht-Teilnehmer bekommt das aktive Event gar nicht — die „verrät nichts"-Regel ergibt sich automatisch | 2026-08-29 |
+| Die Start-Seite `(app)/page.tsx` wird das Dashboard; kein neuer Nav-Punkt | „Start" ist der natürliche Ort; die Bottom-Nav bleibt schlank | 2026-08-29 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+> **Für PMs in einem Satz:** Die Start-Seite wird zum Live-Dashboard des
+> aktuellen Abends. Dahinter ein einziger geteilter „Kanal" pro Abend, auf dem
+> alle Geräte hören; passiert etwas (weiterschalten, abschließen, Eckdaten
+> ändern, jemand bewertet), holen sie sich in Sekundenbruchteilen den neuen
+> Stand. Keine neuen Pakete, keine Datenbank-Änderung — die Realtime-Leitung
+> liegt seit PROJ-1.
+
+### 1. Seitenstruktur
+
+```
+(app)-Bereich
+└─ /  (Start-Tab)  =  das Dashboard
+   │
+   ├─ Zustand „ein Tasting läuft"  (Nutzer = Teilnehmer oder Admin)
+   │   ├─ Live-Streifen   (unsichtbar, außer bei „Nicht live")
+   │   │     „Nicht live — tippen zum Aktualisieren"
+   │   ├─ Kopf            Datum · Ort · Status-Badge
+   │   ├─ Gläserstreifen  ● ● ◐ ○ ○ ○ ○ ○   „Whisky 3 von 8"
+   │   │     leer = verkostet · hervorgehoben = aktuell · voll = ausstehend
+   │   ├─ Eckdaten        Thema · Info zum Essen · Anmerkungen  (je falls gesetzt)
+   │   ├─ Teilnehmerliste Namen, Gastgeber markiert
+   │   ├─ Absprünge
+   │   │     „Jetzt bewerten"    (nur Teilnehmer, nur wenn läuft)
+   │   │     „Steuern"           (nur Gastgeber / Admin)
+   │   │     „Meine Whiskys"     (immer)
+   │   │     „Zur Rangliste"     (nur nach Abschluss — Platzhalter bis PROJ-9)
+   │   └─ „Vergangene Tastings"  (immer, unten — Platzhalter bis PROJ-9)
+   │
+   ├─ Zustand „kein Tasting aktiv, aber nächster eigener Abend"
+   │     Vorschau-Karte „Nächster Abend: Fr, 12. Sep · bei Hermann" + „Meine Whiskys"
+   │
+   ├─ Zustand „kein Tasting, kein bevorstehender"
+   │     „Gerade läuft kein Tasting." + „Vergangene Tastings"
+   │
+   ├─ Laden       → Skeleton
+   └─ Ladefehler  → Hinweis + „Erneut versuchen"
+```
+
+**Neue Bausteine**
+
+- Die Start-Seite `src/app/(app)/page.tsx` wird das Dashboard (ersetzt den
+  Platzhalter), plus `loading.tsx` / `error.tsx`.
+- Komponenten unter `src/components/dashboard/`: der Gläserstreifen, die
+  Eckdaten-Karte, die Teilnehmerliste, die Absprung-Leiste, die Vorschau- /
+  Leer-Karten.
+- **Ein geteilter Realtime-Baustein** `src/hooks/use-event-realtime.ts`:
+  abonniert für ein Event den Kanal, meldet „es hat sich was geändert" und ob die
+  Verbindung steht. Wird von drei Seiten benutzt.
+- Ein winziger Client-Wrapper `<RealtimeRefresher eventId=… />`, der den Baustein
+  einhängt und (nur bei getrennter Verbindung) den „Nicht live"-Streifen zeigt.
+  Kommt einmal aufs Dashboard, einmal in die Bewertungsansicht (PROJ-7), einmal
+  in die Gastgeber-Steuerung (PROJ-6).
+- Datenzugriff: eine Lese-Datei „Dashboard-Stand" (aktives Event + Eckdaten +
+  Teilnehmer + Whiskyzahl, sonst Vorschau / Leer).
+
+### 2. Datenmodell (nichts Neues an Tabellen)
+
+PROJ-8 nutzt ausschließlich, was PROJ-1 bereitgestellt hat:
+
+- **`tasting_events`** — Status, aktuelle Position, Datum, Ort, Thema, Info zum
+  Essen, Anmerkungen. **Für Realtime freigegeben** (mit „vollständiger Zeile",
+  damit die Clients alt gegen neu vergleichen und filtern können).
+- **`whiskies`** — nur Anzahl / Positionen (für den Gläserstreifen). Ebenfalls
+  für Realtime freigegeben.
+- **`event_participants`** + **`profiles`** — die Namensliste (kein Realtime
+  nötig, die Teilnehmer ändern sich am Abend nicht).
+- **`ratings` / `whisky_details`** — **nicht** für Realtime freigegeben
+  (PROJ-1). Punkte, Namen und Notizen wandern nie über einen Kanal.
+
+Der „Dashboard-Stand" ist ein abgeleitetes Objekt, kein gespeichertes Feld:
+entweder „aktives Event + Kontext", oder „Vorschau des nächsten eigenen Abends",
+oder „nichts". Welcher Fall gilt, hängt am RLS-gefilterten Lesen (ein
+Nicht-Teilnehmer bekommt das aktive Event gar nicht).
+
+### 3. Der eine geteilte Kanal
+
+Für ein Event gibt es **genau einen** Realtime-Kanal. Dashboard,
+Bewertungsansicht und Gastgeber-Steuerung abonnieren denselben Kanal (denselben
+Namen, aus der Event-ID gebildet). Der Kanal transportiert zweierlei:
+
+| Auslöser | Was passiert |
+|---|---|
+| Der Gastgeber schaltet weiter, schließt ab oder ändert Eckdaten → `tasting_events` ändert sich | Supabase schickt die Zeilenänderung an **jeden Client, der die Zeile lesen darf** (RLS gilt auch hier). Der Client berechnet daraufhin seine Seite neu. |
+| Im Draft trägt jemand einen Whisky ein → `whiskies` ändert sich | dito für Gläserstreifen und „x von y". |
+| Ein Teilnehmer speichert eine Bewertung | Sein Client sendet zusätzlich einen **inhaltslosen Ping** auf den Kanal („da hat sich was geändert" — **keine** Zahl, **kein** Name). Der Gastgeber-Client hört ihn und holt den Fortschritt neu. |
+
+**„Den frischen Stand holen"** heißt: die betroffene Seite berechnet sich neu
+(derselbe RLS-geschützte Lesepfad wie beim ersten Laden). Kein Zusammenbauen von
+Teil-Updates im Browser — der Server bleibt die einzige Wahrheit, und die
+Datenmenge (eine Event-Zeile, eine Seite) ist winzig. Bei schnellen
+Mehrfach-Schritten des Gastgebers wird das Neu-Berechnen kurz gebündelt (ein
+Refresh statt fünf).
+
+### 4. Live-Sync in PROJ-6 und PROJ-7 — fast geschenkt
+
+- **Bewertungsansicht (PROJ-7):** die Logik „bei Positionswechsel den Fokus
+  mitnehmen, außer es sind ungespeicherte Änderungen offen" ist **schon gebaut**
+  (sie reagiert auf die aktuelle Position aus dem Server-Stand). PROJ-8 fügt nur
+  den Auslöser hinzu: der Realtime-Baustein sorgt dafür, dass sich die Seite bei
+  einem Weiterschalten neu berechnet — der Rest passiert von selbst. Der
+  „Aktualisieren"-Knopf bleibt als stiller Fallback stehen.
+- **Gastgeber-Steuerung (PROJ-6):** analog — der Baustein löst das Neu-Berechnen
+  aus, `rating_progress` und Status kommen frisch. Der „Aktualisieren"-Knopf
+  bleibt als Fallback.
+
+### 5. Wenn die Verbindung wackelt
+
+- Der Realtime-Baustein kennt den Verbindungszustand (verbunden / Fehler /
+  geschlossen). Bei „nicht verbunden" erscheint der dezente Streifen „Nicht
+  live — tippen zum Aktualisieren"; ein Tipp berechnet die Seite neu.
+- Verbindet sich der Kanal von selbst wieder → der Streifen verschwindet und die
+  Seite berechnet sich **einmal** neu.
+- Kommt das Handy aus dem Standby (Seite wieder sichtbar) → ebenfalls einmal neu.
+- Kurze Aussetzer versucht der Client zuerst still selbst zu überbrücken; der
+  Streifen kommt erst nach ein paar Sekunden ohne Verbindung.
+
+### 6. Wer welchen Zustand sieht
+
+| Nutzer | aktives Event lesbar? | Dashboard |
+|---|---|---|
+| Teilnehmer des aktiven Events | ja | volles Dashboard, „Jetzt bewerten" |
+| Gastgeber des aktiven Events | ja | volles Dashboard, „Jetzt bewerten" **und** „Steuern" |
+| Admin, nicht Teilnehmer | ja (Admin darf alles lesen) | volles Info-Dashboard, **„Steuern"**, **kein** „Jetzt bewerten" |
+| Teilnehmer eines anderen / keines Events | nein | Vorschau des nächsten eigenen Abends bzw. „kein Tasting" |
+
+### 7. Zustände & Rückmeldungen (nach `docs/design-system.md`)
+
+- **Laden:** Skeleton für Gläserstreifen + Karten.
+- **Fehler beim Laden:** Hinweis + „Erneut versuchen".
+- **„Nicht live":** dezenter Streifen, tippen lädt nach.
+- **„Kein Tasting" / Vorschau / Abschluss:** wie oben.
+- Der Übergang „läuft → abgeschlossen" passiert live, ohne Neuladen.
+
+### 8. Neue Pakete
+
+Keine. `@supabase/ssr` (Browser-Client mit Realtime) ist da; `date-fns`, `Card`,
+`Badge`, `Skeleton` ebenfalls.
+
+### 9. Betriebsvoraussetzung
+
+Keine neue. (Realtime ist im Supabase-Projekt aktiv; die Tabellen sind seit
+PROJ-1 in der Publication.)
+
+### 10. Wie der Erfolg geprüft wird
+
+- **Unit-Tests** für die Ableitungslogik (welcher Dashboard-Zustand gilt;
+  Gläser-Zustände aus Position + Anzahl; „darf bewerten?"-Ableitung; Kanalname
+  aus der Event-ID).
+- **Datenbank- / Realtime-Tests** (soweit sinnvoll automatisierbar): ein
+  Nicht-Teilnehmer bekommt über den Kanal **kein** Update des laufenden Events;
+  über den Kanal kommen nur Event- / Positions-Daten an.
+- **E2E-Tests** (Chromium + Mobile Safari): Dashboard zeigt das laufende Event
+  mit korrektem Gläserstreifen; nach einem Weiterschalten (per direktem
+  DB-Update / zweitem Kontext) aktualisiert sich der Streifen **ohne Neuladen**;
+  Abschluss wechselt live in den Abschluss-Zustand; „kein Tasting" / Vorschau;
+  Nicht-Teilnehmer sieht das laufende Event nicht; die Bewertungsansicht springt
+  beim Weiterschalten mit.
+- `npm run build` / `npm run lint` sauber.
 
 ## QA Test Results
 _To be added by /qa_
