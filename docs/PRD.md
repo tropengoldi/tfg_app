@@ -36,7 +36,7 @@ Handy bedient — mit einem Glas in der anderen Hand, oft bei gedämpftem Licht.
 | P0 (MVP) | Bewertungsansicht | Planned |
 | P0 (MVP) | Tasting-Dashboard mit Live-Sync | Planned |
 | P1 | Ergebnisse & Tasting-Historie | Planned |
-| P2 | Profil-Seite mit persönlicher Bilanz | Roadmap |
+| P2 | Profil-Seite mit persönlicher Bilanz | Planned |
 
 Details und Abhängigkeiten: siehe [features/INDEX.md](../features/INDEX.md).
 
