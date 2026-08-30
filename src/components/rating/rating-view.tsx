@@ -1,6 +1,6 @@
 'use client'
 
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, WifiOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
+import { useEventRealtime } from '@/hooks/use-event-realtime'
 import { saveRatingAction } from '@/lib/actions/ratings'
 import { ratingFormSchema } from '@/lib/schemas/rating'
 import {
@@ -41,6 +42,7 @@ export function RatingView({
   editable,
 }: RatingViewProps) {
   const router = useRouter()
+  const { isLive, refresh, ping } = useEventRealtime(editable ? eventId : null)
   const [pending, startSaving] = useTransition()
   const [refreshing, startRefreshing] = useTransition()
 
@@ -114,6 +116,7 @@ export function RatingView({
       }
       setDirty(false)
       toast.success('Bewertung gespeichert.')
+      ping()
       router.refresh()
     })
   }
@@ -123,6 +126,17 @@ export function RatingView({
 
   return (
     <div className="space-y-5">
+      {editable && !isLive ? (
+        <button
+          type="button"
+          onClick={refresh}
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
+        >
+          <WifiOff className="h-3.5 w-3.5 shrink-0" />
+          Nicht live — tippen zum Aktualisieren
+        </button>
+      ) : null}
+
       <PositionBar
         total={total}
         currentPosition={currentPosition}

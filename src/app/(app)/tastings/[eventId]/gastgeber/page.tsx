@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 
 import { HostPanel } from '@/components/host/host-panel'
+import { RealtimeRefresher } from '@/components/common/realtime-refresher'
 import { PageHeader } from '@/components/layout/page-header'
 import { requireHost } from '@/lib/auth'
 import { formatEventDate } from '@/lib/dates'
@@ -35,6 +36,7 @@ export default async function GastgeberPage({
         title="Steuern"
         description={`${formatEventDate(data.event.event_date)} · ${data.event.location}`}
       />
+      <RealtimeRefresher eventId={eventId} />
       <HostPanel data={data} />
     </>
   )

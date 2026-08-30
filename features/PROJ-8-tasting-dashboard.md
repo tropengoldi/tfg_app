@@ -1,6 +1,6 @@
 # PROJ-8: Tasting-Dashboard mit Live-Sync
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-29
 **Last Updated:** 2026-08-29
 
@@ -426,6 +426,71 @@ PROJ-1 in der Publication.)
   Nicht-Teilnehmer sieht das laufende Event nicht; die Bewertungsansicht springt
   beim Weiterschalten mit.
 - `npm run build` / `npm run lint` sauber.
+
+## Implementation Notes (Frontend)
+
+**Stand:** Dashboard, geteilter Realtime-Baustein und die Einbindung in PROJ-6/7
+geschrieben. **Rein clientseitig** — die Realtime-Publication auf
+`tasting_events` / `whiskies` liegt seit PROJ-1. **Kein Backend-Schritt** → nach
+diesem Durchlauf direkt `/qa`.
+
+### Was gebaut wurde
+
+**Ableitungslogik** — `src/lib/dashboard.ts` (rein, unit-getestet, 15 Fälle):
+`glassStates` (tasted / current / pending aus Position + Anzahl + Status),
+`progressLabel` („Whisky k von N" / „0 von N" / „N von N verkostet"),
+`eventChannelName` (`event:<id>`, auf allen Seiten identisch), `canRateNow`.
+
+**Geteilter Realtime-Baustein** — `src/hooks/use-event-realtime.ts`: abonniert
+`event:<id>`, hört auf `postgres_changes` an `tasting_events` (`id=eq…`) und
+`whiskies` (`event_id=eq…`) sowie auf einen `broadcast`-Event `touch`; jedes
+Ereignis löst ein gebündeltes `router.refresh()` aus (400 ms Debounce). `isLive`
+kippt auf `false`, wenn der Kanal ~5 s getrennt ist; bei Reconnect und bei
+Rückkehr aus dem Standby (`visibilitychange`) wird einmal nachgezogen. Gibt
+`{ isLive, refresh, ping }` zurück; `ping()` sendet die inhaltslose
+`touch`-Broadcast (`broadcast: { self: false }`).
+
+**„Nicht live"-Streifen** — `src/components/common/realtime-refresher.tsx`
+(hängt den Baustein ein, rendert nur bei `!isLive` den Hinweis). Kommt aufs
+Dashboard und auf die Gastgeber-Seite. Die Bewertungsansicht hängt den Baustein
+selbst ein (sie braucht `ping`).
+
+**Dashboard** — `src/lib/queries/dashboard.ts`: `getDashboard(userId)` →
+`{ kind: 'active' | 'preview' | 'none' }`. „active" ist das laufende Event **oder**
+eines, das in den letzten 30 Minuten abgeschlossen wurde (damit der
+Live-Übergang „läuft → abgeschlossen" sichtbar bleibt, ein Besuch später aber auf
+Vorschau/nichts fällt). Ein Nicht-Teilnehmer bekommt das Event per RLS gar
+nicht → automatisch „preview"/„none". „preview" = nächstes eigenes Draft-Event.
+- `src/components/dashboard/glass-strip.tsx` — Gläserreihe (`Wine`-Icon; leer =
+  blass, aktuell = Ring, ausstehend = halbtransparent) + Fortschrittstext.
+- `src/components/dashboard/dashboard-view.tsx` (Server) — `<RealtimeRefresher>` +
+  Kopf/Status + Gläserstreifen + Absprünge (Jetzt bewerten nur Teilnehmer,
+  Steuern nur Gastgeber, Meine Whiskys immer, Zur Rangliste nach Abschluss) +
+  Eckdaten-Karte (nur falls gesetzt) + Teilnehmerliste (Gastgeber markiert) +
+  „Vergangene Tastings".
+- `src/app/(app)/page.tsx` — ersetzt den Platzhalter; rendert je `kind` das
+  Dashboard, die Vorschau-Karte oder den Leerzustand. Dazu `loading.tsx` /
+  `error.tsx`.
+
+**Einbindung in PROJ-6 / PROJ-7**
+- `gastgeber/page.tsx` — `<RealtimeRefresher eventId={eventId} />` vor dem
+  `HostPanel`. Der bestehende „Aktualisieren"-Knopf im `RunPanel` bleibt als
+  stiller Fallback.
+- `rating-view.tsx` — hängt `useEventRealtime(editable ? eventId : null)` ein;
+  bei getrennter Verbindung erscheint der „Nicht live"-Streifen. Beim Speichern
+  einer Bewertung wird `ping()` gesendet (→ der Gastgeber-Client lädt den
+  Fortschritt neu). Die vorhandene „Fokus folgt aktueller Position, außer bei
+  ungespeicherten Änderungen"-Logik greift automatisch, sobald `router.refresh()`
+  neue `currentPosition`-Props liefert. Der manuelle „Aktualisieren"-Knopf bleibt.
+
+### Verifikation in dieser Session
+- `npm run build` ✅ · `npm run lint` ✅ · `npm test` ✅ (80, davon 15 neu) · `tsc` ✅
+- Smoke gegen `next start`: `/` leitet unangemeldet sauber auf
+  `/login?redirect=%2F`.
+- **Nicht** getestet (braucht echte Daten + Realtime / `/qa`): das Dashboard mit
+  laufendem Event, der Live-Übergang beim Weiterschalten/Abschließen, der
+  „Nicht live"-Streifen, das Mitziehen der Bewertungsansicht, die
+  Vorschau-/Leerzustände, Nicht-Teilnehmer sieht das laufende Event nicht.
 
 ## QA Test Results
 _To be added by /qa_
