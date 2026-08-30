@@ -1,6 +1,6 @@
 # PROJ-9: Ergebnisse & Tasting-Historie
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-08-30
 **Last Updated:** 2026-08-30
 
@@ -607,7 +607,103 @@ war und bleibt draußen).
       `rating-rules`)
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-30
+**App URL:** http://localhost:3000 (prod-Build)
+**Tester:** QA Engineer (AI)
+
+### Automatisierte Suiten
+
+| Suite | Ergebnis |
+|-------|----------|
+| `npm test` (Vitest Unit) | **99/99** (11 Dateien; +19 aus `src/lib/results.test.ts`) |
+| `npm run test:rls` (Integration) | **90/90** (6 Dateien) — inkl. der überarbeiteten `rls.integration` (invertierter Fremd-`ratings`-Fall, neuer `whisky_score_breakdown`-Pfad + `42703`-Check, 6 neue „aktives Nicht-Teilnehmer-Mitglied"-Fälle) und `rating-rules` (Breakdown-View statt roher Tabelle, Notiz-Privatheit) |
+| `tests/PROJ-9-ergebnisse-historie.spec.ts` | **25 passed / 3 skipped** über `chromium` + `Mobile Safari` (2× `fixme` = BUG-1, 1× Dashboard nur `chromium`) |
+| `tsc --noEmit` · `eslint .` · `npm run build` | alle sauber; Route `/tastings/[eventId]/ergebnisse` erzeugt |
+| Regression PROJ-4/5/6/7/8 (E2E, je isoliert, chromium) | grün (4: 24, 5: 19, 6: 24, 7: 10, 8: 19). Zusammen mit PROJ-7/8 im selben Lauf flaken die „Laufendes Event"-Blöcke — bekannte projektweite Einschränkung (nur ein `active` global), kein PROJ-9-Regress |
+
+### Acceptance Criteria Status — 22/24 bestanden
+
+#### Historien-Liste
+- [x] Alle abgeschlossenen Tastings der Runde, auch ohne eigene Teilnahme (E2E „bystander" + RLS-Fälle)
+- [x] Sortierung Datum ↓, dann `closed_at` ↓ (`getPastTastings`-Logik)
+- [x] Zeile zeigt Datum · Ort · Gastgeber · 🏆 Sieger
+- [ ] **BUG-1:** abgeschlossenes Tasting **ohne jede Bewertung** → soll „— kein Sieger" zeigen, zeigt aber den Whisky auf Position 1
+- [x] Zeile ist Link → Ergebnisseite
+- [x] „Noch kein Tasting abgeschlossen." bei leerer Historie (Komponenten-Leerzustand; nicht als E2E isolierbar, da Seed/andere Tests abgeschlossene Events hinterlassen)
+- [x] Neu abgeschlossenes Tasting erscheint in der Liste
+
+#### Ergebnisseite — Zugang
+- [x] Abgeschlossen → Kopf mit Datum, Ort, Thema, Gastgeber + Teilnehmerliste
+- [x] Läuft / in Vorbereitung → Hinweis „läuft noch" + „Zum Dashboard", **keine** Ranglistendaten
+- [x] Unbekannte / fremde Event-ID → „Seite nicht gefunden"
+
+#### Ergebnisseite — Rangliste
+- [x] N Zeilen nach Rang, Rang · Name · Distillery/Region · „mitgebracht von" · Gesamt · „Nase/Geschmack"
+- [x] Ø als informative Zusatzzahl („Ø 13,0")
+- [x] Rang 1 als Sieger hervorgehoben (nur bei ≥ 1 Bewertung)
+- [x] „punktgleich" an beiden Zeilen bei identischer Gesamtpunktzahl
+- [x] „k von m Bewertungen" je Zeile
+- [x] Ohne jede Bewertung: Hinweis oben, kein Sieger hervorgehoben
+- [x] Bis 10 Zeilen auf 375 px ohne horizontales Scrollen (gesamte `Mobile Safari`-Projektspalte grün, Viewport 375 px)
+
+#### Ergebnisseite — Einzelbewertungen & Notizen
+- [x] Aufklappen zeigt Nase/Geschmack/Gesamt je Bewerter
+- [x] Eigene Notiz sichtbar („Deine Notiz: …")
+- [x] Fremde Notizen nie sichtbar (E2E als `member` **und** als `other`; RLS: `whisky_score_breakdown` ohne `notes`-Spalte → `42703`, `ratings_select` auf eigene Zeilen verengt)
+
+#### Ergebnisseite — Video
+- [x] Mit Link → „Video ansehen", `target="_blank"`, `rel="noopener noreferrer"`
+- [~] Ohne Link → **Design-System-Variante** „Auf Whisky.de suchen" (YouTube-Suche). Die Spec-AC „kein Video-Element ohne Link" ist damit **bewusst abgelöst** — mit dem Nutzer abgestimmt (Design-System `docs/design-system.md` „nie leer, nie tot" gewinnt). Kein Bug.
+- [x] Kein Video-Link in der Historien-Liste (nur auf der Ergebnisseite)
+
+#### Absprünge
+- [x] Dashboard „Zur Rangliste" (nach Abschluss) → `/tastings/<id>/ergebnisse`
+- [x] Eingefrorene Bewertungsansicht „Zu den Ergebnissen" → `/tastings/<id>/ergebnisse`
+
+### Edge Cases Status
+- [x] Ergebnisseite eines laufenden/vorbereiteten Events manuell aufgerufen → „läuft noch", keine Daten
+- [x] Mitglied ohne Teilnahme → sieht Rangliste/Namen/Sieger/Videos, aber keine (eigenen) Notizen, Aufschlüsselung nur Punkte
+- [ ] **BUG-1:** abgeschlossenes Event ganz ohne Bewertungen → Ergebnisseite korrekt (0-Punkte-Liste, Hinweis, kein Sieger); **Historien-Zeile falsch** (Whisky-Name statt „— kein Sieger")
+- [x] Einzelner unbewerteter Whisky in sonst bewertetem Abend → am Ende der Rangliste mit 0 Punkten
+- [x] Punktgleichheit → getrennte eindeutige Ränge, beide mit „punktgleich"
+- [x] Distillery/Region/Thema nicht gesetzt → wird einfach weggelassen
+- [x] Deaktiviertes Mitglied → `requireUser` leitet ohnehin ab; `is_active_member()` = false
+- [x] Zwei Tastings am selben Kalendertag → beide gelistet, Zweitsortierung `closed_at`
+
+### Security Audit Results
+- [x] **Auth:** Ergebnisseite und Historie erfordern Login (`requireUser`)
+- [x] **Blindheit bis Abschluss:** `whisky_rankings` / `past_tastings` / `whisky_score_breakdown` liefern für nicht-abgeschlossene Events 0 Zeilen — verifiziert per RLS-Test und per E2E (pending-Seite ohne Rangliste). Der `status='closed'`-Filter, nicht der View-Rechte-Modus, trägt die Garantie
+- [x] **Fremde Notizen strukturell unerreichbar:** `whisky_score_breakdown` führt keine `notes`-Spalte (`select('notes')` → `42703`), `ratings_select` auf `is_admin() OR profile_id = auth.uid()` verengt. E2E: `other`s Notiz erscheint bei `member` nirgends, auch nicht im Response
+- [x] **Runden-Historie korrekt abgegrenzt:** aktives Nicht-Teilnehmer-Mitglied sieht die abgeschlossene Runde, das **aktive** Event bleibt komplett unsichtbar (RLS-Test „Blindheit hält")
+- [x] **Autorisierung:** URL-Raten `/tastings/<aktive-id>/ergebnisse` liefert nur den „läuft noch"-Hinweis, serverseitig keine Datenzeilen
+- [x] **XSS:** Whisky-Namen, Notizen, Thema als React-Text (auto-escaped, auch mit `whitespace-pre-wrap`). Video-`href` per DB-CHECK `^https?://` (kein `javascript:`); Fallback-URL über `encodeURIComponent` auf `youtube.com`
+- [~] **Hinweis (pre-existing, nicht neu):** `event_status_of` ist für jeden Angemeldeten mit beliebiger Event-ID aufrufbar und verrät den Status (draft/active/closed). Kein Inhalt, nur der Zustand. Stammt aus PROJ-1; PROJ-9 nutzt es nur für „läuft noch vs. nicht gefunden". Kein Handlungsbedarf im MVP
+
+### Bugs Found
+
+#### BUG-1: Historien-Liste nennt einen „Sieger" für ein Tasting ohne jede Bewertung
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Ein Event abschließen, an dem **niemand** einen Whisky bewertet hat
+  2. `/tastings` öffnen → Abschnitt „Vergangene Tastings"
+  3. Erwartet: die Zeile zeigt „— kein Sieger"
+  4. Tatsächlich: die Zeile zeigt den Namen des Whiskys auf Ausschankposition 1
+- **Ursache:** `whisky_rankings` vergibt auch bei 0 Punkten Rang 1 (Sortierung `… , w.position asc`); `past_tastings.winner_name` ist dann gesetzt, und `getPastTastings` reicht es ungefiltert durch.
+- **Fix (klein, Frontend):** in `getPastTastings` `winner_name` auf `null` abbilden, wenn `winner_points` fehlt oder `0` ist. Die **Ergebnisseite** ist bereits korrekt — dort unterdrückt `hasAnyRatings` die Sieger-Hervorhebung.
+- **Abgedeckt durch:** `test.fixme` „Historie: abgeschlossener Abend ohne jede Bewertung zeigt „— kein Sieger"" — wird grün, sobald der Fix steht.
+- **Priorität:** Fix in einem kleinen `/frontend`-Nachzug (oder gebündelt im Vor-Deploy-Durchlauf)
+
+#### BUG-2: (projektweit, bekannt) E2E-Interferenz bei aktiven Events + Hydration-Doppelrender
+- **Severity:** Low
+- Nicht PROJ-9-spezifisch. Läuft man mehrere „Laufendes Event"-Specs im selben `playwright test`-Aufruf, schließen sie sich gegenseitig das global einzige `active`-Event weg (1–2 rotierende Fehler). Jede Spec isoliert stabil. Steht auf der `/deploy`-Liste (Specs sharden / `--workers=1`) zusammen mit dem projektweiten transienten Hydration-Doppelrender.
+
+### Summary
+- **Acceptance Criteria:** 22/24 bestanden — 1 × BUG-1 (Low), 1 × Video-„kein Element"-AC bewusst durch das Design-System abgelöst (kein Bug)
+- **Bugs Found:** 2 total (0 Critical, 0 High, 0 Medium, 2 Low)
+- **Security:** Pass — Blindheit bis Abschluss verifiziert, fremde Notizen strukturell unerreichbar, Runden-Historie korrekt gated
+- **Production Ready:** **YES** — kein Critical/High. BUG-1 ist kosmetisch (seltene Konstellation, Ergebnisseite selbst korrekt), BUG-2 ist eine stehende Test-Infra-Notiz
+- **Recommendation:** **Approved.** BUG-1 als kleinen `/frontend`-Nachzug einplanen; die `test:rls`-Suite ist mit der eingespielten Migration grün (90/90).
 
 ## Deployment
 _To be added by /deploy_

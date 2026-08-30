@@ -23,7 +23,7 @@
 | PROJ-6 | Gastgeber-Steuerung & Ablauf | Approved | [PROJ-6-gastgeber-steuerung.md](PROJ-6-gastgeber-steuerung.md) | 2026-08-27 |
 | PROJ-7 | Bewertungsansicht | Approved | [PROJ-7-bewertungsansicht.md](PROJ-7-bewertungsansicht.md) | 2026-08-27 |
 | PROJ-8 | Tasting-Dashboard mit Live-Sync | Approved | [PROJ-8-tasting-dashboard.md](PROJ-8-tasting-dashboard.md) | 2026-08-27 |
-| PROJ-9 | Ergebnisse & Tasting-Historie | In Progress | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
+| PROJ-9 | Ergebnisse & Tasting-Historie | Approved | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
 | PROJ-10 | Profil-Seite mit persönlicher Bilanz | Roadmap | – | 2026-08-27 |
 | PROJ-11 | Neutraler Helfer pro Event | Roadmap | – | 2026-08-29 |
 

@@ -413,26 +413,6 @@ export type Database = {
           },
         ]
       }
-      whisky_score_breakdown: {
-        Row: {
-          event_id: string | null
-          nose_points: number | null
-          rater_id: string | null
-          rater_name: string | null
-          taste_points: number | null
-          total_points: number | null
-          whisky_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ratings_whisky_id_fkey"
-            columns: ["whisky_id"]
-            isOneToOne: false
-            referencedRelation: "whisky_rankings"
-            referencedColumns: ["whisky_id"]
-          },
-        ]
-      }
       whisky_rankings: {
         Row: {
           brought_by: string | null
@@ -470,6 +450,75 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      whisky_score_breakdown: {
+        Row: {
+          event_id: string | null
+          nose_points: number | null
+          rater_id: string | null
+          rater_name: string | null
+          taste_points: number | null
+          total_points: number | null
+          whisky_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "ratings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_profile_id_fkey"
+            columns: ["rater_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whiskies"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id", "event_id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["winner_whisky_id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: false
+            referencedRelation: "whiskies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_whisky_id_fkey"
+            columns: ["whisky_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id"]
           },
         ]
       }
@@ -540,6 +589,7 @@ export type Database = {
         Args: { p_event: string }
         Returns: Database["public"]["Enums"]["event_status"]
       }
+      is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_event_closed: { Args: { p_event: string }; Returns: boolean }
       is_event_host: { Args: { p_event: string }; Returns: boolean }
