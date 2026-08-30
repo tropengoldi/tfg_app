@@ -618,7 +618,7 @@ war und bleibt draußen).
 |-------|----------|
 | `npm test` (Vitest Unit) | **99/99** (11 Dateien; +19 aus `src/lib/results.test.ts`) |
 | `npm run test:rls` (Integration) | **90/90** (6 Dateien) — inkl. der überarbeiteten `rls.integration` (invertierter Fremd-`ratings`-Fall, neuer `whisky_score_breakdown`-Pfad + `42703`-Check, 6 neue „aktives Nicht-Teilnehmer-Mitglied"-Fälle) und `rating-rules` (Breakdown-View statt roher Tabelle, Notiz-Privatheit) |
-| `tests/PROJ-9-ergebnisse-historie.spec.ts` | **25 passed / 3 skipped** über `chromium` + `Mobile Safari` (2× `fixme` = BUG-1, 1× Dashboard nur `chromium`) |
+| `tests/PROJ-9-ergebnisse-historie.spec.ts` | **27 passed / 1 skipped** über `chromium` + `Mobile Safari` (der frühere `fixme` = BUG-1 läuft wieder; 1× Dashboard nur `chromium`) |
 | `tsc --noEmit` · `eslint .` · `npm run build` | alle sauber; Route `/tastings/[eventId]/ergebnisse` erzeugt |
 | Regression PROJ-4/5/6/7/8 (E2E, je isoliert, chromium) | grün (4: 24, 5: 19, 6: 24, 7: 10, 8: 19). Zusammen mit PROJ-7/8 im selben Lauf flaken die „Laufendes Event"-Blöcke — bekannte projektweite Einschränkung (nur ein `active` global), kein PROJ-9-Regress |
 
@@ -628,7 +628,7 @@ war und bleibt draußen).
 - [x] Alle abgeschlossenen Tastings der Runde, auch ohne eigene Teilnahme (E2E „bystander" + RLS-Fälle)
 - [x] Sortierung Datum ↓, dann `closed_at` ↓ (`getPastTastings`-Logik)
 - [x] Zeile zeigt Datum · Ort · Gastgeber · 🏆 Sieger
-- [ ] **BUG-1:** abgeschlossenes Tasting **ohne jede Bewertung** → soll „— kein Sieger" zeigen, zeigt aber den Whisky auf Position 1
+- [x] Abgeschlossenes Tasting **ohne jede Bewertung** → „— kein Sieger" (BUG-1 im /deploy-Hardening behoben: getPastTastings bildet winner_name bei 0 Punkten auf null ab; der fixme-E2E-Test läuft wieder)
 - [x] Zeile ist Link → Ergebnisseite
 - [x] „Noch kein Tasting abgeschlossen." bei leerer Historie (Komponenten-Leerzustand; nicht als E2E isolierbar, da Seed/andere Tests abgeschlossene Events hinterlassen)
 - [x] Neu abgeschlossenes Tasting erscheint in der Liste
@@ -664,7 +664,7 @@ war und bleibt draußen).
 ### Edge Cases Status
 - [x] Ergebnisseite eines laufenden/vorbereiteten Events manuell aufgerufen → „läuft noch", keine Daten
 - [x] Mitglied ohne Teilnahme → sieht Rangliste/Namen/Sieger/Videos, aber keine (eigenen) Notizen, Aufschlüsselung nur Punkte
-- [ ] **BUG-1:** abgeschlossenes Event ganz ohne Bewertungen → Ergebnisseite korrekt (0-Punkte-Liste, Hinweis, kein Sieger); **Historien-Zeile falsch** (Whisky-Name statt „— kein Sieger")
+- [x] Abgeschlossenes Event ganz ohne Bewertungen → Ergebnisseite **und** Historien-Zeile korrekt („— kein Sieger") — BUG-1 behoben
 - [x] Einzelner unbewerteter Whisky in sonst bewertetem Abend → am Ende der Rangliste mit 0 Punkten
 - [x] Punktgleichheit → getrennte eindeutige Ränge, beide mit „punktgleich"
 - [x] Distillery/Region/Thema nicht gesetzt → wird einfach weggelassen
@@ -682,7 +682,7 @@ war und bleibt draußen).
 
 ### Bugs Found
 
-#### BUG-1: Historien-Liste nennt einen „Sieger" für ein Tasting ohne jede Bewertung
+#### BUG-1: Historien-Liste nannte einen „Sieger" für ein Tasting ohne jede Bewertung — BEHOBEN (im /deploy-Hardening, Commit nach 559f6c6)
 - **Severity:** Low
 - **Steps to Reproduce:**
   1. Ein Event abschließen, an dem **niemand** einen Whisky bewertet hat
@@ -691,7 +691,7 @@ war und bleibt draußen).
   4. Tatsächlich: die Zeile zeigt den Namen des Whiskys auf Ausschankposition 1
 - **Ursache:** `whisky_rankings` vergibt auch bei 0 Punkten Rang 1 (Sortierung `… , w.position asc`); `past_tastings.winner_name` ist dann gesetzt, und `getPastTastings` reicht es ungefiltert durch.
 - **Fix (klein, Frontend):** in `getPastTastings` `winner_name` auf `null` abbilden, wenn `winner_points` fehlt oder `0` ist. Die **Ergebnisseite** ist bereits korrekt — dort unterdrückt `hasAnyRatings` die Sieger-Hervorhebung.
-- **Abgedeckt durch:** `test.fixme` „Historie: abgeschlossener Abend ohne jede Bewertung zeigt „— kein Sieger"" — wird grün, sobald der Fix steht.
+- **Fix:** `getPastTastings` (src/lib/queries/results.ts) wählt zusätzlich `winner_points` und setzt `winner_name` auf `null`, wenn `winner_points` fehlt oder 0 ist. Der zuvor als `test.fixme` markierte E2E-Test läuft wieder und ist grün.
 - **Priorität:** Fix in einem kleinen `/frontend`-Nachzug (oder gebündelt im Vor-Deploy-Durchlauf)
 
 #### BUG-2: (projektweit, bekannt) E2E-Interferenz bei aktiven Events + Hydration-Doppelrender
@@ -699,11 +699,11 @@ war und bleibt draußen).
 - Nicht PROJ-9-spezifisch. Läuft man mehrere „Laufendes Event"-Specs im selben `playwright test`-Aufruf, schließen sie sich gegenseitig das global einzige `active`-Event weg (1–2 rotierende Fehler). Jede Spec isoliert stabil. Steht auf der `/deploy`-Liste (Specs sharden / `--workers=1`) zusammen mit dem projektweiten transienten Hydration-Doppelrender.
 
 ### Summary
-- **Acceptance Criteria:** 22/24 bestanden — 1 × BUG-1 (Low), 1 × Video-„kein Element"-AC bewusst durch das Design-System abgelöst (kein Bug)
+- **Acceptance Criteria:** 23/24 bestanden — BUG-1 (Low) im /deploy-Hardening behoben, 1 × Video-„kein Element"-AC bewusst durch das Design-System abgelöst (kein Bug)
 - **Bugs Found:** 2 total (0 Critical, 0 High, 0 Medium, 2 Low)
 - **Security:** Pass — Blindheit bis Abschluss verifiziert, fremde Notizen strukturell unerreichbar, Runden-Historie korrekt gated
-- **Production Ready:** **YES** — kein Critical/High. BUG-1 ist kosmetisch (seltene Konstellation, Ergebnisseite selbst korrekt), BUG-2 ist eine stehende Test-Infra-Notiz
-- **Recommendation:** **Approved.** BUG-1 als kleinen `/frontend`-Nachzug einplanen; die `test:rls`-Suite ist mit der eingespielten Migration grün (90/90).
+- **Production Ready:** **YES** — kein Critical/High. BUG-1 ist inzwischen behoben, BUG-2 ist eine stehende Test-Infra-Notiz
+- **Recommendation:** **Approved.** BUG-1 wurde vor dem Deploy behoben; die `test:rls`-Suite ist mit der eingespielten Migration grün (90/90).
 
 ## Deployment
 _To be added by /deploy_

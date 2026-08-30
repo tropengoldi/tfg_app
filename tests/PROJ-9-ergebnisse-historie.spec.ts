@@ -128,10 +128,7 @@ test('Historie: ein aktives Mitglied ohne Teilnahme sieht den abgeschlossenen Ab
   await expect(page).toHaveURL(new RegExp(`/tastings/${mainId}/ergebnisse`))
 })
 
-// BUG-1 (Low): past_tastings.winner_name ist auch ohne jede Bewertung gesetzt
-// (whisky_rankings vergibt Rang 1 an den Whisky auf Position 1 mit 0 Punkten).
-// getPastTastings müsste winner_name bei winner_points 0/null auf null abbilden.
-test.fixme('Historie: abgeschlossener Abend ohne jede Bewertung zeigt „— kein Sieger“', async ({ page }) => {
+test('Historie: abgeschlossener Abend ohne jede Bewertung zeigt „— kein Sieger“', async ({ page }) => {
   const evId = await createEventDirect({
     hostId: member.id, createdBy: adminId, location: LOC('nowinner'), eventDate: '2025-03-02',
   })

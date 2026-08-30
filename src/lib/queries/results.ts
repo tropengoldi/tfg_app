@@ -24,7 +24,7 @@ export async function getPastTastings(): Promise<PastTastingRow[]> {
 
   const { data, error } = await supabase
     .from('past_tastings')
-    .select('event_id, event_date, location, host_name, winner_name, closed_at')
+    .select('event_id, event_date, location, host_name, winner_name, winner_points, closed_at')
     .order('event_date', { ascending: false })
   if (error) throw error
 
@@ -42,7 +42,9 @@ export async function getPastTastings(): Promise<PastTastingRow[]> {
       event_date: r.event_date,
       location: r.location ?? '',
       host_name: r.host_name ?? 'Unbekannt',
-      winner_name: r.winner_name,
+      // `winner_name` steht in der View auch dann, wenn niemand bewertet hat
+      // (Rang 1 mit 0 Punkten). Ohne Punkte kein Sieger.
+      winner_name: r.winner_points && r.winner_points > 0 ? r.winner_name : null,
     }))
 }
 
