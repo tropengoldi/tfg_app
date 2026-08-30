@@ -240,16 +240,18 @@ Notizen bleiben privat, jede Person sieht nur ihre eigenen wieder.
 
 ## Open Questions
 
-- [ ] Die Erweiterung der RLS-Sichtbarkeit abgeschlossener Ergebnisse von „nur
-      Teilnehmer" auf „jedes aktive Mitglied" betrifft `whisky_rankings` /
-      `past_tastings` / `whisky_details` / `ratings` und ist von `/architecture`
-      zu entwerfen (neue Policy vs. angepasste `is_event_closed`-Logik). Die
-      **eigenen** Notizen bleiben dabei das einzige teilnehmergebundene Feld.
-- [ ] Format der Ø-Zahl bei nicht ganzzahligem Mittel — eine Nachkommastelle
-      („Ø 12,3") oder ganzzahlig gerundet? (Vorschlag: eine Nachkommastelle,
-      Komma als Dezimaltrennzeichen.)
-- [ ] Sollen die aufklappbaren Einzelbewertungen nach Punktzahl oder nach
-      Anzeigename sortiert sein? (Vorschlag: Gesamtpunkte absteigend.)
+- [x] ~~Die Erweiterung der RLS-Sichtbarkeit abgeschlossener Ergebnisse…~~
+      **Gelöst in `/architecture`:** die beiden Ranglisten-Views laufen künftig mit
+      Owner-Rechten und einem eingebauten „nur abgeschlossen + aktives Mitglied"-
+      Filter; eine neue Punkte-Aufschlüsselungs-View (ohne Notizen) kommt hinzu;
+      zwei Lese-Regeln (Event-Kopf, Teilnehmerliste) werden für abgeschlossene
+      Events auf alle aktiven Mitglieder geweitet; der Roh-Zugriff auf `ratings`
+      wird auf „nur die eigenen Zeilen" **verengt**. Details im Abschnitt
+      „Tech Design → Backend-Änderungen".
+- [x] ~~Format der Ø-Zahl~~ **Entschieden:** eine Nachkommastelle, Komma als
+      Dezimaltrennzeichen („Ø 12,3"); bei 0 Bewertungen kein Ø.
+- [x] ~~Sortierung der aufklappbaren Einzelbewertungen~~ **Entschieden:**
+      Gesamtpunkte absteigend, bei Gleichstand nach Anzeigename.
 
 ## Decision Log
 
@@ -270,13 +272,202 @@ Notizen bleiben privat, jede Person sieht nur ihre eigenen wieder.
 | Kein Realtime auf der Ergebnisseite | Post-Abschluss statisch; das Live-Umschalten „Abend vorbei" macht bereits das Dashboard (PROJ-8) | 2026-08-30 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Reine Leseansicht auf vorhandene Datenbank-Views — **keine** neuen Tabellen, **keine** Server-Actions, **keine** RPCs | Rangliste und Sieger werden schon in PROJ-1 berechnet (`whisky_rankings`, `past_tastings`); PROJ-9 ist Darstellung | 2026-08-30 |
+| Die beiden Ranglisten-Views von „mit den Rechten des Abfragenden" auf „mit Owner-Rechten + eingebautem Filter (nur `status = 'closed'` **und** aktives Mitglied)" umstellen | So sieht auch ein Mitglied, das an dem Abend gefehlt hat, die volle Rangliste. Die Blindheits-Garantie hängt am `closed`-Filter, **nicht** am Rechte-Modus der View — der bleibt erhalten | 2026-08-30 |
+| Neue View „Punkte-Aufschlüsselung" (pro Whisky pro Bewerter: Name, Nase, Geschmack, Gesamt — **ohne Notiz-Spalte**) mit demselben Owner-Rechte-+-Filter-Muster | Die aufklappbaren Einzelpunkte brauchen zeilengenauen Zugriff; eine eigene View ohne Notiz-Spalte macht es strukturell unmöglich, fremde Notizen über diesen Weg zu lesen | 2026-08-30 |
+| Roh-Lesezugriff auf die `ratings`-Tabelle auf „nur die eigenen Zeilen" **verengen** (bisher durften Teilnehmer eines abgeschlossenen Events auch fremde Zeilen inkl. Notiz lesen) | Fremde Notizen dürfen laut Spec „auch nicht im Netzwerk-Response" auftauchen; die geteilte Sicht liefern jetzt die Views ohne Notiz-Spalte, also wird der Direktzugriff nicht mehr für die Aggregation gebraucht | 2026-08-30 |
+| Eigene Notizen: direkter, auf die eigene Person gefilterter Lesezugriff auf `ratings` (wie in PROJ-7) | Die bestehende Regel „eigene Zeilen jederzeit lesbar" deckt das ab — kein neues Objekt nötig | 2026-08-30 |
+| „Aktives Mitglied" = Profil existiert und ist nicht deaktiviert (jede Rolle) | Es gibt keine eigene „Runden-Mitgliedschaft"; die Runde ist der vom Admin eingeladene, aktive Nutzerkreis. Deckt sich mit `is_admin()`, das ebenfalls `is_active` verlangt | 2026-08-30 |
+| „Läuft noch" vs. „nicht gefunden" unterscheidet der Loader über den bestehenden PROJ-1-Statushelfer (Status eines Events per ID, für angemeldete Nutzer aufrufbar) | Kein weiteres Aufweichen der Event-Leseregeln nötig; PROJ-8 (Nicht-Teilnehmer sieht laufendes Event nicht) bleibt unangetastet | 2026-08-30 |
+| Historien-Liste als zweiter Abschnitt in `/tastings`; die bestehende Liste zeigt künftig nur noch **nicht** abgeschlossene Abende | Vermeidet, dass ein abgeschlossener Abend doppelt (oben „meine" + unten „Historie") erscheint; nur die Seite ändert sich, nicht die `getMyTastings`-Abfrage | 2026-08-30 |
+| Aufklappen der Einzelbewertungen mit der bereits installierten `accordion`/`collapsible`-Komponente; Rangliste als `table` bzw. Karten-Liste | Beide shadcn-Bausteine sind schon im Projekt; keine neue Abhängigkeit | 2026-08-30 |
+| Ableitungen (Ø-Zahl, „punktgleich", Sieger-ja/nein, Sortierung der Aufschlüsselung) als reine Funktionen in `src/lib/results.ts` mit Co-Test | Testbar ohne DB/Browser; QA hakt sie mit Vitest ab | 2026-08-30 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+
+PROJ-9 zeigt Daten, die es schon gibt. Die Rangliste und der Sieger-Whisky
+werden seit PROJ-1 von zwei Datenbank-Views berechnet (`whisky_rankings`,
+`past_tastings`). Diese Funktion baut **zwei Bildschirme** darauf:
+
+1. **Historien-Liste** — ein neuer Abschnitt „Vergangene Tastings" auf der schon
+   vorhandenen Seite `/tastings`.
+2. **Ergebnisseite** — eine neue Unterseite `/tastings/<Event>/ergebnisse`.
+
+Es gibt **einen** fokussierten Backend-Eingriff: die Sichtbarkeit der
+abgeschlossenen Ergebnisse wird von „nur wer an dem Abend dabei war" auf „jedes
+aktive Mitglied der Runde" geweitet — und im selben Zug wird der direkte Zugriff
+auf die rohe Bewertungstabelle **enger** gezogen, damit fremde persönliche
+Notizen garantiert nirgends mehr mitgeliefert werden. Kein neuer API-Endpunkt,
+keine Server-Action, keine neue Tabelle.
+
+### A) Seiten- und Komponentenstruktur
+
+**Seite `/tastings` (erweitert)**
+
+```
+Tastings-Seite
+├─ Seitenkopf  „Tastings"
+├─ Abschnitt „Deine Abende"        ← wie bisher, aber ohne abgeschlossene
+│   └─ Tasting-Liste (kommende / laufende Abende)
+└─ Abschnitt „Vergangene Tastings"  ← NEU
+    ├─ Historien-Liste
+    │   └─ Historien-Zeile  (pro abgeschlossenem Event der Runde)
+    │        Datum · Ort · „Gastgeber: Name" · „🏆 Sieger-Whisky"
+    │        (ganze Zeile ist ein Link → Ergebnisseite)
+    └─ Leerzustand  „Noch kein Tasting abgeschlossen."
+```
+
+**Seite `/tastings/<Event>/ergebnisse` (neu)**
+
+```
+Ergebnisseite
+├─ Zustand „Event nicht gefunden / fremde ID"      → Standard-„nicht gefunden"
+├─ Zustand „Event läuft noch / in Vorbereitung"
+│   └─ Hinweis-Karte  „Dieses Tasting läuft noch …" + Link zum Dashboard
+├─ Zustand „Event abgeschlossen"  (Regelfall)
+│   ├─ Ergebnis-Kopf
+│   │    Datum · Ort · Thema (falls gesetzt) · „Gastgeber: Name"
+│   │    Teilnehmerliste des Abends
+│   ├─ Hinweis „keine Bewertungen abgegeben"   (nur falls zutreffend)
+│   └─ Rangliste
+│        └─ Ranglisten-Zeile  (pro Whisky, nach Rang sortiert)
+│             ├─ Rang groß · Sieger-Hervorhebung bei Rang 1
+│             ├─ Whisky-Name · Distillery · Region (falls gesetzt)
+│             ├─ „mitgebracht von Name"
+│             ├─ Gesamtpunkte groß · „Nase n · Geschmack m" · „Ø 12,3"
+│             ├─ „k von m Bewertungen" · ggf. „punktgleich"
+│             ├─ „Video ansehen"  (neuer Tab; nur falls Link hinterlegt)
+│             └─ Aufklappbereich (zu / auf)
+│                  ├─ pro Bewerter: Name · Nase · Geschmack · Gesamt
+│                  └─ „Deine Notiz: …"   (nur die eigene, falls vorhanden)
+├─ Laden        → Skelett
+└─ Ladefehler   → Hinweis + „Erneut versuchen"
+```
+
+**Neue Bausteine**
+
+- `src/app/(app)/tastings/[eventId]/ergebnisse/` mit `page.tsx`, `loading.tsx`,
+  `error.tsx` (gleiche Konvention wie `whiskies/`, `gastgeber/`, `bewerten/`).
+- Komponenten unter `src/components/results/`: Historien-Liste + -Zeile,
+  Ergebnis-Kopf, Rangliste + Ranglisten-Zeile (mit Aufklappbereich),
+  Video-Link.
+- `src/lib/queries/results.ts`: die Lesezugriffe (siehe C).
+- `src/lib/results.ts` (+ `results.test.ts`): reine Hilfsfunktionen — Ø-Zahl
+  formatieren, „punktgleich" ermitteln, „ist Sieger", Aufschlüsselung sortieren,
+  „abgeschlossen / läuft noch / nicht gefunden" bestimmen.
+- Wiederverwendet: `PageHeader`, `EventStatusBadge`, `formatEventDate`, `Card`,
+  `Table`, `Badge`, `Accordion`/`Collapsible` (alle bereits im Projekt).
+
+Die bestehende `/tastings`-Seite bekommt lediglich einen Filter (obere Liste nur
+noch nicht-abgeschlossene Abende) und den neuen Abschnitt darunter. `tasting-row`
+und `getMyTastings` bleiben unverändert.
+
+### B) Woher die Daten kommen
+
+| Anzeige | Quelle | Zugriff |
+|---|---|---|
+| Historien-Liste | View `past_tastings` (Datum, Ort, Thema, Gastgeber-Name, Sieger-Whisky + -Punkte) | alle aktiven Mitglieder |
+| Ergebnis-Kopf (Datum, Ort, Thema, Gastgeber) | View `past_tastings` | alle aktiven Mitglieder |
+| Teilnehmerliste des Abends | `event_participants` + `profiles` | Leseregel für **abgeschlossene** Events auf alle aktiven Mitglieder geweitet |
+| Rangliste (Rang, Name, Herkunft, Bringer, Punktsummen, Anzahl Bewertungen, Video-Link) | View `whisky_rankings` | alle aktiven Mitglieder |
+| Aufklappbare Einzelpunkte pro Bewerter | **neue** View „Punkte-Aufschlüsselung" (ohne Notiz-Spalte) | alle aktiven Mitglieder |
+| Eigene Notiz je Whisky | Tabelle `ratings`, auf die eigene Person gefiltert | wie in PROJ-7 — eigene Zeilen jederzeit lesbar |
+| „läuft noch" vs. „nicht gefunden" | bestehender PROJ-1-Statushelfer (Status eines Events per ID) | jeder angemeldete Nutzer |
+
+Alle Zugriffe sind reine Lesezugriffe aus Server-Komponenten. Kein Client-seitiges
+Nachladen, kein Realtime.
+
+### C) Datenmodell
+
+Es entstehen **keine neuen Tabellen** und **keine neuen Spalten für Nutzdaten**.
+Bestehende Strukturen (PROJ-1):
+
+- **Rangliste je Event** (`whisky_rankings`): pro Whisky eines abgeschlossenen
+  Events — Rang, Position, aufgelöster Name, Distillery, Region, Video-Link,
+  Bringer, Summe Nase, Summe Geschmack, Summe Gesamt, Anzahl Bewertungen.
+  Rangfolge: Gesamt ↓, Geschmack ↓, Nase ↓, Ausschankposition ↑ (immer
+  eindeutig).
+- **Vergangene Tastings** (`past_tastings`): pro abgeschlossenem Event — Datum,
+  Ort, Thema, Gastgeber-Name, Sieger-Whisky (Name + Punkte). Bekommt zusätzlich
+  den **Abschlusszeitpunkt** als Sortier-Zweitschlüssel sichtbar gemacht.
+- **Punkte-Aufschlüsselung** (neu): pro Whisky pro Bewerter — Anzeigename,
+  Nase, Geschmack, Gesamt. **Bewusst ohne Notiz-Feld.**
+- **Eigene Notiz**: das Feld `notes` der eigenen Zeile in `ratings`.
+
+### D) Backend-Änderungen (eine Migration, in Worten)
+
+Alles in einer neuen Migrationsdatei; der Nutzer spielt sie ein und lässt die
+RLS-Tests laufen (Claude hat hier keinen DB-Zugriff).
+
+1. **Neuer Helfer „ist aktives Mitglied":** wahr, wenn der Aufrufer ein
+   nicht-deaktiviertes Profil hat (jede Rolle). Das ist „die Runde".
+
+2. **`whisky_rankings` und `past_tastings` auf Owner-Rechte umstellen** und in
+   die View selbst den Filter „nur abgeschlossene Events **und** Aufrufer ist
+   aktives Mitglied" einbauen. Wirkung: Auch wer an dem Abend gefehlt hat, sieht
+   die volle Rangliste. Unverändert: Ein nicht abgeschlossenes Event liefert
+   weiterhin **null Zeilen** — daran hängt die Blindheit, nicht am Rechte-Modus.
+   Beide Views tragen weiterhin **keine** persönlichen Notizen.
+
+3. **Neue View „Punkte-Aufschlüsselung"** nach demselben Muster (Owner-Rechte,
+   Filter „abgeschlossen + aktives Mitglied"), Spalten: Event, Whisky, Bewerter-
+   Name, Nase, Geschmack, Gesamt. Keine Notiz-Spalte.
+
+4. **Leseregel für Teilnehmerlisten weiten:** Für **abgeschlossene** Events darf
+   jedes aktive Mitglied die Teilnehmerzuordnung lesen (bisher nur Teilnehmer
+   desselben Events). Für laufende / vorbereitete Events bleibt alles wie bisher.
+
+5. **Roh-Lesezugriff auf `ratings` verengen:** Bisher durfte ein Teilnehmer eines
+   **abgeschlossenen** Events auch die Zeilen der anderen lesen (inklusive deren
+   Notiz). Diese Ausnahme entfällt — künftig gilt tabellenweit „nur die eigenen
+   Zeilen" (Admin ausgenommen). Die geteilte Auswertung kommt ausschließlich aus
+   den Views aus Schritt 2 und 3, die keine Notiz führen. Damit können fremde
+   Notizen auf keinem Weg mehr in einen Response geraten.
+
+**Was sich NICHT ändert:** die Rang-/Punkte-Rechenregel, die Leseregeln für
+laufende Events, die Realtime-Publication, alle RPCs, das Dashboard-Verhalten aus
+PROJ-8 (Nicht-Teilnehmer sieht ein laufendes Event nicht).
+
+### E) Auswirkungen auf bereits gebaute Teile
+
+- **PROJ-1 RLS-Integrationstests** (`rating-rules`): Der Fall „Teilnehmer eines
+  abgeschlossenen Events sieht fremde Bewertungen" kehrt sich um und muss auf
+  „sieht sie **nicht**" umgeschrieben werden. Neue Fälle: aktives Nicht-
+  Teilnehmer-Mitglied sieht `whisky_rankings` / `past_tastings` / die neue
+  Aufschlüsselungs-View eines fremden abgeschlossenen Events; sieht sie **nicht**,
+  solange das Event läuft.
+- **PROJ-7 Bewertungsansicht:** liest ohnehin nur die eigenen Bewertungen —
+  unberührt. Der eingefrorene „Ergebnisse ansehen"-Hinweis bekommt jetzt sein
+  echtes Ziel (`…/ergebnisse`).
+- **PROJ-8 Dashboard:** Der Platzhalter-Absprung „Zur Rangliste" zeigt jetzt auf
+  `…/ergebnisse`. Sonst nichts.
+- **`/tastings`-Seite:** obere Liste zeigt nur noch nicht-abgeschlossene Abende.
+
+### F) Neue Pakete
+
+Keine. `accordion`, `collapsible`, `table`, `badge` sind bereits installiert;
+`date-fns` (Datumsformat) ebenfalls.
+
+### G) Sicherheits- und Datenschutz-Betrachtung
+
+- **Blindheit bis zum Abschluss:** unverändert erzwungen durch den
+  `status = 'closed'`-Filter in allen drei Views; ein laufendes Event liefert
+  null Ergebniszeilen, unabhängig davon, wer fragt.
+- **Fremde Notizen:** nach dieser Änderung strukturell unerreichbar — die
+  auswertenden Views führen die Spalte nicht, und der Direktzugriff auf `ratings`
+  ist auf die eigene Person beschränkt.
+- **Kein Vorab-Auslesen per URL:** die Ergebnisseite einer noch laufenden Runde
+  zeigt nur den „läuft noch"-Hinweis; Datenzeilen gibt es serverseitig keine.
+- **Video-Link:** unverändertes, in PROJ-5 akzeptiertes Restrisiko (beliebige
+  `https://`-Adresse im geschlossenen Kreis); Öffnen in neuem Tab mit
+  `rel="noopener noreferrer"`, kein eingebetteter Player.
 
 ## QA Test Results
 _To be added by /qa_
