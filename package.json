@@ -20,7 +20,8 @@
     "db:types": "supabase gen types typescript --project-id ogwuwisutgaxxpknkgpg --schema public > src/lib/supabase/types.ts",
     "admin:password": "node --env-file=.env.local scripts/set-admin-password.mjs",
     "tasting:delete": "node --env-file=.env.local scripts/delete-tasting.mjs",
-    "user:delete": "node --env-file=.env.local scripts/delete-user.mjs"
+    "user:delete": "node --env-file=.env.local scripts/delete-user.mjs",
+    "tasting:list": "node --env-file=.env.local scripts/delete-tasting.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

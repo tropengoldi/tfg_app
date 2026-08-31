@@ -71,6 +71,8 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
 
 ### Wartungsskripte (Service-Role, kein UI)
 
+- `npm run tasting:list` — alle Events auflisten (Datum · Status · Whiskys/
+  Bewertungen · Gastgeber · **ID** · Ort). Gleiches Skript ohne `EVENT_ID`.
 - `npm run tasting:delete` — Event komplett löschen (`EVENT_ID=…`,
   `CONFIRM=yes`). Trockenlauf ohne `CONFIRM`. Whiskys/Details/Bewertungen/
   Teilnahme gehen per CASCADE mit.
