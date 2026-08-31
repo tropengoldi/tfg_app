@@ -437,4 +437,23 @@ projektweite Umbenennung, Spec-Grenze).
 - **Recommendation:** **Approved.** BUG-1 (feste Bandhöhe) als kleinen Nachzug einplanen. Vor dem Roll-out einmal am dunklen Handy-Display sichtprüfen, dass die Fläche „fast unmerklich" wirkt und das Band keinen harten Schnitt hat.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-08-31 · **Production URL:** https://tfg-app-self.vercel.app · **Tag:** `v1.2.0`
+
+Über den Vercel-Auto-Deploy von `main` ausgeliefert. Keine Env-Vars, keine
+DB-Migration, keine neuen Pakete.
+
+**Pre-Deploy-Checks:** `npm run build` · `npm run lint` · `npm test` (108/108) ·
+`tests/PROJ-13-marken-auftritt.spec.ts` (14/14) — alle grün. QA: Approved,
+1 × BUG-1 (Low, kosmetisch), kein Critical/High.
+
+**Live verifiziert (curl):**
+- `https://tfg-app-self.vercel.app/login` enthält „Whizzky",
+  „Treffpunkt feiner Geister" und `.brand-surface` — **nicht** mehr
+  „Whisky-Tasting".
+- Das Live-CSS-Bundle enthält `.brand-surface{…radial-gradient…}`,
+  `feTurbulence`, `.header-band{isolation:isolate;…}` und `@media print`.
+
+**Offene Nachzüge:** BUG-1 (feste `header-band`-Höhe statt mit-wachsend) als
+kleiner `/frontend`-Nachzug. Manuelle Sichtprüfung am dunklen Handy-Display
+empfohlen (Fläche „fast unmerklich", Band ohne harten Schnitt).
