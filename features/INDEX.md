@@ -25,7 +25,7 @@
 | PROJ-8 | Tasting-Dashboard mit Live-Sync | Deployed | [PROJ-8-tasting-dashboard.md](PROJ-8-tasting-dashboard.md) | 2026-08-27 |
 | PROJ-9 | Ergebnisse & Tasting-Historie | Deployed | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
 | PROJ-10 | Profil-Seite mit persönlicher Bilanz | Deployed | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
-| PROJ-11 | Neutraler Helfer pro Event | Approved | [PROJ-11-neutraler-helfer-pro-event.md](PROJ-11-neutraler-helfer-pro-event.md) | 2026-08-29 |
+| PROJ-11 | Neutraler Helfer pro Event | Deployed | [PROJ-11-neutraler-helfer-pro-event.md](PROJ-11-neutraler-helfer-pro-event.md) | 2026-08-29 |
 | PROJ-12 | App-Icon & Homescreen | Deployed | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
 
@@ -33,10 +33,11 @@
 
 ## Next Available ID: PROJ-14
 
-## Nächste Umsetzung (vor PROJ-11)
+## Stand der Roadmap
 
-Reihenfolge: **PROJ-12 → PROJ-13**. Beides ist rein visuell/Frontend, keine
-DB-Änderung. PROJ-11 (Neutraler Helfer) folgt danach.
+PROJ-1..13 **Deployed**. PROJ-11 (Neutraler Helfer) am 2026-08-31 als `v1.3.0`
+live (mit DB-Migration `20260831120000_helper_role.sql`). Keine offenen
+Feature-Specs — nächste Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 

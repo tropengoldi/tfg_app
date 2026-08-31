@@ -1,6 +1,6 @@
 # PROJ-11: Neutraler Helfer pro Event
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-08-31
 **Last Updated:** 2026-08-31
 
@@ -646,4 +646,51 @@ Blindheit). Die 6 bestehenden Integrationsdateien (PROJ-4/5/6/8/9) bleiben grün
 - **Recommendation:** **Deploy** (`/deploy` → `v1.3.0`).
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-08-31 · **Tag:** `v1.3.0`
+**Production URL:** https://tfg-app-self.vercel.app
+**Deploy-Weg:** Vercel Auto-Deploy vom `main`-Branch (GitHub `tropengoldi/tfg_app`).
+
+### Reihenfolge (wichtig bei diesem Feature)
+
+PROJ-11 bringt eine **DB-Migration** mit. Die Migration muss **vor** dem Code
+live sein, sonst brechen `/tastings`, das Dashboard und das Event-Formular
+(Zugriff auf `tasting_events.helper_id` / `p_helper_id`).
+
+1. `supabase/migrations/20260831120000_helper_role.sql` per `npm run db:push` auf
+   das Prod-Projekt `ogwuwisutgaxxpknkgpg` eingespielt, danach
+   `npm run db:types`. **Verifiziert:** `npm run test:rls` **101 / 101** gegen
+   dieselbe DB (inkl. `helper-role.integration.test.ts` 11 / 11).
+2. Code-Commits `173a5db` (Frontend) · `a2b694a` (Backend) · `5aedd38` (QA) ·
+   `78a06a9` (BUG-1-Fix) auf `main` → Vercel-Auto-Deploy.
+
+### Pre-Deploy-Checks
+
+- [x] `npm run build` erfolgreich (lokal)
+- [x] `npm run lint` sauber
+- [x] `npm test` 112 / 112 · `npm run test:rls` 101 / 101 · `npm run test:e2e`
+      (`PROJ-11-neutraler-helfer.spec.ts`) 5 / 5
+- [x] QA **Approved**, keine offenen Critical/High/Medium-Bugs (BUG-1 behoben)
+- [x] Keine neuen Umgebungsvariablen
+- [x] Keine Secrets im Commit
+- [x] DB-Migration auf Prod angewandt (siehe oben)
+- [x] Alles committet und nach `origin/main` gepusht (`78a06a9`)
+
+### Post-Deploy-Smoke (automatisiert)
+
+- [x] `GET /login` → 200; `GET /manifest.webmanifest` → 200
+- [x] `GET /` → 307 → `/login?redirect=%2F`
+- [x] `GET /tastings/<id>/gastgeber` (unauth) → 307 → `/login?redirect=…`
+- [x] Marken-Auftritt sichtbar („Whizzky", „Treffpunkt feiner Geister")
+- [ ] **Vom Nutzer zu prüfen:** als Admin ein Event mit Helfer anlegen; als
+      Helfer anmelden → Dashboard + „Steuern"; als Gastgeber-mit-Helfer →
+      `/tastings/[id]/gastgeber` = „nicht gefunden", Details unsichtbar bis zum
+      Abschluss.
+
+### Offene Betriebsnotiz
+
+Zwischen dem Frontend-Push (`173a5db`) und dem `db:push` gab es ein kurzes
+Fenster, in dem das Live-Frontend die noch fehlende Spalte `helper_id` abfragte
+(mögliche 500er auf `/tastings` und dem Dashboard). Das Fenster ist geschlossen —
+die Migration ist eingespielt. Für künftige DB-Features: erst `db:push`, dann
+Code-Push.
