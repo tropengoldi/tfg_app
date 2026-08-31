@@ -27,7 +27,7 @@
 | PROJ-10 | Profil-Seite mit persönlicher Bilanz | Deployed | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
 | PROJ-11 | Neutraler Helfer pro Event | Roadmap | – | 2026-08-29 |
 | PROJ-12 | App-Icon & Homescreen | Deployed | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
-| PROJ-13 | Marken-Auftritt (Whizzky) | Planned | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
+| PROJ-13 | Marken-Auftritt (Whizzky) | Architected | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
 
 <!-- Add features above this line -->
 

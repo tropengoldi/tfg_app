@@ -162,16 +162,13 @@ Bausteine: der Marken-Block (`AuthCard`) und die Kopfzone (`(auth)`-Layout +
 - **Performance:** kein spürbarer FCP-Verlust; Lighthouse-Performance > 90.
 - **Browser:** aktuelle iOS-Safari, Android-Chrome, Desktop-Chrome/Firefox/Safari.
 
-## Open Questions
-
-- [ ] Bild vs. reine CSS-Lösung (Verlauf + Rauschen, null Bytes): Entscheidung
-      für `/architecture` bzw. `/frontend` — die CSS-Variante ist bevorzugt,
-      wenn sie den Effekt trägt.
-- [ ] Falls Bild: konkrete Vorlage (der Nutzer stellt keine bereit) —
-      abstraktes Bernstein-Bokeh / Verlaufsfläche, in `/frontend` zu erzeugen
-      oder aus einer freien Quelle zu holen und stark nachzubearbeiten.
-- [ ] Genaue Deckkraft / Scrim-Stärke — Richtwert 8–15 % Bildpräsenz; final per
-      Kontrastmessung in `/qa`.
+- [x] ~~Bild vs. reine CSS-Lösung~~ **Gelöst (`/architecture`): reine CSS-Lösung**,
+      kein Bild-Asset. Zwei weiche Bernstein-Radialverläufe + ein sehr feines
+      Rausch-Muster als Inline-Data-URI, alles über der Grundfläche `#161310`.
+      Null zusätzliche Bytes, keine Ladeabhängigkeit.
+- [x] ~~Konkrete Bildvorlage~~ **Entfällt** — kein Bild.
+- [ ] Finale Zahlenwerte (Verlaufs-Alpha, Rausch-Deckkraft, Bandhöhe): Startwerte
+      im Tech Design, final per Kontrastmessung in `/qa` justiert.
 
 ## Decision Log
 
@@ -191,13 +188,134 @@ Bausteine: der Marken-Block (`AuthCard`) und die Kopfzone (`(auth)`-Layout +
 | Fallback-Basisfarbe/-verlauf immer vorhanden, damit ein fehlendes Bild nichts bricht | Robustheit bei langsamer Verbindung / blockierten Assets | 2026-08-31 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| **Frontend-only**, keine DB, kein Backend, keine Server-Action, keine neue Library, kein Bild-Asset, kein Web-Font | Es geht um zwei Textzeilen und eine dekorative Fläche | 2026-08-31 |
+| **Reine CSS-Fläche** statt Bild: zwei weiche Radialverläufe in `--primary` / `--gold` mit sehr niedrigem Alpha über `#161310`, plus ein feines Rausch-Muster als Inline-SVG-`data:`-URI (kein File) | Null Bytes, keine Ladeabhängigkeit, am nächsten am dekorationsarmen Design-System; ein „fehlendes Bild" kann nichts brechen, weil es keins gibt | 2026-08-31 |
+| **Eine gemeinsame Rezeptur in `src/app/globals.css`** — zwei Utility-Klassen (`brand-surface` für die Auth-Fläche, `header-band` für das App-Band) | Auth-Seiten und App-Header teilen dieselbe Farbstimmung; QA hat **einen** Ort zum Feinjustieren der Alpha-Werte | 2026-08-31 |
+| Auth-Hintergrund als **fest positionierte, `aria-hidden`, `pointer-events-none` Deko-Ebene** hinter `{children}` im `(auth)`-Layout (`-z-10`) | Deckt den ganzen Viewport ruhig ab, ohne Scroll-Effekt; trägt keine Information; fängt keine Klicks ab | 2026-08-31 |
+| App-Band an **`PageHeader`** (nicht an der App-Shell): der Header bekommt einen nach unten auslaufenden Verlauf, der über die `main`-Innenbreite reicht | „Hinter den Seiten-Überschriften" ist genau `PageHeader`; er sitzt auf jeder `(app)`-Seite ganz oben. Kein Eingriff in `AppShell`/Routing | 2026-08-31 |
+| **Kein Text und kein Bedienelement sitzt direkt auf der Deko-Ebene** — nur der Marken-Block (Auth) und `PageHeader`-Titel/Unterzeile. Karten, Inputs, Buttons, Alerts haben ihre eigenen deckenden Token-Flächen (`--card` / `--input` / …) | Damit ist die Lesbarkeit strukturell abgesichert; QA misst nur die zwei Textblöcke | 2026-08-31 |
+| Startwerte: Radial-Alpha ~0,05–0,08, Rausch-Deckkraft ~0,03, Bandhöhe ~140 px, Auth-Fläche etwas präsenter als das App-Band | Richtwerte aus der Spec (8–15 % Präsenz); `/qa` justiert per Kontrastmessung | 2026-08-31 |
+| `@media print` schaltet die Deko-Ebene ab | Druck / Reader-Modus: nur Inhalt | 2026-08-31 |
+| Marken-Block: `AuthCard` rendert statt der einen Zeile zwei — `„Whizzky"` (`font-display`, groß, `text-primary`) + `„Treffpunkt feiner Geister"` (klein, `text-muted-foreground`) | Klare Hierarchie, bestehende Design-Tokens, kein neues Markup-Muster | 2026-08-31 |
+| Nur Dark: keine Anpassung der Light-Tokens, kein Light-`@media`-Zweig für die neuen Klassen | `ThemeProvider` läuft fest dark; doppelter Aufwand für einen unsichtbaren Modus vermeiden | 2026-08-31 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+
+Rein visuell, **kein** Backend, **keine** neue Abhängigkeit, **kein** Bild.
+Drei kleine Eingriffe:
+
+1. **Marken-Block** — `AuthCard` zeigt statt „Whisky-Tasting" zwei Zeilen:
+   „Whizzky" groß, „Treffpunkt feiner Geister" klein darunter.
+2. **Auth-Hintergrund** — eine dekorative CSS-Fläche hinter der zentrierten Box.
+3. **App-Band** — ein nach unten auslaufender Verlauf hinter jedem `PageHeader`.
+
+Die „Bild"-Idee aus der Spec wird als **reine CSS-Lösung** umgesetzt: zwei sehr
+schwache Bernstein-Radialverläufe plus ein feines Rauschen (Inline-Data-URI)
+über der Grundfläche `#161310`. Das ist dem dekorationsarmen Design-System am
+nächsten und hat keine Ladeabhängigkeit.
+
+### A) Betroffene Bausteine
+
+```
+src/app/globals.css
+  └─ NEU: zwei Utility-Klassen (eine Rezeptur, ein Ort zum Justieren)
+       .brand-surface  — die Auth-Deko-Ebene (Radialverläufe + Rauschen + Scrim)
+       .header-band     — der nach unten auslaufende Verlauf hinter dem PageHeader
+     + @media print { … } schaltet beide ab
+
+src/app/(auth)/layout.tsx
+  └─ hinter {children}: eine fest positionierte, aria-hidden,
+     pointer-events-none Ebene mit .brand-surface (-z-10), Viewport-füllend
+
+src/components/auth/auth-card.tsx
+  └─ der eine <p>„Whisky-Tasting"</p> wird zum Marken-Block:
+       „Whizzky"                    font-display, groß, text-primary
+       „Treffpunkt feiner Geister"  klein, text-muted-foreground
+
+src/components/layout/page-header.tsx
+  └─ der <header> bekommt .header-band: ein oben verankerter Verlauf, der
+     innerhalb der ~140 px Bandhöhe weich nach transparent (#161310) ausläuft;
+     reicht über die main-Innenbreite. Titel/Unterzeile bleiben unverändert.
+```
+
+Kein Eingriff in `AppShell`, Routing, Layout-Struktur oder Tailwind-Config.
+
+### B) Wie die Lesbarkeit strukturell gesichert ist
+
+- Die Deko-Ebene liegt **immer hinter** deckenden Token-Flächen: `Card`
+  (`--card`), `Input` (`--input`), `Button`, `Alert` haben jeweils eigenen
+  Hintergrund. Auf diesen Elementen ändert sich am Kontrast **nichts**.
+- Direkt auf der Deko-Ebene steht nur:
+  - der **Marken-Block** (Auth) — „Whizzky" in `--primary`, Unterzeile in
+    `--muted-foreground`, auf nahezu `#161310`.
+  - der **`PageHeader`** — Titel in `--foreground`, Unterzeile in
+    `--muted-foreground`, auf dem `header-band`.
+- Beide Fälle misst `/qa` gegen WCAG 2.1 AA (Fließtext ≥ 4,5:1, große
+  Überschrift ≥ 3:1). Die Startwerte (Alpha ~0,05–0,08 für die Verläufe, ~0,03
+  fürs Rauschen) sind bewusst so niedrig, dass der effektive Hintergrund von
+  `#161310` praktisch nicht abweicht.
+- Der Fokusring (`--ring`, Bernstein) sitzt auf den Bedienelementen, nicht auf
+  der Deko-Ebene — unverändert sichtbar.
+
+### C) „Datenmodell"
+
+Keins. Die einzige „Konfiguration" sind die Alpha-/Größenwerte in den zwei
+CSS-Klassen — an einer Stelle, von `/qa` justierbar.
+
+### D) Backend-Bedarf
+
+Keiner.
+
+### E) Auswirkungen auf Bestehendes
+
+- **`AuthCard`** wird auf allen Auth-Seiten (Login, Passwort setzen, Passwort
+  vergessen) verwendet → der Marken-Block erscheint überall gleich. Keine dieser
+  Seiten ändert sonst ihr Verhalten.
+- **`PageHeader`** wird auf **jeder** `(app)`-Seite verwendet (Dashboard,
+  Tastings, Bewerten, Ergebnisse, Gastgeber, Whiskys, Profil, Admin-Seiten) →
+  das Band erscheint überall oben. Titeltexte, Abstände (`mb-6`) und die
+  Semantik (`<h1>`) bleiben.
+- **`globals.css`** bekommt zwei Klassen + einen `@media print`-Block. Bestehende
+  Tokens und der `body`-Block bleiben unangetastet.
+- Der sichtbare String „Whisky-Tasting" verschwindet aus der laufenden App
+  (er stand nur im `AuthCard`). PRD/Doku/Kommentare bleiben (Spec-Grenze).
+
+### F) Neue Pakete
+
+Keine.
+
+### G) Robustheit / Randfälle (wie abgedeckt)
+
+- **Kein Bild** → „Bild lädt nicht" ist gegenstandslos; Basis ist immer
+  `#161310`, die Verläufe sind CSS.
+- **Schmales Gerät** → der Marken-Block ist zentrierter Fließtext, bricht
+  natürlich um; das Band ist ein Verlauf ohne feste Breite.
+- **Langer Header-Titel** → das Band ist am `<header>` verankert und wächst mit
+  dessen Höhe; der Verlauf endet relativ zur Bandhöhe weich.
+- **JS aus** → alles CSS/Markup.
+- **Druck / Reader** → `@media print` (und der rein dekorative Charakter)
+  entfernt die Flächen.
+- **Light Mode** (versehentlich aktiv) → die Verläufe nutzen `--primary` /
+  `--gold`, die auch Light-Werte haben; die Fläche wäre dort einfach ein
+  minimaler warmer Hauch, kein kaputtes Layout. Kein Feinschliff (Spec-Grenze).
+
+### H) Verifikation (Hinweis für `/qa`)
+
+- Kontrastmessung an „Whizzky", „Treffpunkt feiner Geister" und einem
+  `PageHeader`-Titel/-Unterzeile über der Deko-Ebene → WCAG AA.
+- Sichtprüfung: Fläche „fast unmerklich", kein Blickfang, kein harter Bandschnitt.
+- Fokusring auf Login-Feldern klar sichtbar.
+- `npm run build` / Lighthouse-Performance unverändert (kein Netzwerk-Asset).
+- Bestehende E2E (Auth, App-Shell) unverändert grün — der Marken-Block-Text
+  ändert sich (ein E2E, das auf „Whisky-Tasting" prüft, müsste angepasst werden;
+  Grep zeigt aktuell keins).
 
 ## QA Test Results
 _To be added by /qa_
