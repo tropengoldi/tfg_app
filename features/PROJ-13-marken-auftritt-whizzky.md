@@ -1,6 +1,6 @@
 # PROJ-13: Marken-Auftritt (Whizzky)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-31
 **Last Updated:** 2026-08-31
 
@@ -316,6 +316,48 @@ Keine.
 - Bestehende E2E (Auth, App-Shell) unverändert grün — der Marken-Block-Text
   ändert sich (ein E2E, das auf „Whisky-Tasting" prüft, müsste angepasst werden;
   Grep zeigt aktuell keins).
+
+## Implementation Notes (Frontend)
+
+**Stand:** komplett. **Kein Backend, keine neue Abhängigkeit, kein Bild-Asset.**
+Vier Dateien:
+
+- **`src/app/globals.css`** — zwei Klassen im `@layer components` plus ein
+  `@media print`-Block:
+  - `.brand-surface`: `background-color: hsl(var(--background))` + zwei weiche
+    Radialverläufe (`--primary / 0.07` oben-links, `--gold / 0.055`
+    unten-rechts) + ein feines graustufiges Rauschen als Inline-SVG-`data:`-URI
+    (`feTurbulence`, `rect` mit `opacity 0.035`, 140 px gekachelt).
+  - `.header-band`: `position: relative; isolation: isolate;` + ein
+    `::before` (`z-index: -1`, `pointer-events: none`), das zu den `main`-Rändern
+    blutet (`left/right: -1rem`, `top: -1.5rem`, `height: 9rem`) und einen
+    Radial- (`--primary / 0.06`) + Linearverlauf (`--gold / 0.035` → transparent)
+    trägt.
+  - `@media print` schaltet beide ab.
+- **`src/app/(auth)/layout.tsx`** — hinter `{children}` eine `aria-hidden`,
+  `pointer-events-none`, `fixed inset-0 -z-10` Ebene mit `.brand-surface`.
+- **`src/components/auth/auth-card.tsx`** — die eine Zeile „Whisky-Tasting" →
+  Marken-Block: „Whizzky" (`font-display text-3xl leading-none text-primary`) +
+  „Treffpunkt feiner Geister" (`text-sm text-muted-foreground`).
+- **`src/components/layout/page-header.tsx`** — `<header>` bekommt zusätzlich die
+  Klasse `header-band`. Titel/Unterzeile/Abstände unverändert.
+
+Der einzige verbliebene „Whisky-Tasting"-Treffer in `src/` ist ein
+**Kommentar** in `globals.css` (Doku-Referenz) — bewusst gelassen (keine
+projektweite Umbenennung, Spec-Grenze).
+
+### Checks (Frontend)
+- `npm test` → 108/108. `tsc` + `eslint` sauber. `npm run build` sauber.
+- `curl` gegen `next start`: `/login` enthält `brand-surface`, „Whizzky",
+  „Treffpunkt feiner Geister" — **nicht** mehr „Whisky-Tasting". Das
+  CSS-Bundle enthält `.brand-surface{…radial-gradient…}`, `feTurbulence`,
+  `.header-band{isolation:isolate;…}` und `@media print`.
+- Überschlägige Kontraste (formale Messung in `/qa`): „Whizzky"
+  (`text-primary` ≈ `#E6A433`) auf ~`#161310` ≈ 6,5:1; „Treffpunkt feiner
+  Geister" (`text-muted-foreground`) ≈ 5,5:1; `PageHeader`-Titel
+  (`text-foreground`) auf dem Band ≈ 15:1 — alle über WCAG AA.
+- Die faint Verläufe bewegen den effektiven Hintergrund praktisch nicht von
+  `#161310` weg.
 
 ## QA Test Results
 _To be added by /qa_

@@ -108,3 +108,51 @@
     font-size: max(16px, 1rem);
   }
 }
+
+/*
+ * PROJ-13 · Marken-Auftritt (Whizzky). Zwei rein dekorative Flächen, eine
+ * Rezeptur, ein Ort zum Feinjustieren der Alpha-Werte. Nur Dark (der einzige
+ * aktive Modus). Kein Bild — zwei weiche Bernstein-Radialverläufe + feines
+ * Rauschen als Inline-SVG über der Grundfläche #161310.
+ */
+@layer components {
+  .brand-surface {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(58% 44% at 18% 0%, hsl(var(--primary) / 0.07), transparent 72%),
+      radial-gradient(52% 40% at 100% 100%, hsl(var(--gold) / 0.055), transparent 72%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-position: center, center, 0 0;
+    background-size: auto, auto, 140px 140px;
+  }
+
+  /* Band hinter dem PageHeader: läuft nach unten weich in #161310 aus.
+     Blutet zu den Rändern von <main> (px-4 / pt-6). */
+  .header-band {
+    position: relative;
+    isolation: isolate;
+  }
+  .header-band::before {
+    content: "";
+    position: absolute;
+    left: -1rem;
+    right: -1rem;
+    top: -1.5rem;
+    height: 9rem;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(78% 100% at 14% 0%, hsl(var(--primary) / 0.06), transparent 76%),
+      linear-gradient(to bottom, hsl(var(--gold) / 0.035), transparent 88%);
+  }
+}
+
+/* Druck / Reader-Modus: nur Inhalt. */
+@media print {
+  .brand-surface,
+  .header-band::before {
+    display: none !important;
+    background: none !important;
+  }
+}

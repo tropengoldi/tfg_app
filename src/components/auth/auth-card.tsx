@@ -18,8 +18,9 @@ interface AuthCardProps {
 export function AuthCard({ title, description, children, footer }: AuthCardProps) {
   return (
     <div className="space-y-6">
-      <div className="space-y-1 text-center">
-        <p className="font-display text-lg text-primary">Whisky-Tasting</p>
+      <div className="space-y-0.5 text-center">
+        <p className="font-display text-3xl leading-none text-primary">Whizzky</p>
+        <p className="text-sm text-muted-foreground">Treffpunkt feiner Geister</p>
       </div>
       <Card>
         <CardHeader>
