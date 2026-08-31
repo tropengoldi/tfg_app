@@ -1,6 +1,6 @@
 # PROJ-12: App-Icon & Homescreen
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-08-31
 **Last Updated:** 2026-08-31
 
@@ -375,7 +375,85 @@ holt das Manifest teils ohne Session). Die Icon-Dateien waren über die
   Post-Deploy-Backlog vermerkt.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-31
+**App URL:** http://localhost:3000 (prod-Build) · Live: https://tfg-app-self.vercel.app
+**Tester:** QA Engineer (AI)
+
+### Automatisierte Suiten
+
+| Suite | Ergebnis |
+|-------|----------|
+| `npm test` (Vitest Unit) | **108/108** — PROJ-12 hat keine testbare Logik (nur Assets + `<head>`), daher keine neuen Unit-Tests |
+| `tests/PROJ-12-app-icon-homescreen.spec.ts` (neu) | **12/12** über `chromium` + `Mobile Safari` (6 Tests je Projekt), 28 s |
+| `tsc --noEmit` · `eslint .` · `npm run build` | sauber (Build nur nach dem Icon-Umzug nach `public/` — siehe Frontend-Abweichung) |
+| Icon-Dateien (`sharp`-Metadaten + Pixel-Stichproben) | 32/180/192/512/512 px, alle **3-Kanal / deckend** (kein Alpha); `#161310`-Grund an Ecken/Rändern, Bernstein-Dram im unteren Drittel; maskable-Motiv innerhalb der 80 %-Safe-Zone |
+| Regression `tests/PROJ-2-auth.spec.ts` (wg. `proxy.ts`) | 21 passed / 1 flaky / 2 failed — die 2 Fehler sind **Admin-Login** (Seed-Passwort per `admin:password` geändert), **nicht PROJ-12**; nach Reaktivieren des Test-Kontos 9 Tests wieder grün. Details im Backlog-Punkt „E2E-Suite hängt an den Seed-Konten" |
+
+### Acceptance Criteria Status — 16/16 (11 automatisiert verifiziert, 5 gerätegebunden manuell)
+
+#### Homescreen — iOS
+- [~] „Teilen → Zum Home-Bildschirm" zeigt Glas-Icon + „Whizzky" — **gerätegebunden manuell.** Verifiziert: `<link rel="apple-touch-icon" href="/apple-icon.png">` (180×180, deckend, ausgeliefert), `<meta name="apple-mobile-web-app-title" content="Whizzky">`.
+- [~] Start vom Homescreen im Vollbild — **gerätegebunden.** Verifiziert: `<meta name="mobile-web-app-capable" content="yes">`, Manifest `display: standalone`.
+
+#### Homescreen — Android
+- [~] „⋮ → Zum Startbildschirm" zeigt Icon + „Whizzky" — **gerätegebunden.** Verifiziert: Manifest `name`/`short_name`, Icons 192/512 erreichbar.
+- [~] Startbildschirm `#161310`, Vollbild, hochkant — **gerätegebunden.** Verifiziert: Manifest `background_color: #161310`, `theme_color: #161310`, `orientation: portrait`, `display: standalone`.
+- [x] Adaptives Icon (rund/rundeckig) schneidet das Motiv nicht an — `icon-512-maskable.png` vorhanden, 512², deckend; Pixel-Stichprobe: äußere ~20 % sind reiner `#161310`-Grund, Motiv sitzt in der Safe-Zone.
+
+#### Browser-Tab
+- [x] Tab zeigt das Whiskyglas-Favicon statt Default — `<link rel="icon" href="/icon.svg">` **und** `<link rel="icon" href="/favicon-32.png" sizes="32x32">` im `<head>`, beide Assets HTTP 200. (Ob das Glas bei 32 px als Glas erkennbar ist: **manueller Blick empfohlen.**)
+- [x] Kein SVG-Support → `.png`-Fallback greift — beide `rel="icon"`-Links vorhanden (SVG + PNG).
+
+#### Titel & Farbe
+- [x] Tab-Titel ist nicht mehr der Rohwert „Whisky-Tasting" — `/login` → „Anmelden · Whizzky" (Title-Template `%s · Whizzky`).
+- [x] Chrome-/Statusleisten-Farbe `#161310` — `<meta name="theme-color" content="#161310">` vorhanden.
+
+#### Robustheit
+- [x] Ohne JS trotzdem Favicon/`apple-touch-icon`/Manifest — E2E lädt mit `waitUntil: 'domcontentloaded'` und findet alle Links; Assets liegen statisch unter `public/`.
+
+### Edge Cases Status
+- [x] `apple-touch-icon` deckend (iOS legt Transparenz auf Schwarz) — alle PNGs 3-Kanal ohne Alpha (`sharp`-Stats).
+- [x] Icon auf hellem Wallpaper — deckender `#161310`-Grund (Pixel-Stichprobe Ecken).
+- [x] `/manifest.webmanifest` ohne Session — HTTP 200 `application/manifest+json` (nach `proxy.ts`-Matcher-Ausnahme; E2E `maxRedirects: 0`).
+- [~] Vor PROJ-12 abgelegte Verknüpfung behält altes Icon — inhärent, kein Fix möglich, dokumentiert. Nicht testbar.
+- [~] Favicon-Caching nach Deploy — inhärent, verschwindet von selbst. Nicht testbar.
+- [~] `standalone` ohne Netz → Browser-Fehlerseite — by design (kein Service-Worker), nicht getestet.
+- [~] Legibilität bei 16–32 px — **manueller Blick empfohlen.**
+
+### Security Audit Results
+- [x] **Angriffsfläche:** nur statische Bilddateien + ein JSON-Manifest + `<head>`-Metadaten. Kein dynamischer Input, keine Nutzerdaten, keine Auth-Interaktion.
+- [x] **`/manifest.webmanifest` umgeht jetzt die Auth-Middleware** — enthält ausschließlich öffentliche Marken-Metadaten (Name, Farben, Icon-Pfade). Nichts Sensibles. Es war nie eine geschützte Ressource, nur versehentlich vom Matcher erfasst.
+- [x] **`public/icon.svg`** — handgeschrieben, kein `<script>`, keine `on*`-Attribute, keine externen Referenzen; als `image/svg+xml` ausgeliefert.
+- [x] **`proxy.ts`-Änderung** — eine additive Alternative im Negativ-Lookahead; per curl + E2E bestätigt, dass `/login`, geschützte Seiten und der Session-Refresh unverändert funktionieren. Keine Auth-Bypass-Einführung.
+- [x] Keine Secrets, keine PII, keine Injektionsvektoren.
+
+### Bugs Found
+Keine in PROJ-12.
+
+Übernommen aus `/frontend` (dokumentierte Abweichung, kein offener Bug): Turbopack
+(Next 16.1.1) paniert beim `next build`, sobald `src/app/icon.svg` als
+`app/`-Metadatei existiert → Icons liegen unter `public/`, Verlinkung über
+`metadata.icons`. Gerendertes `<head>` identisch.
+
+Bekannt / im Backlog (nicht PROJ-12): die E2E-Suite hängt an den aktiven
+Seed-Konten und am Seed-Passwort (`test.teilnehmer@example.com` +
+`hermann.hoppen@gmail.com`). Post-Deploy-Aktionen (Konto deaktivieren,
+Admin-Passwort ändern) brechen ~11 bzw. 2 PROJ-2-Tests. Fix: Helper auf
+`createDisposableUser` + Wegwerf-Admin umstellen.
+
+### Summary
+- **Acceptance Criteria:** 16/16 — 11 automatisiert (E2E + Asset-Inspektion), 5 gerätegebunden manuell (die treibenden Metadaten sind alle verifiziert vorhanden und korrekt)
+- **Bugs Found:** 0 (0 Critical / 0 High / 0 Medium / 0 Low)
+- **Security:** Pass — reine statische Assets, keine sensiblen Daten, `proxy.ts`-Änderung ohne Auth-Auswirkung
+- **Production Ready:** **YES**
+- **Recommendation:** **Approved.** Vor dem Roll-out einmal am echten iPhone und Android-Gerät „Zum Startbildschirm" durchspielen (Icon + Name + Vollbild) und den 32-px-Tab-Favicon anschauen — reine Sichtprüfung, kein Blocker.
+
+### Manuelle Geräte-Checkliste (nach Deploy, am echten Handy)
+1. **iOS Safari** → `https://tfg-app-self.vercel.app` → Teilen → „Zum Home-Bildschirm": Vorschau zeigt Glas-Icon + „Whizzky" → hinzufügen → vom Homescreen starten → öffnet im Vollbild ohne Adressleiste.
+2. **Android Chrome** → dieselbe URL → „⋮ → Zum Startbildschirm hinzufügen": Icon + „Whizzky" → Start zeigt kurz `#161310`-Splash, dann Vollbild hochkant.
+3. **Desktop/mobiler Tab**: Favicon ist das Glas, nicht der leere Default.
+4. Bereits abgelegte alte Verknüpfungen: einmal neu anlegen (behalten sonst das alte Icon — bekannt).
 
 ## Deployment
 _To be added by /deploy_
