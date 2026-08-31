@@ -224,16 +224,19 @@ nicht nur in der Oberfläche.
 - **Performance / Browser:** wie der Rest der App (mobile-first, aktuelle
   Browser).
 
-## Open Questions
-
-- [ ] Genaue Fehlermeldungen für die Konsistenzprüfungen (Helfer = Gastgeber /
-      Helfer ist Teilnehmer) — Wortlaut in `/frontend`.
-- [ ] Ob der „Steuern"-Absprung in der `/tastings`-Zeile für den Helfer schon im
-      Draft-Zustand erscheint oder erst ab „läuft" — Vorschlag: ab „läuft", wie
-      beim Gastgeber (im Draft steuert man über das Admin-Formular bzw. es gibt
-      nichts zu tun). Für `/architecture`/`/frontend`.
-- [ ] Ob die Deaktivierungs-Sperre für zugeordnete Helfer denselben Fehlercode
-      wie beim Gastgeber nutzt (`TS013`) oder einen eigenen — für `/architecture`.
+- [x] ~~Fehlercode Helfer-Konsistenz~~ **Gelöst (`/architecture`): neuer Code
+      `TS017`** („helper_conflict") für „Helfer = Gastgeber / Helfer ist
+      Teilnehmer". Genauer Wortlaut in `/frontend`.
+- [x] ~~Deaktivierungs-Sperre für zugeordnete Helfer~~ **Gelöst:** derselbe Code
+      `TS013` wie beim Gastgeber, ergänzter Text („… Gastgeber **oder Helfer**
+      eines noch nicht abgeschlossenen Tastings").
+- [ ] „Steuern"-Absprung für den Helfer in der `/tastings`-Zeile: ab „läuft" (wie
+      beim Gastgeber) oder schon im Draft? Vorschlag „ab läuft" — final in
+      `/frontend`.
+- [ ] Braucht der Helfer eine eigene read-only Whisky-Übersicht, oder reicht die
+      **Namensliste in der Steuerungs-Ansicht** (die es schon gibt)? Vorschlag:
+      es reicht die Steuerung — kein Eingriff in `/tastings/[eventId]/whiskies`.
+      Final in `/frontend`.
 
 ## Decision Log
 
@@ -257,13 +260,183 @@ nicht nur in der Oberfläche.
 | **Verengung der Gastgeber-Sicht RLS-erzwungen**, nicht nur UI | Die Blindheit ist in dieser App immer die DB-Schicht | 2026-08-31 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| **Eine neue Spalte** `tasting_events.helper_id` (nullable, → `profiles`, `ON DELETE RESTRICT`), **keine neue Tabelle** | Genau einer oder keiner pro Event; `RESTRICT` wie bei `host_id` (die Deaktivierungs-Regel deckt den „offenes Event"-Fall ab) | 2026-08-31 |
+| **Eine tragende Helfer-Funktion** `is_event_helper(event)` (`security definer`, `stable`, `search_path=''`), analog `is_event_host` | Alle Policy- und RPC-Änderungen sind ein Ein-Zeiler damit | 2026-08-31 |
+| Dazu `event_has_helper(event)` (Helfer benannt?) und `can_run_host_control(event)` = `is_admin() OR is_event_helper() OR (is_event_host() AND NOT event_has_helper())` | Die „Gastgeber nur ohne Helfer"-Regel steht **an einer Stelle**; die fünf Steuerungs-RPCs + `rating_progress` rufen sie alle auf | 2026-08-31 |
+| **`wd_select` (Geheim-Details):** Gastgeber-Zweig auf „kein Helfer" einengen, Helfer-Zweig ergänzen — `own`- und `closed`-Zweig unangetastet | Die Verengung der Blindheit auf DB-Ebene; der Gastgeber-mit-Helfer sieht die Details auch per Direkt-API nicht | 2026-08-31 |
+| **`whiskies_select` / `events_select` / `participants_select`:** je `OR is_event_helper(...)` ergänzen | Der Helfer ist kein Teilnehmer, braucht aber Positionen, die Event-Zeile und die Teilnehmerliste. Der Nicht-Teilnehmer-ohne-Rolle sieht weiterhin nichts → die PROJ-8-„Blindheit für Außenstehende" bleibt RLS-erzwungen | 2026-08-31 |
+| **`ratings_select`: keine Änderung** | Der Helfer sieht nie Bewertungszeilen; er bekommt nur Zähler über `rating_progress` | 2026-08-31 |
+| **`create_event` / `update_event`:** neuer Parameter `p_helper_id` (default null); prüft „aktives Mitglied ∧ ≠ Gastgeber ∧ ∉ Teilnehmerliste"; Änderung nur im `draft` | Zuordnung wie Gastgeber/Teilnehmer heute; Konsistenz serverseitig erzwungen | 2026-08-31 |
+| **`set_event_participants`:** lehnt ab, wenn der aktuelle `helper_id` in der neuen Liste steht (`TS017`) | Verhindert „verkostet und hilft" auch über den zweiten Eingabepfad | 2026-08-31 |
+| **Fünf Steuerungs-RPCs** (`set_whisky_order`, `start_event`, `close_round`, `close_event`, `update_event_host_fields`) **+ `rating_progress`:** Guard `is_admin() OR is_event_host()` → `can_run_host_control()` | Zentrale Stelle; der Gastgeber-mit-Helfer kann keine Steuerungs-Aktion mehr auslösen | 2026-08-31 |
+| **`deactivate_member`:** die bestehende „Gastgeber eines offenen Events"-Sperre (`TS013`) um „… oder Helfer" erweitern | Verhindert einen führerlosen Abend; ein Fehlercode weniger | 2026-08-31 |
+| **`admin_list_events`** um `helper_id` + `helper_name` erweitern; **`past_tastings`**-View um `helper_id` + Helfer-Name | Admin-Liste/Detail und der Ergebnis-Kopf („Helfer: {Name}") | 2026-08-31 |
+| Neuer Fehlercode **`TS017`** („helper_conflict") in `errors.ts` | Bessere Meldung als das generische `TS004` | 2026-08-31 |
+| **Frontend-Guard `canAccessHostArea`** (rein, unit-getestet) bekommt `event.helper_id`: `isAdmin ∨ helper_id === userId ∨ (isEventHost ∧ !helper_id)` | Eine Änderung deckt `requireHost` (`auth.ts`) **und** `requireHostOr` (`actions/host-control.ts`) ab | 2026-08-31 |
+| **`getDashboard`** gibt zusätzlich `isHelper` zurück; das aktive Event wird auch dann geliefert, wenn `isHelper` (die geweitete `events_select`-Policy trägt das ohnehin) | Der Helfer sieht das Dashboard + „Steuern", nicht „Jetzt bewerten" | 2026-08-31 |
+| **`getMyTastings`** liest zusätzlich Events mit `helper_id = userId` und mischt sie ein; `MyTastingRow` bekommt `is_helper`; die Zeile zeigt „Steuern" für den Helfer und **nicht** für den Gastgeber-mit-Helfer | Sonst fände der Helfer „seinen" Abend nicht unter `/tastings` | 2026-08-31 |
+| **Kein Eingriff** in `/tastings/[eventId]/whiskies` und `/bewerten`: `getWhiskyEntryData` / `getRatingViewData` prüfen Teilnahme → der Helfer bekommt „nicht gefunden" (gewollt). Seine Whisky-Sicht läuft über die **Namensliste in der Steuerung** | Kein neuer Screen, kein Doppel-Pfad | 2026-08-31 |
+| **Kein Eingriff** in `whisky_rankings` und `getPersonalBalance` (PROJ-10) | Der Helfer bringt nichts mit, bewertet nicht, ist kein Teilnehmer → er erscheint dort ohnehin nicht | 2026-08-31 |
+| **Realtime:** keine spezifische Änderung — der Helfer empfängt die `tasting_events` / `whiskies`-Ereignisse, weil `events_select` / `whiskies_select` ihn jetzt einschließen | Der PROJ-8-Hook wird auf Dashboard + Steuerung genutzt, beide sieht der Helfer jetzt | 2026-08-31 |
+| **Eine Migration**, danach `npm run db:types`; die RLS-Integrationstests bekommen Helfer-Fälle | Alle Änderungen sind mechanisch und hängen zusammen | 2026-08-31 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+
+PROJ-11 dreht sich um **eine Frage**, an vielen Stellen dieselbe: „Gibt es für
+dieses Event einen Helfer?" Ist einer benannt, verschiebt sich das
+Gastgeber-Recht (geheime Details sehen, Ablauf steuern, Fortschrittszähler) auf
+den Helfer; der Gastgeber ist dann nur Teilnehmer.
+
+Der Bau ist entsprechend: **eine neue Spalte**, **eine tragende Helfer-Funktion**,
+und dann überall dort, wo heute „Gastgeber" geprüft wird, dieselbe kleine
+Regeländerung — **auf DB-Ebene erzwungen**, nicht nur in der Oberfläche.
+
+Es gibt Backend (Migration) **und** Frontend (Formular, Guards, Dashboard,
+Ergebnis-Kopf). Keine neue Seite, keine neue Abhängigkeit.
+
+### A) Datenmodell
+
+```
+tasting_events
+  + helper_id  uuid  NULL  → profiles(id)  ON DELETE RESTRICT
+      NULL      = kein Helfer, alles wie heute
+      gesetzt   = diese Person steuert, der Gastgeber verkostet blind mit
+```
+
+Regeln (RPC-erzwungen): `helper_id` ist ein **aktives Mitglied**, **≠ host_id**,
+**∉ Teilnehmerliste** des Events; änderbar nur solange `status = 'draft'`.
+
+Keine neue Tabelle (genau einer oder keiner). `ON DELETE RESTRICT` wie bei
+`host_id`.
+
+### B) Die tragende Logik (drei kleine DB-Funktionen)
+
+| Funktion | liefert |
+|---|---|
+| `is_event_helper(event)` | Ist der Aufrufer der Helfer dieses Events? (analog `is_event_host`) |
+| `event_has_helper(event)` | Ist überhaupt ein Helfer benannt? |
+| `can_run_host_control(event)` | `Admin` **oder** `Helfer` **oder** (`Gastgeber` **und kein** Helfer) |
+
+`can_run_host_control` ist die **eine Stelle**, an der die „Gastgeber nur ohne
+Helfer"-Regel für den Ablauf lebt.
+
+### C) Was sich ändert (Karte)
+
+**Backend — eine Migration:**
+
+```
+Sichtbarkeit (RLS)
+├─ whisky_details  · Gastgeber-Zweig auf „kein Helfer" einengen + Helfer-Zweig
+│                    ergänzen   (own / closed bleiben)
+├─ whiskies        · + Helfer   (Positionen)
+├─ tasting_events  · + Helfer   (Event-Zeile)
+└─ event_participants · + Helfer (Teilnehmerliste)
+   ratings         · UNVERÄNDERT — der Helfer sieht nie Punkte
+
+Ablauf-Steuerung (RPCs)
+├─ set_whisky_order / start_event / close_round / close_event /
+│  update_event_host_fields / rating_progress
+│      Guard  „Admin ∨ Gastgeber"  →  can_run_host_control()
+├─ create_event / update_event      + Parameter p_helper_id (+ Konsistenzprüfung,
+│                                     nur im draft)              → TS017
+├─ set_event_participants            lehnt den aktuellen Helfer in der Liste ab → TS017
+├─ deactivate_member                „Gastgeber eines offenen Events"  →  „… oder Helfer"  (TS013)
+└─ admin_list_events                 + helper_id, helper_name
+
+Ergebnis-View
+└─ past_tastings   + helper_id + Helfer-Name
+
+Fehlercodes
+└─ errors.ts       + TS017 „Helfer und Teilnehmer/Gastgeber schließen sich aus."
+```
+
+**Frontend:**
+
+```
+Rollen-Prädikat (rein, unit-getestet)
+└─ auth-rules.ts · canAccessHostArea(user, profile, event{host_id, helper_id})
+     = isAdmin ∨ helper_id === user ∨ (isEventHost ∧ !helper_id)
+   → deckt requireHost (auth.ts) UND requireHostOr (actions/host-control.ts) ab
+
+Admin – Event-Formular
+├─ schemas/admin-events.ts · + helperId (optional), refine: ≠ hostId, ∉ participantIds
+├─ event-form.tsx · neues Feld „Helfer (optional)"; Optionen schließen
+│                   Gastgeber + Teilnehmer aus (weiche Führung)
+├─ actions/admin-events.ts · p_helper_id an create/update; TS017 → Meldung
+└─ admin/events/[eventId] + event-list/-row · „Helfer: {Name}" anzeigen
+
+Dashboard
+└─ queries/dashboard.ts · + isHelper; DashboardView: „Steuern" für Helfer/Admin/
+   Gastgeber-ohne-Helfer, „Jetzt bewerten" nur für Teilnehmer (Helfer fällt raus)
+
+Tastings-Liste
+└─ queries/tastings.ts · getMyTastings mischt Events mit helper_id = user ein;
+   MyTastingRow + is_helper; tasting-row.tsx zeigt „Steuern" für den Helfer,
+   nicht für den Gastgeber-mit-Helfer
+
+Ergebnisseite
+└─ queries/results.ts + results-header.tsx · Zeile „Helfer: {Name}" (falls gesetzt)
+
+Unverändert
+├─ /tastings/[eventId]/whiskies + /bewerten · Teilnahme-Check → Helfer bekommt
+│    „nicht gefunden" (gewollt); seine Whisky-Sicht = Namensliste in der Steuerung
+├─ whisky_rankings / getPersonalBalance (PROJ-10) · Helfer taucht dort nie auf
+└─ Realtime · Helfer empfängt die Ereignisse automatisch (RLS jetzt geweitet)
+```
+
+### D) „Datenmodell" — was gespeichert wird
+
+Nur die eine Spalte `helper_id`. Alles andere leitet sich daraus ab (die drei
+Funktionen). Kein Rollenwert in `profiles`, keine Verlaufstabelle.
+
+### E) Backend-Bedarf
+
+**Ja — eine Migration** (Spalte + drei Funktionen + die o. g. Policy-/RPC-/
+View-Änderungen + `TS017`), danach `npm run db:types`. Die
+RLS-Integrationstests bekommen Helfer-Fälle (Helfer sieht Details & steuert;
+Gastgeber-mit-Helfer sieht sie nicht & kann nicht steuern; Außenstehender
+weiterhin nichts; Deaktivierungs-Sperre).
+
+### F) Neue Pakete
+
+Keine.
+
+### G) Auswirkungen auf Bestehendes
+
+- **PROJ-6 (Steuerung):** Zugriff und RPC-Guards weiten sich um den Helfer und
+  verengen sich für den Gastgeber-mit-Helfer. Die Ansicht selbst bleibt.
+- **PROJ-4 (Event-Formular):** ein neues optionales Feld + eine Konsistenzregel.
+- **PROJ-5 (Whisky-Details):** die `wd_select`-Verengung. `add_whisky` /
+  `wd_update_own` unverändert (der Helfer schreibt nichts).
+- **PROJ-8 (Dashboard):** `isHelper` + Absprung-Logik. Die „Außenstehende sehen
+  nichts"-Garantie bleibt (RLS).
+- **PROJ-9 (Ergebnis):** „Helfer: {Name}" im Kopf; Rangliste unberührt.
+- **PROJ-3 (Deaktivierung):** die `TS013`-Sperre deckt jetzt auch Helfer ab.
+- **PROJ-10 (Bilanz):** nichts zu tun — Helfer ist kein Teilnehmer.
+- **Generierte Typen:** `helper_id` kommt via `db:types` in `types.ts`.
+
+### H) Sicherheits-Betrachtung
+
+- Die **Blindheit bleibt RLS-erzwungen**: der Gastgeber-mit-Helfer bekommt die
+  geheimen Details auch über die Direkt-API nicht; die Steuerungs-RPCs weisen
+  ihn ab (`can_run_host_control`). Nur der Helfer (bzw. Admin) kommt durch.
+- Ein **Außenstehender** (weder Teilnehmer noch Helfer noch Admin) sieht das
+  Event weiterhin gar nicht — die drei `OR is_event_helper`-Ergänzungen öffnen
+  nichts für andere.
+- Der Helfer sieht **nie** Bewertungszeilen (kein `ratings_select`-Zweig), nur
+  Zähler.
+- `helper_id`-Konsistenz (≠ Gastgeber, ∉ Teilnehmer) ist **serverseitig**
+  erzwungen (`TS017`), an beiden Eingabepfaden (Event-RPCs **und**
+  `set_event_participants`).
+- Ein zugeordneter Helfer eines nicht abgeschlossenen Events kann nicht
+  deaktiviert werden (`TS013`) — kein führerloser Abend.
 
 ## QA Test Results
 _To be added by /qa_
