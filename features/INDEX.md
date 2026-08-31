@@ -62,10 +62,25 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       für `whisky_rankings` / `past_tastings` / `whisky_score_breakdown` ist
       gewollt (PROJ-9).
 - [ ] **Alten Supabase Personal Access Token widerrufen** (steckte in `.mcp.json`)
-- [ ] **Test-Konto `test.teilnehmer@example.com` deaktivieren** (Admin →
-      Teilnehmer) — vor der ersten echten Runde
+- [x] **Test-Konto `test.teilnehmer@example.com`** ist deaktiviert (`is_active =
+      false`). Es hat noch einen Fußabdruck (1 Event als Gastgeber, 5 Whiskys, 4
+      Bewertungen — E2E-/Seed-Reste); bei Bedarf mit
+      `npm run user:delete` + `MODE=cascade CONFIRM=yes` ganz entfernen.
 - [ ] **E2E-Specs in CI sharden / `--workers=1`** (BUG-2) plus der projektweite
       transiente Hydration-Doppelrender
+
+### Wartungsskripte (Service-Role, kein UI)
+
+- `npm run tasting:delete` — Event komplett löschen (`EVENT_ID=…`,
+  `CONFIRM=yes`). Trockenlauf ohne `CONFIRM`. Whiskys/Details/Bewertungen/
+  Teilnahme gehen per CASCADE mit.
+- `npm run user:delete` — Nutzer verwalten (`EMAIL=…`, `MODE=report|soft|
+  reactivate|hard|cascade`, `CONFIRM=yes` für alles Destruktive). `report` zeigt
+  den Fußabdruck; `soft` = `is_active=false` (versteckt, Historie bleibt);
+  `hard` nur ohne geschützte Verweise; `cascade` löscht auch die Historie und
+  ist für Admin-/`created_by`-Konten gesperrt.
+- Details in den Datei-Köpfen von `scripts/delete-tasting.mjs` /
+  `scripts/delete-user.mjs`.
 
 ---
 
