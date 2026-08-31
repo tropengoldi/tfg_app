@@ -43,9 +43,19 @@ DB-Änderung. PROJ-11 (Neutraler Helfer) folgt danach.
 Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
 `/write-spec` nötig — Konfiguration bzw. kleine Chores.
 
-- [ ] **Custom SMTP** einrichten (Supabase → Auth → Emails → SMTP Settings) —
-      der eingebaute Mailer ist hart rate-limitiert; „Einladung" und „Passwort
-      vergessen" sind bis dahin nur eingeschränkt nutzbar. *(in Arbeit)*
+- [x] **Custom SMTP** — Gmail-SMTP in Supabase eingerichtet, Mailversand läuft.
+- [x] **Passwort-Reset / Einladung repariert** — die E-Mail-Vorlagen „Reset
+      Password" und „Invite user" bauen den Link jetzt aus
+      `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=…&next=/passwort-setzen`
+      statt aus `{{ .ConfirmationURL }}`. Damit entfällt die Abhängigkeit von der
+      `redirect_to`-Allowlist **und** vom PKCE-`code_verifier`-Cookie; es ist der
+      Pfad, den `src/app/auth/confirm/route.ts` + die PROJ-2-E2E-Tests abdecken.
+      Voraussetzung: Supabase **Site URL** = `https://tfg-app-self.vercel.app`
+      (ohne Slash). Siehe [[auth-email-tokenhash-template-fix]].
+- [ ] **`siteUrl()` aus Request-Headern ableiten** statt aus
+      `NEXT_PUBLIC_SITE_URL` (`src/lib/actions/auth.ts` + `admin.ts`) — kleiner
+      `/refine PROJ-2`-Nachzug, damit eine falsch gesetzte Env-Var diese Links
+      nicht mehr brechen kann.
 - [ ] **Sentry / Error-Tracking** — siehe `docs/production/error-tracking.md`
 - [ ] **Supabase Advisors** (Security + Performance) im Dashboard prüfen;
       Leaked-Password-Protection einschalten. Die „Security Definer View"-Warnung
