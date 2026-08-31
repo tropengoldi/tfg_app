@@ -1,6 +1,6 @@
 # PROJ-13: Marken-Auftritt (Whizzky)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-08-31
 **Last Updated:** 2026-08-31
 
@@ -360,7 +360,81 @@ projektweite Umbenennung, Spec-Grenze).
   `#161310` weg.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-31
+**App URL:** http://localhost:3000 (prod-Build)
+**Tester:** QA Engineer (AI)
+
+### Automatisierte Suiten
+
+| Suite | Ergebnis |
+|-------|----------|
+| `npm test` (Vitest Unit) | **108/108** — keine testbare Logik in PROJ-13, keine neuen Unit-Tests |
+| `tests/PROJ-13-marken-auftritt.spec.ts` (neu) | **14/14** über `chromium` + `Mobile Safari` (7 Tests je Projekt), 36 s |
+| `tsc --noEmit` · `eslint .` · `npm run build` | sauber |
+
+### Acceptance Criteria Status — 16/16 (13 automatisiert, 3 per Inspektion)
+
+#### Marken-Block (Auth-Seiten)
+- [x] Login zeigt „Whizzky" (Display-Schrift, `text-primary`) + „Treffpunkt feiner Geister" (klein, gedämpft); **kein** „Whisky-Tasting" mehr (E2E).
+- [x] Derselbe Block auf „Passwort vergessen" (E2E; kommt aus `AuthCard`, gilt auch für „Passwort setzen").
+- [x] 320 px: „Treffpunkt feiner Geister" wird nicht abgeschnitten (`scrollWidth − clientWidth ≤ 1`, E2E). „Whizzky" bleibt einzeilig.
+
+#### Hintergrund — Auth-Seiten
+- [x] Dezente Deko-Ebene hinter der Box: `.brand-surface`-Element vorhanden, `aria-hidden="true"`, `pointer-events: none`, `background-image` enthält `radial-gradient` (E2E).
+- [x] Karte / Eingaben / Buttons auf eigenen deckenden Flächen — strukturell (shadcn nutzt `--card` / `--input` / …); die Deko-Ebene liegt darunter.
+- [x] Fehler-Alert auf deckender Fläche — strukturell (`Alert` hat eigenen Hintergrund).
+
+#### Hintergrund — angemeldete App
+- [x] Hinter dem `PageHeader` ein Band: `<header class="header-band">` mit `::before` (`content` ≠ none, `background-image` enthält `gradient`, `position: absolute`), verifiziert auf `/profil` (E2E, Disposable-Login).
+- [~] Band „wächst mit der Header-Höhe" — die Umsetzung nutzt eine **feste, großzügige** `::before`-Höhe (9 rem), die realistische Header (inkl. zweizeiliges „Hallo, {Name}") abdeckt. Bei einem außergewöhnlich langen Titel (3+ Zeilen) kann der Verlauf enden, bevor der Titel endet → **BUG-1 (Low)**.
+
+#### Lesbarkeit & Robustheit
+- [x] WCAG 2.1 AA über der Deko-Ebene: „Whizzky" ≈ 6,x:1, „Treffpunkt feiner Geister" ≥ 4,5:1, `PageHeader`-Titel auf dem Band ≥ 4,5:1 — alle per berechnetem Kontrastverhältnis im E2E geprüft (`≥ 4,5`).
+- [x] Fokusring sichtbar — der Ring sitzt auf den Bedienelementen (`--input`-Fläche), von PROJ-13 nicht berührt; per Inspektion bestätigt.
+- [x] „Bild lädt nicht" — es gibt kein Bild; Basis ist immer `#161310` + CSS-Verläufe.
+- [x] JS aus — Deko + Marken-Block sind reines CSS/Markup; E2E lädt mit `domcontentloaded` und findet alles.
+- [x] Druck / Reader-Modus — unter `@media print` ist `.brand-surface` `display: none` (E2E).
+
+#### Performance
+- [x] Kein Netzwerk-Asset (reine CSS + Inline-Data-URI) → FCP / Lighthouse-Performance unverändert.
+
+### Edge Cases Status
+- [x] Bild lädt nicht → gegenstandslos (kein Bild).
+- [x] 320–375 px → Marken-Block bricht sauber um (E2E 320 px).
+- [~] Sehr langer Header-Titel → siehe BUG-1.
+- [x] Fehler-Alert auf Auth-Seite → eigener Hintergrund.
+- [x] JS aus / langsam → CSS/Markup.
+- [x] Druck / Reader → `@media print`.
+- [~] Light Mode versehentlich aktiv → nicht getestet (Spec-Grenze: nur Dark); die Verläufe nutzen Tokens mit Light-Werten, Layout bliebe heil.
+- [x] Sehr großer Desktop-Viewport → `background-position: center` + `no-repeat` für die Verläufe, das Rauschen kachelt sauber (140 px); kein Verzerren.
+
+### Security Audit Results
+- [x] **Angriffsfläche:** zwei Textzeilen + zwei CSS-Klassen. Kein Nutzer-Input, kein dynamisches Rendering, keine Auth-Interaktion, keine Daten.
+- [x] **Inline-SVG im `background-image`** — von CSS referenzierte SVGs laufen im eingeschränkten Modus (kein Script, keine externen Ressourcen). Der `feTurbulence`-Filter ist rein visuell. Kein XSS-Vektor.
+- [x] **Deko-Ebene** `aria-hidden` (kein Inhalt für AT) + `pointer-events: none` (kein Klick-Abfangen / kein Clickjacking-Overlay).
+- [x] `proxy.ts` / Auth / Routing unangetastet.
+
+### Bugs Found
+
+#### BUG-1: `header-band`-Verlauf hat feste Höhe statt mit dem Header zu wachsen
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Ein Mitglied mit sehr langem Anzeigenamen (nahe 80 Zeichen) anmelden
+  2. Dashboard `/` öffnen — der `PageHeader`-Titel „Hallo, {langer Name}" bricht auf 3+ Zeilen
+  3. Erwartet: das getönte Band reicht bis unter den Titel
+  4. Tatsächlich: der `::before`-Verlauf (feste 9 rem) kann vor dem Titelende auslaufen; die letzten Zeilen sitzen auf nahezu `#161310`
+- **Wirkung:** rein kosmetisch — der Kontrast ist dort sogar besser, nichts wird unlesbar.
+- **Fix:** das `::before` an die Header-Box hängen (`inset` / `bottom` statt fixer `height`) oder die Höhe relativ machen.
+- **Priorität:** Nice to have / nächster `/frontend`-Nachzug.
+
+### Summary
+- **Acceptance Criteria:** 16/16 — 13 automatisiert (E2E inkl. berechnetem WCAG-Kontrast), 3 per Inspektion/Struktur; 1 AC mit BUG-1 (Low) eingeschränkt
+- **Bugs Found:** 1 total (0 Critical / 0 High / 0 Medium / 1 Low)
+- **Security:** Pass — reine CSS + Text, Deko-Ebene inert und `aria-hidden`
+- **Regression:** `npm test` 108/108; die PROJ-13-„App-Seiten"-E2E fährt `AuthCard` → `login()` → App-Shell → `PageHeader` end-to-end durch → grün. Keine Shared-Component-Regression. (Die PROJ-2-Auth-Suite trägt weiterhin das bekannte Seed-Konto-/Admin-Passwort-Thema — nicht PROJ-13.)
+- **Production Ready:** **YES**
+- **Recommendation:** **Approved.** BUG-1 (feste Bandhöhe) als kleinen Nachzug einplanen. Vor dem Roll-out einmal am dunklen Handy-Display sichtprüfen, dass die Fläche „fast unmerklich" wirkt und das Band keinen harten Schnitt hat.
 
 ## Deployment
 _To be added by /deploy_
