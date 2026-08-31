@@ -552,7 +552,100 @@ der echten Generierung — inhaltlich identisch. Danach `npm run test:rls`
 ist → `/qa`.**
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-08-31
+**App URL:** http://localhost:3000 (Prod-Build) · Supabase `tfg_app` (Migration
+`20260831120000_helper_role.sql` angewandt, `db:types` neu generiert)
+**Tester:** QA Engineer (AI)
+
+### Automatisierte Suiten
+
+| Suite | Ergebnis |
+|-------|----------|
+| `npm test` (Unit) | **112 / 112** grün — inkl. `auth-rules.test.ts` (`canAccessHostArea` mit `helper_id`, `isEventHelper`) |
+| `npm run test:rls` (Integration gegen die echte DB) | **101 / 101** grün — inkl. neuer `helper-role.integration.test.ts` (**11 / 11**) |
+| `npx tsc --noEmit` · `npm run lint` · `npm run build` | sauber |
+| `npm run test:e2e` → `PROJ-11-neutraler-helfer.spec.ts` | **4 / 5** — 1 Fehler = BUG-1 (siehe unten) |
+
+Die Integrationssuite ist die **tragende Prüfung** dieses Features (RLS-erzwungene
+Blindheit). Die 6 bestehenden Integrationsdateien (PROJ-4/5/6/8/9) bleiben grün →
+`can_run_host_control()` und die `wd_select`-Änderung sind regressionsfrei.
+
+### Acceptance Criteria Status
+
+#### Helfer benennen (Admin, Event-Formular)
+- [x] **AC1** Feld „Helfer (optional)", aktive Person wählbar, leer = kein Helfer — E2E ✓
+- [x] **AC2** Gastgeber/Teilnehmer im Helfer-Feld nicht wählbar (und umgekehrt) — E2E ✓ (Gastgeber-Ausschluss); Teilnehmer-Ausschluss über `excludeIds` + `helperOptions`-Filter, unit-nah geprüft
+- [x] **AC3** Helfer = Gastgeber / Helfer ∈ Teilnehmerliste → abgelehnt, nichts gespeichert — `test:rls`: `TS017` an `create_event`, `update_event`, `set_event_participants`
+- [x] **AC4** Helfer gesetzt (Draft) → „Helfer: {Name}" in der Admin-Liste — E2E ✓
+- [x] **AC5** Event nicht mehr Draft → Helfer-Zuordnung nicht änderbar — Edit-Seite leitet Nicht-Draft auf `/admin/events` um; `update_event` → `TS005`
+- [x] **AC6** Helfer im Draft entfernen → verhält sich wieder wie „ohne Helfer" — `test:rls` „Helfer entfernen: der Gastgeber bekommt Steuerung + Detail-Einblick zurück"
+
+#### Sicht & Rechte des Helfers
+- [~] **AC7** Helfer sieht Dashboard + Absprung „Steuern", nicht „Jetzt bewerten" — Dashboard-Absprung „Steuern" korrekt (`canControl = isHelper || …`), „Jetzt bewerten" ausgeblendet. **`/tastings`-Zeile zeigt keinen beschrifteten „Steuern"-Link → BUG-1.**
+- [x] **AC8** Helfer sieht in der Vorbereitung alle Whiskys mit Details — über die **Namensliste in der Steuern-Ansicht** (`/tastings/[eventId]/gastgeber`), erreichbar für den Helfer; `wd_select`-Helfer-Zweig getestet (`test:rls`: „der Helfer sieht alle whisky_details"). Dokumentierte Abweichung: kein Eingriff in `/tastings/[eventId]/whiskies` (Architektur-Entscheidung).
+- [x] **AC9** Helfer steuert wie der Gastgeber ohne Helfer — `test:rls` „der Helfer darf steuern": `set_whisky_order`, `start_event`, `close_round`, `close_event`, `update_event_host_fields` alle ✓; E2E: Helfer öffnet `/gastgeber`, sieht Whisky-Namen (blockiert von BUG-1, aber Seite selbst über direkte URL geprüft)
+- [x] **AC10** Fortschritt als Zähler, ohne Punkte/Namen — `rating_progress` → `can_run_host_control`, gibt nur `whisky_position/rating_count/participant_count`
+- [x] **AC11** Bewertungsansicht für den Helfer nicht bewertbar — `getRatingViewData` prüft Teilnahme → „nicht gefunden"; `ratings_insert_own` scheitert (kein `can_rate_whisky`)
+- [x] **AC12** Ergebnisseite: volle Rangliste wie jedes aktive Mitglied — `whisky_rankings`/`past_tastings` filtern `is_active_member()`
+
+#### Verengung für den Gastgeber (RLS-erzwungen)
+- [x] **AC13** Gastgeber-mit-Helfer bekommt die Whisky-Details nicht (auch per API) — `test:rls`: Host sieht nur `['Host-Dram']` (den eigenen, wie jeder Teilnehmer), nicht die fremden; nach Abschluss alle
+- [x] **AC14** Gastgeber-mit-Helfer ruft `/tastings/[eventId]/gastgeber` → „nicht gefunden" — E2E ✓; Unit `auth-rules.test.ts`
+- [x] **AC15** Gastgeber-mit-Helfer löst Steuerungs-Aktion per API aus → abgelehnt — `test:rls`: `TS004` für `set_whisky_order`/`start_event`/`rating_progress`/`update_event_host_fields`
+- [x] **AC16** Gastgeber-mit-Helfer: kein „Steuern"-Absprung, aber „Jetzt bewerten"/„Meine Whiskys" — E2E ✓ (Zeile ohne „Steuern"; Bewerten/Whiskys sichtbar)
+- [x] **AC17** Gastgeber-mit-Helfer bewertet seinen eigenen Whisky wie jeder Teilnehmer — Host bleibt in `event_participants`; `can_rate_whisky` ok
+- [x] **AC18** Ohne Helfer: alles exakt wie vor PROJ-11 — 101 Integrationstests grün, `can_run_host_control` fällt auf den Gastgeber-Zweig zurück
+
+#### Admin & Blindheit
+- [x] **AC19** Admin sieht Steuerung + Details trotz Helfer (God-Mode) — erste Bedingung in `can_run_host_control` / `wd_select` / `canAccessHostArea`
+- [x] **AC20** Niemand außer Helfer sieht vor Abschluss Namen/fremde Bewertungen — `wd_select` (nur admin/helper/eigener/closed), `ratings_select` unverändert (nur eigene/admin); `test:rls`: Außenstehender 0 Zeilen
+
+#### Ergebnis & Historie
+- [x] **AC21** Ergebnis-Kopf „Helfer: {Name}" neben „Gastgeber: {Name}"; Helfer nicht in „Wer war dabei" / Rangliste — E2E ✓
+- [x] **AC22** Helfer-Rolle zählt nicht als Tasting in der Bilanz (PROJ-10) — `getPersonalBalance` liest `event_participants`/`whisky_details`/`whisky_rankings`; der Helfer steht in keiner davon
+
+### Edge Cases Status
+- [x] Helfer im Draft entfernen → Steuerung + Details zurück beim Gastgeber (`test:rls`)
+- [x] Helfer im Draft wechseln → alter verliert, neuer bekommt Zugriff (`is_event_helper` re-evaluiert)
+- [x] Zugeordneten Helfer deaktivieren → `TS013` (`test:rls`: „deactivate_member lehnt den Helfer eines offenen Events ab")
+- [x] Helfer offline im laufenden Event → Admin kann immer steuern (`is_admin()` in `can_run_host_control`)
+- [x] Event mit Helfer ohne Whiskys → „starten" scheitert (`TS008`), leerer Zustand wie beim Gastgeber
+- [x] Person ist Admin **und** Helfer → beide Zweige true, kein Fehler
+- [x] Gastgeber im Draft gewechselt, Helfer gesetzt → `p_helper_id = p_host_id` → `TS017`; neuer Gastgeber wird Teilnehmer
+- [x] Helfer versucht Whisky einzutragen → `add_whisky` → `TS004` (kein Teilnehmer); `/whiskies` → „nicht gefunden"
+- [x] Zwei Events gleichzeitig → nur eins aktiv (unverändert); Helfer darf bei mehreren Drafts benannt sein
+
+### Security Audit Results
+- [x] **Authorization / Blindheit RLS-erzwungen:** Gastgeber-mit-Helfer bekommt die geheimen `whisky_details` weder über die UI noch per Direkt-API (`test:rls` bestätigt); die 6 Steuerungs-RPCs weisen ihn ab (`can_run_host_control`)
+- [x] **Kein neuer Angriffsvektor für Außenstehende:** die drei `OR is_event_helper(...)`-Ergänzungen greifen nur für den benannten Helfer; ein Nicht-Mitglied sieht Event-Zeile/Positionen/Details weiterhin nicht (`test:rls`)
+- [x] **Bewertungen:** `ratings_select` unverändert → der Helfer sieht nie Punkte oder fremde Notizen, nur Zähler
+- [x] **Rollen-Eskalation:** `create_event`/`update_event` prüfen `is_admin()` zuerst → ein Gastgeber kann den Helfer nicht selbst entfernen
+- [x] **Input-Validierung:** `helper_id` Zod-`uuid()` im Client, `uuid`-Parameter serverseitig; Konsistenz (≠ Gastgeber, ∉ Teilnehmer) an beiden Eingabepfaden erzwungen
+- [x] **Realtime:** Publication unverändert (`tasting_events` + `whiskies`, keine Geheimnisse); der Helfer empfängt nur Position/Status
+- [x] **FK `helper_id` `ON DELETE RESTRICT`** wie `host_id` → keine stille Historien-Umschreibung
+
+### Bugs Found
+
+#### BUG-1: `/tastings`-Zeile zeigt dem Helfer keinen beschrifteten „Steuern"-Link
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Als Admin ein (laufendes) Event mit einem Helfer anlegen.
+  2. Als **Helfer** anmelden, `/tastings` öffnen.
+  3. Erwartet: die Event-Zeile trägt — wie beim Gastgeber ohne Helfer — einen sichtbaren Sekundär-Link **„Steuern"** (AC7 „Absprung Steuern"; so auch in den Frontend-Implementation-Notes festgehalten: „in der `/tastings`-Zeile nach genau derselben Regel wie beim Gastgeber — `isHelper || (isHost && !helper_id)`").
+  4. Tatsächlich: kein „Steuern"-Link. `src/components/tasting/tasting-row.tsx` pusht die Sekundäraktion nur bei `hostControls = row.is_host && !row.has_helper`; für den Helfer (`is_helper`) ist das `false`. Die Zeile verlinkt zwar im Rumpf auf `/gastgeber` (`primaryHref`), aber ohne erkennbare Beschriftung.
+- **Auswirkung:** Der Helfer erreicht die Steuerung weiterhin — über den Zeilen-Rumpf **und** über den (korrekt funktionierenden) „Steuern"-Absprung auf dem Dashboard. Es fehlt nur die beschriftete Affordance in der Liste; Discoverability leidet, und die Implementierung widerspricht ihren eigenen Notes/AC7.
+- **Fix-Vorschlag:** In `tasting-row.tsx` die „Steuern"-Sekundäraktion bei `row.is_helper || (row.is_host && !row.has_helper)` rendern; `primaryHref` für den Helfer weiterhin `/gastgeber` (die Redundanz „Rumpf + Button" entspricht dem Gastgeber-Fall).
+- **Regressions-Guard:** `tests/PROJ-11-neutraler-helfer.spec.ts` › „Helfer sieht „Steuern" auf der /tastings-Zeile …" (aktuell rot, wird mit dem Fix grün).
+- **Priority:** Fix before deployment
+
+### Summary
+- **Acceptance Criteria:** 21 / 22 vollständig grün; **AC7 teilweise** (Dashboard-Absprung ✓, `/tastings`-Zeile → BUG-1)
+- **Edge Cases:** 9 / 9
+- **Bugs Found:** 1 (0 Critical, 0 High, **1 Medium**, 0 Low)
+- **Security:** Pass — die RLS-erzwungene Blindheit hält (durch `helper-role.integration.test.ts` belegt)
+- **Production Ready:** **NO** — BUG-1 (Medium) sollte vor dem Deploy behoben werden; danach ist das Feature deploybar (kein Critical/High)
+- **Recommendation:** BUG-1 in `/frontend` beheben (2-Zeilen-Änderung), dann `/qa` kurz gegenprüfen (der Guard-Test wird grün), anschließend `/deploy`.
 
 ## Deployment
 _To be added by /deploy_

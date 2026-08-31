@@ -406,6 +406,7 @@ export type Database = {
           event_date: string | null
           event_id: string | null
           helper_id: string | null
+          helper_name: string | null
           host_id: string | null
           host_name: string | null
           location: string | null
@@ -562,8 +563,8 @@ export type Database = {
         Args: never
         Returns: {
           event_date: string
-          helper_id: string | null
-          helper_name: string | null
+          helper_id: string
+          helper_name: string
           host_id: string
           host_name: string
           id: string
