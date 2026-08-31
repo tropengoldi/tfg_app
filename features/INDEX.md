@@ -62,10 +62,19 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       für `whisky_rankings` / `past_tastings` / `whisky_score_breakdown` ist
       gewollt (PROJ-9).
 - [ ] **Alten Supabase Personal Access Token widerrufen** (steckte in `.mcp.json`)
-- [x] **Test-Konto `test.teilnehmer@example.com`** ist deaktiviert (`is_active =
-      false`). Es hat noch einen Fußabdruck (1 Event als Gastgeber, 5 Whiskys, 4
-      Bewertungen — E2E-/Seed-Reste); bei Bedarf mit
-      `npm run user:delete` + `MODE=cascade CONFIRM=yes` ganz entfernen.
+- [ ] **E2E-Suite hängt an den Seed-Konten** (`tests/helpers/auth.ts`): der
+      „normaler Teilnehmer"-Pfad meldet sich als `test.teilnehmer@example.com`
+      an, der Admin-Pfad als `hermann.hoppen@gmail.com` — beide mit
+      `SEED_PASSWORD`. Post-Deploy stört das:
+      - Test-Konto deaktivieren → ~11 PROJ-2-Tests scheitern („Zugang
+        deaktiviert"). Konto steht deshalb **wieder auf `is_active = true`**;
+        Fußabdruck 0.
+      - Admin-Passwort per `npm run admin:password` geändert → Admin-Login-Tests
+        scheitern (2 in PROJ-2, evtl. weitere in PROJ-3..12).
+      **Fix:** Helper auf `createDisposableUser` (+ `setRole(..., 'admin')` für
+      einen Wegwerf-Admin) umstellen, damit die Suite unabhängig von den
+      Seed-Konten läuft. Danach kann das Test-Konto endgültig weg und das
+      Admin-Passwort bleibt geändert.
 - [ ] **E2E-Specs in CI sharden / `--workers=1`** (BUG-2) plus der projektweite
       transiente Hydration-Doppelrender
 

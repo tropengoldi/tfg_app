@@ -359,7 +359,20 @@ holt das Manifest teils ohne Session). Die Icon-Dateien waren über die
   JSON (nach dem `proxy.ts`-Fix; vorher 307 → `/login`).
 - `/icon.svg` → 200 `image/svg+xml`, `/apple-icon.png` → 200 `image/png`.
 - `npm test` → 108/108, `tsc` + `eslint` sauber.
-- `npx playwright test tests/PROJ-2-auth.spec.ts` (wegen `proxy.ts`) → _läuft_.
+- `npx playwright test tests/PROJ-2-auth.spec.ts --project=chromium` (wegen
+  `proxy.ts`) → **21 passed / 1 flaky / 2 failed**. Die Non-Passes hängen **nicht**
+  an PROJ-12, sondern an Post-Deploy-Änderungen an den Seed-Konten:
+  - `test.teilnehmer@example.com` war deaktiviert (Post-Deploy-Hygiene) → `login()`
+    im Helper bricht mit „Zugang deaktiviert" ab. Nach `npm run user:delete
+    MODE=reactivate` wieder aktiv → 9 dieser Tests grün.
+  - Die **2 verbleibenden Fehler** (`:258`, `:277`) sind Admin-Login-Tests: das
+    Admin-Passwort wurde per `npm run admin:password` vom Seed-Wert gelöst, also
+    schlägt der `SEED_PASSWORD`-Login als Admin fehl. Kein Code-Bezug zu PROJ-12.
+  - `:228` einmal flaky (bekannter Nav-/Hydration-Race), auf Retry grün.
+  PROJ-12 ändert nur `<head>`-Metadaten + `proxy.ts` (Matcher-Ausnahme, per curl
+  als wirkungslos für Nicht-Manifest-Pfade bestätigt). Der eigentliche
+  E2E-Infra-Schaden (Suite hängt an aktivem Seed-Konto + Seed-Passwörtern) ist im
+  Post-Deploy-Backlog vermerkt.
 
 ## QA Test Results
 _To be added by /qa_
