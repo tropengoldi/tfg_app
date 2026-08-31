@@ -1,6 +1,6 @@
 # PROJ-12: App-Icon & Homescreen
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-31
 **Last Updated:** 2026-08-31
 
@@ -177,6 +177,8 @@ PROJ-13). Kein Service-Worker, keine Offline-Fähigkeit, keine Push (PRD-Non-Goa
 | `metadata.appleWebApp` = `{ capable: true, title: 'Whizzky', statusBarStyle: 'default' }`, `applicationName: 'Whizzky'` | Erzeugt die `apple-mobile-web-app-*`-Meta-Tags für den iOS-Homescreen-Namen + Vollbildstart | 2026-08-31 |
 | `viewport.themeColor` bleibt `#161310` (unverändert) | Bereits gesetzt; Spec schließt eine Änderung aus | 2026-08-31 |
 | Neuer npm-Script `icons:gen` | Discoverability, wie `db:seed` / `tasting:list` | 2026-08-31 |
+| **`/frontend`-Korrektur:** Icons **nicht** als `app/`-Metadateien, sondern unter `public/` + explizit über `metadata.icons` verlinkt | Turbopack (Next 16.1.1) paniert beim `next build`, sobald `src/app/icon.svg` existiert (FATAL, „Dependency tracking is disabled"). Per Bisektion die SVG-Metadatei. `public/` umgeht die `app/`-Metadaten-Pipeline; das gerenderte `<head>` ist identisch | 2026-08-31 |
+| **`/frontend`-Ergänzung:** `manifest.webmanifest` in den `proxy.ts`-Matcher-Ausschluss aufgenommen | Sonst leitet die Auth-Middleware den Manifest-Request auf `/login` um (Android holt das Manifest teils ohne Session) → „Zum Startbildschirm" bekäme Name/Icons nicht | 2026-08-31 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
@@ -300,6 +302,64 @@ Keiner.
 - Manuell am Gerät: iOS „Zum Home-Bildschirm" + Android „Zum Startbildschirm"
   zeigen Glas + „Whizzky", Start im Vollbild.
 - Lighthouse „Installable"/PWA ist **kein** Prüfkriterium (kein Service-Worker).
+
+## Implementation Notes (Frontend)
+
+**Stand:** UI/Assets komplett. **Kein Backend.** Eine neue devDependency
+(`sharp`), sonst nur statische Dateien + `<head>`-Metadaten.
+
+### Was gebaut wurde
+
+**Quell-SVG** — `public/icon.svg`: reduzierte Tumbler-Silhouette (heller
+Umriss `#F3F1ED`, Bernstein-Dram `#E6A433` mit hellerer Oberkante `#EFC44D`) auf
+deckendem `#161310`, großzügiger Rand.
+
+**Generator** — `scripts/gen-icons.mjs` (`npm run icons:gen`, nutzt `sharp`):
+rendert daraus `public/favicon-32.png`, `public/apple-icon.png` (180),
+`public/icon-192.png`, `public/icon-512.png` und `public/icon-512-maskable.png`
+(Motiv auf 80 % skaliert, mit `#161310` auf 512 aufgefüllt → Android-Safe-Zone).
+Die PNGs werden eingecheckt.
+
+**Manifest** — `src/app/manifest.ts`: `name`/`short_name` „Whizzky",
+`display: standalone`, `orientation: portrait`, Farben `#161310`, drei
+Manifest-Icons (192/512/maskable). Next serviert es unter `/manifest.webmanifest`.
+
+**`src/app/layout.tsx`** — `metadata`:
+- `title` → `{ default: 'Whizzky', template: '%s · Whizzky' }` (Tab-Titel, keine
+  sichtbare Überschrift — die bleibt PROJ-13).
+- `applicationName: 'Whizzky'`, `appleWebApp: { capable: true, title: 'Whizzky',
+  statusBarStyle: 'default' }`.
+- `icons`: `/icon.svg` + `/favicon-32.png` als `rel="icon"`, `/apple-icon.png`
+  als `rel="apple-touch-icon"` — **explizit auf `public/`-Pfade** (nicht als
+  `app/`-Metadatei, siehe Abweichung).
+- `viewport.themeColor` unverändert `#161310`.
+
+**`src/proxy.ts`** — `config.matcher` um `manifest.webmanifest` erweitert, damit
+die Middleware den Manifest-Request **nicht** auf `/login` umleitet (Android
+holt das Manifest teils ohne Session). Die Icon-Dateien waren über die
+`.png`/`.svg`-Endungs-Ausnahme schon frei.
+
+### Abweichungen von Tech Design
+
+- **Kein `src/app/icon.svg` / `icon.png` / `apple-icon.png`.** Sobald eine
+  `icon.svg` als `app/`-Metadatei liegt, paniert **Turbopack** beim `next build`
+  („Dependency tracking is disabled so invalidation is not allowed", FATAL). Per
+  Bisektion eindeutig die SVG-Metadatei. Lösung: alle Icons unter `public/`,
+  Verlinkung über `metadata.icons` in `layout.tsx`. Ergebnis im `<head>`
+  identisch. Der Generator schreibt entsprechend nach `public/` statt `src/app/`.
+- **`favicon-32.png`** statt `icon.png` als Dateiname (liegt jetzt in `public/`).
+
+### Checks
+- `npm run build` → sauber (nach dem Umzug nach `public/`; mit `src/app/icon.svg`
+  reproduzierbar FATAL).
+- `curl` gegen `next start`: `<head>` enthält `manifest`, beide `icon`-Links,
+  `apple-touch-icon`, `apple-mobile-web-app-*`, `mobile-web-app-capable`,
+  `theme-color #161310`; `<title>` = „Anmelden · Whizzky".
+- `/manifest.webmanifest` → HTTP 200 `application/manifest+json` mit gültigem
+  JSON (nach dem `proxy.ts`-Fix; vorher 307 → `/login`).
+- `/icon.svg` → 200 `image/svg+xml`, `/apple-icon.png` → 200 `image/png`.
+- `npm test` → 108/108, `tsc` + `eslint` sauber.
+- `npx playwright test tests/PROJ-2-auth.spec.ts` (wegen `proxy.ts`) → _läuft_.
 
 ## QA Test Results
 _To be added by /qa_

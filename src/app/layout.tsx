@@ -19,8 +19,26 @@ const fraunces = Fraunces({
 })
 
 export const metadata: Metadata = {
-  title: 'Whisky-Tasting',
+  title: {
+    default: 'Whizzky',
+    template: '%s · Whizzky',
+  },
   description: 'Digitale Verkostung für unsere Runde',
+  applicationName: 'Whizzky',
+  appleWebApp: {
+    capable: true,
+    title: 'Whizzky',
+    statusBarStyle: 'default',
+  },
+  // Icons liegen unter public/ (nicht als app/-Metadatei) — siehe
+  // scripts/gen-icons.mjs; Turbopack paniert sonst beim Build an icon.svg.
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180' }],
+  },
 }
 
 export const viewport: Viewport = {

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Whizzky">
+  <rect width="512" height="512" fill="#161310"/>
+  <defs>
+    <clipPath id="glass">
+      <path d="M138 124 L162 384 Q164 400 182 400 L330 400 Q348 400 350 384 L374 124 Z"/>
+    </clipPath>
+  </defs>
+  <!-- Dram: Bernstein, auf das Glasinnere geclippt -->
+  <g clip-path="url(#glass)">
+    <rect x="130" y="286" width="252" height="130" fill="#E6A433"/>
+    <rect x="130" y="282" width="252" height="10" fill="#EFC44D"/>
+  </g>
+  <!-- Glas-Umriss -->
+  <path d="M138 124 L162 384 Q164 400 182 400 L330 400 Q348 400 350 384 L374 124 Z"
+        fill="none" stroke="#F3F1ED" stroke-width="13"
+        stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

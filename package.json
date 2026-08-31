@@ -21,7 +21,8 @@
     "admin:password": "node --env-file=.env.local scripts/set-admin-password.mjs",
     "tasting:delete": "node --env-file=.env.local scripts/delete-tasting.mjs",
     "user:delete": "node --env-file=.env.local scripts/delete-user.mjs",
-    "tasting:list": "node --env-file=.env.local scripts/delete-tasting.mjs"
+    "tasting:list": "node --env-file=.env.local scripts/delete-tasting.mjs",
+    "icons:gen": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -77,6 +78,7 @@
     "eslint-config-next": "16.1.1",
     "jsdom": "^29.0.1",
     "postcss": "^8",
+    "sharp": "^0.35.4",
     "supabase": "^2.116.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
