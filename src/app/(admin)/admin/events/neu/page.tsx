@@ -22,6 +22,7 @@ export default async function NeuesEventPage() {
     location: '',
     hostId: '',
     participantIds: [],
+    helperId: '',
     maxWhiskies: '',
     theme: '',
   }

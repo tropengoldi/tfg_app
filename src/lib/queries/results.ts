@@ -92,6 +92,8 @@ export interface EventResults {
     location: string
     theme: string | null
     host_name: string
+    /** Anzeigename des neutralen Helfers (PROJ-11), oder null. */
+    helper_name: string | null
   }
   participants: ResultsParticipant[]
   ranking: RankingRow[]
@@ -124,7 +126,7 @@ export async function getEventResults(
   const [headRes, partRes, rankRes, breakdownRes, ownRes] = await Promise.all([
     supabase
       .from('past_tastings')
-      .select('event_date, location, theme, host_name, host_id')
+      .select('event_date, location, theme, host_name, host_id, helper_id')
       .eq('event_id', eventId)
       .maybeSingle(),
     supabase.from('event_participants').select('profile_id').eq('event_id', eventId),
@@ -154,7 +156,14 @@ export async function getEventResults(
   const broughtByIds = (rankRes.data ?? [])
     .map((r) => r.brought_by)
     .filter((id): id is string => Boolean(id))
-  const needNames = [...new Set([...participantIds, ...broughtByIds])]
+  const helperId = (head.helper_id as string | null) ?? null
+  const needNames = [
+    ...new Set([
+      ...participantIds,
+      ...broughtByIds,
+      ...(helperId ? [helperId] : []),
+    ]),
+  ]
   const names = new Map<string, string>()
   if (needNames.length > 0) {
     const { data: profs } = await supabase
@@ -219,6 +228,7 @@ export async function getEventResults(
       location: head.location ?? '',
       theme: head.theme,
       host_name: head.host_name ?? 'Unbekannt',
+      helper_name: helperId ? names.get(helperId) ?? 'Unbekannt' : null,
     },
     participants,
     ranking,

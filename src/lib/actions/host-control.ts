@@ -27,7 +27,7 @@ async function requireHostOr(eventId: string): Promise<ActionResult | null> {
   const supabase = await createClient()
   const { data: event } = await supabase
     .from('tasting_events')
-    .select('host_id')
+    .select('host_id, helper_id')
     .eq('id', eventId)
     .maybeSingle()
 

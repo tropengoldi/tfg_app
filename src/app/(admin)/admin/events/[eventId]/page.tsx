@@ -33,12 +33,21 @@ export default async function EventBearbeitenPage({
     const host = members.find((m) => m.id === loaded.event.host_id)
     if (host) active.unshift({ id: host.id, display_name: host.display_name })
   }
+  // Ebenso den aktuellen Helfer (PROJ-11) — er könnte inzwischen deaktiviert sein.
+  if (
+    loaded.event.helper_id &&
+    !active.some((m) => m.id === loaded.event.helper_id)
+  ) {
+    const helper = members.find((m) => m.id === loaded.event.helper_id)
+    if (helper) active.push({ id: helper.id, display_name: helper.display_name })
+  }
 
   const defaultValues: EventFormInput = {
     eventDate: loaded.event.event_date,
     location: loaded.event.location,
     hostId: loaded.event.host_id,
     participantIds: loaded.participantIds,
+    helperId: loaded.event.helper_id ?? '',
     maxWhiskies: loaded.event.max_whiskies_per_participant?.toString() ?? '',
     theme: loaded.event.theme ?? '',
   }

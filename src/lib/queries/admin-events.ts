@@ -8,6 +8,8 @@ export interface EventListRow {
   theme: string | null
   host_id: string
   host_name: string
+  helper_id: string | null
+  helper_name: string | null
   status: EventStatus
   max_whiskies_per_participant: number | null
   participant_count: number

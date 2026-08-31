@@ -19,11 +19,13 @@ export interface ActiveDashboard {
     theme: string | null
     food_info: string | null
     host_notes: string | null
+    helper_id: string | null
   }
   participants: DashboardParticipant[]
   whiskyCount: number
   isParticipant: boolean
   isHost: boolean
+  isHelper: boolean
 }
 
 export interface PreviewDashboard {
@@ -56,7 +58,7 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
   const { data: active } = await supabase
     .from('tasting_events')
     .select(
-      'id, event_date, location, status, current_position, theme, food_info, host_notes, host_id',
+      'id, event_date, location, status, current_position, theme, food_info, host_notes, host_id, helper_id',
     )
     .or(`status.eq.active,and(status.eq.closed,closed_at.gte.${recentCutoff})`)
     .order('status', { ascending: true })
@@ -97,6 +99,7 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
         theme: active.theme,
         food_info: active.food_info,
         host_notes: active.host_notes,
+        helper_id: active.helper_id,
       },
       participants: ids
         .map((id) => ({
@@ -108,6 +111,7 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
       whiskyCount: count ?? 0,
       isParticipant: ids.includes(userId),
       isHost: active.host_id === userId,
+      isHelper: active.helper_id === userId,
     }
   }
 

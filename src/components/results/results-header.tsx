@@ -39,6 +39,13 @@ export function ResultsHeader({
           Gastgeber: {head.host_name}
         </p>
 
+        {head.helper_name ? (
+          <p className="flex items-center gap-1.5 text-muted-foreground">
+            <UserRound className="h-3.5 w-3.5 shrink-0" />
+            Helfer: {head.helper_name}
+          </p>
+        ) : null}
+
         <div>
           <p className="mb-1.5 text-muted-foreground">
             Wer war dabei ({participants.length})

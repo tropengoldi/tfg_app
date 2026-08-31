@@ -15,6 +15,8 @@ interface ParticipantPickerProps {
   onChange: (ids: string[]) => void
   /** diese Person ist gesetzt und nicht abwählbar */
   lockedId?: string
+  /** diese Personen tauchen gar nicht in der Liste auf (PROJ-11: der Helfer) */
+  excludeIds?: string[]
 }
 
 export function ParticipantPicker({
@@ -22,13 +24,18 @@ export function ParticipantPicker({
   value,
   onChange,
   lockedId,
+  excludeIds,
 }: ParticipantPickerProps) {
+  const visible = excludeIds?.length
+    ? members.filter((m) => !excludeIds.includes(m.id))
+    : members
+
   function toggle(id: string, checked: boolean) {
     if (id === lockedId) return
     onChange(checked ? [...new Set([...value, id])] : value.filter((v) => v !== id))
   }
 
-  if (members.length === 0) {
+  if (visible.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         Keine aktiven Mitglieder. Lade zuerst Teilnehmer ein.
@@ -38,7 +45,7 @@ export function ParticipantPicker({
 
   return (
     <ul className="divide-y divide-border rounded-lg border border-border">
-      {members.map((m) => {
+      {visible.map((m) => {
         const checked = value.includes(m.id) || m.id === lockedId
         const locked = m.id === lockedId
         return (

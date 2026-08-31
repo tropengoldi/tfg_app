@@ -54,6 +54,7 @@ export function EventRow({ event }: { event: EventListRow }) {
           {event.host_name} · {event.participant_count}{' '}
           {event.participant_count === 1 ? 'Teilnehmer' : 'Teilnehmer'}
           {event.whisky_count > 0 ? ` · ${event.whisky_count} Whiskies` : ''}
+          {event.helper_name ? ` · Helfer: ${event.helper_name}` : ''}
         </p>
       </div>
 

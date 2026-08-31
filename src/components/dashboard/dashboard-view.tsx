@@ -10,7 +10,9 @@ import { formatEventDate } from '@/lib/dates'
 import type { ActiveDashboard } from '@/lib/queries/dashboard'
 
 export function DashboardView({ data }: { data: ActiveDashboard }) {
-  const { event, participants, whiskyCount, isParticipant, isHost } = data
+  const { event, participants, whiskyCount, isParticipant, isHost, isHelper } = data
+  // Mit Helfer steuert der Helfer den Abend, nicht der Gastgeber (PROJ-11).
+  const canControl = isHelper || (isHost && !event.helper_id)
   const states = glassStates(whiskyCount, event.current_position, event.status)
   const label = progressLabel(whiskyCount, event.current_position, event.status)
   const closed = event.status === 'closed'
@@ -44,14 +46,16 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
                 Jetzt bewerten
               </Jump>
             ) : null}
-            {isHost ? (
+            {canControl ? (
               <Jump href={`/tastings/${event.id}/gastgeber`} icon={SlidersHorizontal}>
                 Steuern
               </Jump>
             ) : null}
-            <Jump href={`/tastings/${event.id}/whiskies`} icon={GlassWater}>
-              Meine Whiskys
-            </Jump>
+            {isHelper ? null : (
+              <Jump href={`/tastings/${event.id}/whiskies`} icon={GlassWater}>
+                Meine Whiskys
+              </Jump>
+            )}
             {closed ? (
               <Jump href={`/tastings/${event.id}/ergebnisse`} icon={Trophy}>
                 Zur Rangliste

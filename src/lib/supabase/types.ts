@@ -197,6 +197,7 @@ export type Database = {
           current_position: number
           event_date: string
           food_info: string | null
+          helper_id: string | null
           host_id: string
           host_notes: string | null
           id: string
@@ -214,6 +215,7 @@ export type Database = {
           current_position?: number
           event_date: string
           food_info?: string | null
+          helper_id?: string | null
           host_id: string
           host_notes?: string | null
           id?: string
@@ -231,6 +233,7 @@ export type Database = {
           current_position?: number
           event_date?: string
           food_info?: string | null
+          helper_id?: string | null
           host_id?: string
           host_notes?: string | null
           id?: string
@@ -245,6 +248,13 @@ export type Database = {
           {
             foreignKeyName: "tasting_events_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasting_events_helper_id_fkey"
+            columns: ["helper_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -395,6 +405,7 @@ export type Database = {
           closed_at: string | null
           event_date: string | null
           event_id: string | null
+          helper_id: string | null
           host_id: string | null
           host_name: string | null
           location: string | null
@@ -404,6 +415,13 @@ export type Database = {
           winner_whisky_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasting_events_helper_id_fkey"
+            columns: ["helper_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasting_events_host_id_fkey"
             columns: ["host_id"]
@@ -544,6 +562,8 @@ export type Database = {
         Args: never
         Returns: {
           event_date: string
+          helper_id: string | null
+          helper_name: string | null
           host_id: string
           host_name: string
           id: string
@@ -576,6 +596,7 @@ export type Database = {
         Args: {
           p_event_date: string
           p_food_info?: string
+          p_helper_id?: string | null
           p_host_id: string
           p_location: string
           p_max_whiskies?: number
@@ -622,6 +643,7 @@ export type Database = {
           p_event: string
           p_event_date: string
           p_food_info?: string
+          p_helper_id?: string | null
           p_host_id: string
           p_location: string
           p_max_whiskies?: number

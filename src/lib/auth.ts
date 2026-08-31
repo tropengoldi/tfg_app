@@ -79,7 +79,7 @@ export async function requireHost(eventId: string): Promise<SessionContext> {
   const supabase = await createClient()
   const { data: event } = await supabase
     .from('tasting_events')
-    .select('id, host_id')
+    .select('id, host_id, helper_id')
     .eq('id', eventId)
     .maybeSingle()
 

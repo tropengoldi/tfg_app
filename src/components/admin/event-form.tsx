@@ -47,12 +47,26 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
   })
 
   const hostId = useWatch({ control: form.control, name: 'hostId' })
+  const helperId = useWatch({ control: form.control, name: 'helperId' }) ?? ''
+  const participantIds = useWatch({ control: form.control, name: 'participantIds' }) ?? []
+
+  // Helfer-Auswahl: alle aktiven Mitglieder außer Gastgeber und Teilnehmern.
+  // Der aktuell gesetzte Helfer bleibt sichtbar, damit die Auswahl nicht springt.
+  const helperOptions = members.filter(
+    (m) =>
+      m.id === helperId ||
+      (m.id !== hostId && !participantIds.includes(m.id)),
+  )
+  // Gastgeber-Auswahl: der Helfer darf nicht zugleich Gastgeber sein.
+  const hostOptions = members.filter((m) => m.id === hostId || m.id !== helperId)
 
   function onSubmit(values: EventFormInput) {
     startTransition(async () => {
+      const helper = values.helperId ?? ''
+      const base = (values.participantIds ?? []).filter((id) => id !== helper)
       const participantIds = hostId
-        ? [...new Set([...(values.participantIds ?? []), hostId])]
-        : (values.participantIds ?? [])
+        ? [...new Set([...base, hostId])]
+        : base
       const payload = { ...values, participantIds }
 
       const result =
@@ -118,7 +132,7 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {members.map((m) => (
+                  {hostOptions.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.display_name}
                     </SelectItem>
@@ -141,11 +155,47 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
                 value={field.value ?? []}
                 onChange={field.onChange}
                 lockedId={hostId || undefined}
+                excludeIds={helperId ? [helperId] : undefined}
               />
               <FormDescription>
                 Der Gastgeber ist immer dabei. Weitere lassen sich jederzeit
                 ergänzen, solange das Tasting in Vorbereitung ist.
               </FormDescription>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="helperId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Helfer (optional)</FormLabel>
+              <Select
+                value={field.value || 'none'}
+                onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kein Helfer" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">Kein Helfer</SelectItem>
+                  {helperOptions.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Der Helfer schenkt aus und steuert den Abend, verkostet aber
+                selbst nicht mit. Ist ein Helfer benannt, verkostet der Gastgeber
+                blind wie alle anderen. Nur solange das Tasting in Vorbereitung
+                ist änderbar.
+              </FormDescription>
+              <FormMessage />
             </FormItem>
           )}
         />

@@ -1,6 +1,6 @@
 # PROJ-11: Neutraler Helfer pro Event
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-08-31
 **Last Updated:** 2026-08-31
 
@@ -437,6 +437,56 @@ Keine.
   `set_event_participants`).
 - Ein zugeordneter Helfer eines nicht abgeschlossenen Events kann nicht
   deaktiviert werden (`TS013`) — kein führerloser Abend.
+
+## Implementation Notes (Frontend)
+
+**Stand:** Frontend umgesetzt am 2026-08-31. Der Datenbank-Teil (Spalte
+`tasting_events.helper_id`, Helfer-Funktionen, RLS-Zweige, RPC-Parameter
+`p_helper_id`, `admin_list_events` / `past_tastings` um Helfer-Spalten erweitert,
+`TS013`/`TS017`) steht noch aus → `/backend PROJ-11`. Bis dahin greifen die
+Helfer-Pfade in der UI mangels Daten ins Leere, brechen aber nichts.
+
+### Reine Frontend-Entscheidungen (aus den offenen Fragen des Specs)
+
+- **„Steuern"-Absprung für den Helfer:** erscheint auf `/` (Dashboard) und in der
+  `/tastings`-Zeile nach genau derselben Regel wie beim Gastgeber — nämlich
+  `isHelper || (isHost && !helper_id)`. Der Gastgeber-mit-Helfer sieht „Steuern"
+  nicht mehr. Ob der Absprung schon in der Vorbereitungsphase sichtbar ist,
+  richtet sich wie beim Gastgeber nach dem bestehenden Verhalten (Dashboard erst
+  ab „läuft/gerade abgeschlossen"; `/tastings`-Zeile immer).
+- **Whisky-Sicht des Helfers:** keine eigene Seite. `/tastings/[eventId]/whiskies`
+  bleibt unverändert (Teilnehmer-Sicht „meine mitgebrachten"). Der Helfer bringt
+  nichts mit; der Link „Meine Whiskys" wird für ihn ausgeblendet. Seine Sicht auf
+  alle geheimen Details entsteht im Steuern-Bereich (Reihenfolge-Liste, PROJ-6 /
+  `/backend`).
+
+### Geänderte Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/errors.ts` | `TS017` → „Der Helfer kann nicht gleichzeitig Gastgeber oder Teilnehmer dieses Abends sein." |
+| `src/lib/auth-rules.ts` (+ `.test.ts`) | neu `isEventHelper()`; `canAccessHostArea()` nimmt jetzt `helper_id` — Reihenfolge: Admin → (Helfer, falls gesetzt) → sonst Gastgeber. |
+| `src/lib/auth.ts` | `requireHost` lädt `helper_id` mit. |
+| `src/lib/actions/host-control.ts` | `requireHostOr` lädt `helper_id` mit. |
+| `src/lib/schemas/admin-events.ts` | Feld `helperId` (`''` = kein Helfer); Objekt-Refinements „≠ Gastgeber", „∉ Teilnehmer". |
+| `src/lib/actions/admin-events.ts` | `EventPayload.p_helper_id: string \| null`; `normalize()` liefert `null` bei `''`; `create_event` / `update_event` erhalten `p_helper_id`. |
+| `src/components/admin/participant-picker.tsx` | neue Prop `excludeIds?: string[]` (Helfer aus der Liste nehmen). |
+| `src/components/admin/event-form.tsx` | „Helfer (optional)"-`<Select>` mit „Kein Helfer"; Helfer-Optionen = aktive Mitglieder minus Gastgeber/Teilnehmer (aktueller Helfer bleibt sichtbar); Gastgeber-`<Select>` schließt den Helfer aus; `<ParticipantPicker excludeIds={[helperId]}>`; `onSubmit` filtert den Helfer aus `participantIds`. |
+| `src/app/(admin)/admin/events/neu/page.tsx` | `defaultValues.helperId = ''`. |
+| `src/app/(admin)/admin/events/[eventId]/page.tsx` | `defaultValues.helperId = event.helper_id ?? ''`; deaktivierter Helfer bleibt in der Auswahlliste. |
+| `src/lib/queries/admin-events.ts` | `EventListRow` + `helper_id` / `helper_name` (aus `admin_list_events`). `getEventForEdit` nutzt `select('*')` → `helper_id` kommt automatisch. |
+| `src/components/admin/event-row.tsx` | „· Helfer: {Name}" in der Personen-Zeile, wenn gesetzt. |
+| `src/lib/queries/dashboard.ts` | `ActiveDashboard` + `isHelper`, `event.helper_id`; `helper_id` selektiert; `isHelper = helper_id === userId`. |
+| `src/components/dashboard/dashboard-view.tsx` | „Steuern" ⇔ `isHelper || (isHost && !helper_id)`; „Meine Whiskys" für den Helfer ausgeblendet. |
+| `src/lib/queries/tastings.ts` | `getMyTastings` zieht zusätzlich Events mit `helper_id = userId` (dedupe); `MyTastingRow` + `is_helper`, `has_helper`. |
+| `src/components/tasting/tasting-row.tsx` | Helfer-Zeile verlinkt primär auf `/gastgeber`, ohne „Whiskys"-Sekundäraktion; „Steuern"-Sekundäraktion nur für Gastgeber-ohne-Helfer. |
+| `src/lib/queries/results.ts` | `past_tastings`-Select + `helper_id`; Name über den bestehenden `profiles`-Batch; `EventResults.head` + `helper_name`. |
+| `src/components/results/results-header.tsx` | „Helfer: {Name}"-Zeile neben „Gastgeber: …", wenn gesetzt. |
+| `src/lib/supabase/types.ts` | Handnachtrag (wird von `db:types` reproduziert): `tasting_events` Row/Insert/Update + `helper_id`; `past_tastings` Row + `helper_id`; `admin_list_events` Returns + `helper_id`/`helper_name`; `create_event` / `update_event` Args + `p_helper_id?`. |
+
+### Verifikation
+
+`npx tsc --noEmit` sauber · `eslint` sauber · `npm test` → 112/112 · `npm run build` ok.
 
 ## QA Test Results
 _To be added by /qa_

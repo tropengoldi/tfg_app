@@ -10,10 +10,15 @@ export interface MyTastingRow {
   host_name: string
   /** Ist der abfragende Nutzer der Gastgeber dieses Abends? (→ „Steuern"-Aktion) */
   is_host: boolean
+  /** Ist der abfragende Nutzer der Helfer dieses Abends? (PROJ-11, → „Steuern") */
+  is_helper: boolean
+  /** Hat der Abend überhaupt einen Helfer? (dann steuert der Gastgeber nicht) */
+  has_helper: boolean
 }
 
 /**
- * Die Tastings, bei denen der angemeldete Nutzer als Teilnehmer eingetragen ist.
+ * Die Tastings, bei denen der angemeldete Nutzer als Teilnehmer eingetragen ist
+ * oder als Helfer benannt wurde (PROJ-11).
  * Kommende zuerst (aufsteigend), dann vergangene (absteigend). Wirft bei Fehler.
  */
 export async function getMyTastings(userId: string): Promise<MyTastingRow[]> {
@@ -21,23 +26,35 @@ export async function getMyTastings(userId: string): Promise<MyTastingRow[]> {
 
   const { data, error } = await supabase
     .from('event_participants')
-    .select('tasting_events(id, event_date, location, status, host_id)')
+    .select('tasting_events(id, event_date, location, status, host_id, helper_id)')
     .eq('profile_id', userId)
   if (error) throw error
 
-  type Row = {
-    tasting_events: {
-      id: string
-      event_date: string
-      location: string
-      status: EventStatus
-      host_id: string
-    } | null
+  type EventShape = {
+    id: string
+    event_date: string
+    location: string
+    status: EventStatus
+    host_id: string
+    helper_id: string | null
   }
+  type Row = { tasting_events: EventShape | null }
 
-  const events = (data as Row[])
-    .map((r) => r.tasting_events)
-    .filter((e): e is NonNullable<Row['tasting_events']> => e !== null)
+  // Events als Helfer — der Nutzer steht dann nicht in event_participants.
+  const { data: helperRows, error: helperErr } = await supabase
+    .from('tasting_events')
+    .select('id, event_date, location, status, host_id, helper_id')
+    .eq('helper_id', userId)
+  if (helperErr) throw helperErr
+
+  const byId = new Map<string, EventShape>()
+  for (const r of (data as Row[]).map((x) => x.tasting_events)) {
+    if (r) byId.set(r.id, r)
+  }
+  for (const r of (helperRows ?? []) as EventShape[]) {
+    if (!byId.has(r.id)) byId.set(r.id, r)
+  }
+  const events = [...byId.values()]
 
   const hostIds = [...new Set(events.map((e) => e.host_id))]
   const hostNames = new Map<string, string>()
@@ -58,6 +75,8 @@ export async function getMyTastings(userId: string): Promise<MyTastingRow[]> {
       status: e.status,
       host_name: hostNames.get(e.host_id) ?? 'Unbekannt',
       is_host: e.host_id === userId,
+      is_helper: e.helper_id === userId,
+      has_helper: e.helper_id !== null,
     }))
     .sort((a, b) => {
       const aUpcoming = a.event_date >= today

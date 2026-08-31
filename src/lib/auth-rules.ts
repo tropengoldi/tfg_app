@@ -24,11 +24,26 @@ export function isEventHost(
   return !!userId && !!event && event.host_id === userId
 }
 
-/** Darf dieser Nutzer den Gastgeber-Bereich eines Events sehen? */
+/** Ist dieser Nutzer der (optionale) Helfer dieses Events? (PROJ-11) */
+export function isEventHelper(
+  userId: string | null | undefined,
+  event: { helper_id?: string | null } | null | undefined,
+): boolean {
+  return !!userId && !!event && !!event.helper_id && event.helper_id === userId
+}
+
+/**
+ * Darf dieser Nutzer den Gastgeber-/Steuerungs-Bereich eines Events sehen?
+ * Mit Helfer (PROJ-11): der Helfer steuert, der Gastgeber ist dann nur
+ * Teilnehmer. Admin darf immer.
+ */
 export function canAccessHostArea(
   userId: string | null | undefined,
   profile: Pick<Profile, 'role' | 'is_active'> | null | undefined,
-  event: { host_id: string } | null | undefined,
+  event: { host_id: string; helper_id?: string | null } | null | undefined,
 ): boolean {
-  return isEventHost(userId, event) || isAdmin(profile)
+  if (!event) return false
+  if (isAdmin(profile)) return true
+  if (event.helper_id) return isEventHelper(userId, event)
+  return isEventHost(userId, event)
 }

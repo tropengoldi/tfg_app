@@ -26,6 +26,7 @@ interface EventPayload {
   p_event_date: string
   p_location: string
   p_host_id: string
+  p_helper_id: string | null
   p_theme: string | undefined
   p_max_whiskies: number | undefined
   participantIds: string[]
@@ -50,6 +51,7 @@ function normalize(input: unknown): Normalized {
       p_event_date: d.eventDate,
       p_location: d.location,
       p_host_id: d.hostId,
+      p_helper_id: d.helperId === '' ? null : d.helperId,
       p_theme: theme,
       p_max_whiskies: maxWhiskies,
       participantIds: d.participantIds,
@@ -69,6 +71,7 @@ export async function createEventAction(input: unknown): Promise<ActionResult> {
     p_event_date: n.data.p_event_date,
     p_location: n.data.p_location,
     p_host_id: n.data.p_host_id,
+    p_helper_id: n.data.p_helper_id,
     p_theme: n.data.p_theme,
     p_max_whiskies: n.data.p_max_whiskies,
   })
@@ -107,6 +110,7 @@ export async function updateEventAction(
     p_event_date: n.data.p_event_date,
     p_location: n.data.p_location,
     p_host_id: n.data.p_host_id,
+    p_helper_id: n.data.p_helper_id,
     p_theme: n.data.p_theme,
     p_max_whiskies: n.data.p_max_whiskies,
   })

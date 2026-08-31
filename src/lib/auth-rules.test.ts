@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { canAccessHostArea, isActiveMember, isAdmin, isEventHost } from './auth-rules'
+import {
+  canAccessHostArea,
+  isActiveMember,
+  isAdmin,
+  isEventHelper,
+  isEventHost,
+} from './auth-rules'
 
 describe('isActiveMember', () => {
   it('true nur bei is_active === true', () => {
@@ -54,5 +60,30 @@ describe('canAccessHostArea', () => {
     expect(
       canAccessHostArea('admin1', { role: 'admin', is_active: false }, { host_id: 'u1' }),
     ).toBe(false)
+  })
+
+  // --- PROJ-11: Helfer ---
+  it('mit Helfer: der Helfer darf durch, der Gastgeber nicht', () => {
+    const ev = { host_id: 'u1', helper_id: 'h1' }
+    expect(canAccessHostArea('h1', other, ev)).toBe(true)
+    expect(canAccessHostArea('u1', host, ev)).toBe(false)
+  })
+
+  it('mit Helfer: der Admin darf trotzdem durch', () => {
+    expect(canAccessHostArea('admin1', admin, { host_id: 'u1', helper_id: 'h1' })).toBe(true)
+  })
+
+  it('ohne Helfer (helper_id null): der Gastgeber darf wie bisher', () => {
+    expect(canAccessHostArea('u1', host, { host_id: 'u1', helper_id: null })).toBe(true)
+  })
+})
+
+describe('isEventHelper', () => {
+  it('true nur, wenn helper_id gesetzt ist und der User-ID entspricht', () => {
+    expect(isEventHelper('h1', { helper_id: 'h1' })).toBe(true)
+    expect(isEventHelper('h1', { helper_id: 'h2' })).toBe(false)
+    expect(isEventHelper('h1', { helper_id: null })).toBe(false)
+    expect(isEventHelper('h1', {})).toBe(false)
+    expect(isEventHelper(null, { helper_id: 'h1' })).toBe(false)
   })
 })

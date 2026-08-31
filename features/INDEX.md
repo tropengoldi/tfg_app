@@ -25,7 +25,7 @@
 | PROJ-8 | Tasting-Dashboard mit Live-Sync | Deployed | [PROJ-8-tasting-dashboard.md](PROJ-8-tasting-dashboard.md) | 2026-08-27 |
 | PROJ-9 | Ergebnisse & Tasting-Historie | Deployed | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
 | PROJ-10 | Profil-Seite mit persönlicher Bilanz | Deployed | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
-| PROJ-11 | Neutraler Helfer pro Event | Architected | [PROJ-11-neutraler-helfer-pro-event.md](PROJ-11-neutraler-helfer-pro-event.md) | 2026-08-29 |
+| PROJ-11 | Neutraler Helfer pro Event | In Progress | [PROJ-11-neutraler-helfer-pro-event.md](PROJ-11-neutraler-helfer-pro-event.md) | 2026-08-29 |
 | PROJ-12 | App-Icon & Homescreen | Deployed | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
 
