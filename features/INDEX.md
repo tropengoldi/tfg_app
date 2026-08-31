@@ -26,7 +26,7 @@
 | PROJ-9 | Ergebnisse & Tasting-Historie | Deployed | [PROJ-9-ergebnisse-tasting-historie.md](PROJ-9-ergebnisse-tasting-historie.md) | 2026-08-27 |
 | PROJ-10 | Profil-Seite mit persönlicher Bilanz | Deployed | [PROJ-10-profil-persoenliche-bilanz.md](PROJ-10-profil-persoenliche-bilanz.md) | 2026-08-27 |
 | PROJ-11 | Neutraler Helfer pro Event | Roadmap | – | 2026-08-29 |
-| PROJ-12 | App-Icon & Homescreen | Planned | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
+| PROJ-12 | App-Icon & Homescreen | Architected | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
 | PROJ-13 | Marken-Auftritt (Whizzky) | Roadmap | – | 2026-08-30 |
 
 <!-- Add features above this line -->

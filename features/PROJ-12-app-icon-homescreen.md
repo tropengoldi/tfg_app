@@ -139,12 +139,17 @@ PROJ-13). Kein Service-Worker, keine Offline-Fähigkeit, keine Push (PRD-Non-Goa
 
 ## Open Questions
 
-- [ ] Genaue Form des Glas-Motivs (identisch zum bestehenden
-      `whisky-glass.tsx`-Pfad, oder eine noch weiter reduzierte Silhouette fürs
-      Icon?) — Detail für `/architecture` bzw. `/frontend`.
-- [ ] Dateiablage: Next-App-Router-Konventionen (`src/app/icon.svg`,
-      `src/app/apple-icon.png`, `src/app/manifest.ts`) vs. klassisch unter
-      `public/` — Entscheidung für `/architecture`.
+- [x] ~~Genaue Form des Glas-Motivs~~ **Gelöst (`/architecture`):** es gibt keine
+      bestehende `whisky-glass.tsx` (die Design-System-Erwähnung wurde nie
+      umgesetzt; das Dashboard nutzt das Lucide-`Wine`-Icon). Für PROJ-12 entsteht
+      eine **neue, reduzierte Tumbler-Silhouette** als Quell-SVG. Der genaue Pfad
+      ist ein `/frontend`-Detail; die Vorgabe steht im Tech Design.
+- [x] ~~Dateiablage~~ **Gelöst:** Hybrid — Next-`app/`-Konventionen für
+      `favicon`/`icon`/`apple-icon`/`manifest`, die Manifest-PNGs (192/512/
+      maskable) unter `public/`, eine Quell-SVG unter `public/`.
+- [ ] `apple-mobile-web-app-status-bar-style`: `default` (opake Leiste) oder
+      `black-translucent` (Seite läuft unter die Statusleiste, braucht
+      Safe-Area-Padding)? Vorschlag `default` — Detail für `/frontend`.
 
 ## Decision Log
 
@@ -160,13 +165,141 @@ PROJ-13). Kein Service-Worker, keine Offline-Fähigkeit, keine Push (PRD-Non-Goa
 | Ein einziges deckendes Icon für Light- und Dark-Mode-Tabs | Eine helle Zweitvariante wäre Mehraufwand ohne erkennbaren Nutzen im geschlossenen Nutzerkreis | 2026-08-31 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| **Frontend-only**, keine DB, kein Backend, keine Server-Action | Icons + Manifest sind statische Dateien und `<head>`-Metadaten | 2026-08-31 |
+| Eine **Quell-SVG** (`public/icon.svg`), daraus die Rastergrößen per Skript `scripts/gen-icons.mjs` (`npm run icons:gen`) | Reproduzierbar (eine Änderung → ein Befehl), passt zum Skript-Muster des Projekts (`seed`, `admin:password`, `user:delete`); die SVG ist zugleich das moderne SVG-Favicon | 2026-08-31 |
+| **`sharp`** als neue **devDependency** (nur Autoren-/Buildzeit) | Rendert SVG mit vollem librsvg sauber nach PNG; kein Laufzeit-Code, kein `next/og`/Satori mit seinen SVG-Grenzen | 2026-08-31 |
+| **Kein `favicon.ico`** — stattdessen `src/app/icon.svg` **und** `src/app/icon.png` (32) | Next verlinkt beide; moderne Browser nehmen SVG, ältere (Safari) das PNG. Ein echtes `.ico` bräuchte ein zweites Paket (`png-to-ico`) für minimalen Zusatznutzen | 2026-08-31 |
+| Dateien über **Next-`app/`-Metadatei-Konventionen**: `src/app/icon.svg`, `src/app/icon.png`, `src/app/apple-icon.png`, `src/app/manifest.ts` | Next injiziert `<link rel="icon/apple-touch-icon/manifest">` automatisch; kein manuelles `<head>`-Gefrickel | 2026-08-31 |
+| Manifest als **`src/app/manifest.ts`** (TS-Objekt), Icons zeigen auf `public/icon-192.png` / `icon-512.png` / `icon-512-maskable.png` | Next serviert es unter `/manifest.webmanifest`; die großen PNGs liegen als echte Dateien vor (Android/maskable brauchen sie verlässlich) | 2026-08-31 |
+| `layout.tsx` `metadata.title` → **Title-Template** `{ default: 'Whizzky', template: '%s · Whizzky' }` | Der Tab-Titel soll nicht mehr der Rohwert „Whisky-Tasting" sein; die vorhandenen Seiten-Titel („Profil", „Bewerten" …) werden zu „Profil · Whizzky". Reine Metadaten, keine sichtbare UI-Überschrift (das ist PROJ-13) | 2026-08-31 |
+| `metadata.appleWebApp` = `{ capable: true, title: 'Whizzky', statusBarStyle: 'default' }`, `applicationName: 'Whizzky'` | Erzeugt die `apple-mobile-web-app-*`-Meta-Tags für den iOS-Homescreen-Namen + Vollbildstart | 2026-08-31 |
+| `viewport.themeColor` bleibt `#161310` (unverändert) | Bereits gesetzt; Spec schließt eine Änderung aus | 2026-08-31 |
+| Neuer npm-Script `icons:gen` | Discoverability, wie `db:seed` / `tasting:list` | 2026-08-31 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+
+**Reine Frontend-/Asset-Arbeit.** Keine Datenbank, kein Backend, keine
+Server-Action, keine Realtime. PROJ-12 legt eine Handvoll Bilddateien an und
+ergänzt die `<head>`-Metadaten in `src/app/layout.tsx`. Die einzige neue
+Abhängigkeit ist `sharp` — und die nur, um die Bilder aus einer Quell-SVG zu
+rendern; sie läuft nie im Browser oder auf dem Server.
+
+Wichtig: Die im Design-System erwähnte `whisky-glass.tsx` **existiert nicht** (das
+Dashboard nutzt das Lucide-`Wine`-Icon). Das Icon-Motiv wird hier neu gezeichnet.
+
+### A) Dateikarte (statt Komponentenbaum)
+
+```
+public/
+├─ icon.svg                     ← Quell-SVG: Tumbler-Silhouette, Bernstein-Dram
+│                                  auf deckendem #161310. Dient zugleich als
+│                                  SVG-Favicon-Quelle.
+├─ icon-192.png                 ← generiert, deckend, purpose "any"
+├─ icon-512.png                 ← generiert, deckend, purpose "any"
+└─ icon-512-maskable.png        ← generiert, Motiv in der inneren 80%-Safe-Zone,
+                                   purpose "maskable"
+
+src/app/
+├─ icon.svg                     ← Kopie der Quell-SVG (Next → <link rel="icon"
+│                                  type="image/svg+xml">)
+├─ icon.png                     ← generiert, 32×32 (Next → <link rel="icon"
+│                                  type="image/png">, Fallback ohne SVG-Support)
+├─ apple-icon.png               ← generiert, 180×180, deckend, ohne runde Ecken
+│                                  (Next → <link rel="apple-touch-icon">)
+├─ manifest.ts                  ← Web-App-Manifest als TS-Objekt; Next serviert
+│                                  es unter /manifest.webmanifest und injiziert
+│                                  <link rel="manifest"> automatisch
+└─ layout.tsx                   ← MODIFIZIERT: metadata.title-Template,
+                                   appleWebApp, applicationName
+
+scripts/
+└─ gen-icons.mjs                ← npm run icons:gen — liest public/icon.svg,
+                                   schreibt alle generierten PNGs. Einmalig /
+                                   bei Icon-Änderung von Hand ausgeführt, die
+                                   Ergebnisse werden committet.
+```
+
+### B) Das Icon-Motiv (Vorgabe fürs `/frontend`)
+
+Eine **reduzierte Tumbler-Silhouette** (Whiskyglas, kein Stielglas):
+
+- quadratische Fläche, vollflächig **deckend `#161310`**, kein transparenter
+  Rand;
+- mittig ein leicht konisches Glas (unten schmaler), Umriss als dünne, helle
+  Linie (`--foreground`-nah);
+- die unteren ~40 % der Glasfläche in **Bernstein** (`--primary`) als „Dram",
+  mit einer dezenten helleren Oberkante;
+- großzügiger Rand zum Bildrand, damit das Glas bei 32 px noch als Glas lesbar
+  ist und beim adaptiven Zuschnitt (rund) nicht angeschnitten wird;
+- für `icon-512-maskable.png` sitzt das komplette Motiv innerhalb des inneren
+  80 %-Kreises (Android-Safe-Zone), außen nur die `#161310`-Fläche.
+
+Keine Reflexe, keine Farbverläufe über das Nötigste hinaus, keine Beschriftung.
+
+### C) „Datenmodell"
+
+Kein Datenmodell. Die einzige „Konfiguration" ist das Manifest:
+
+```
+name             = "Whizzky – Treffpunkt feiner Geister"
+short_name       = "Whizzky"
+description      = kurzer Satz (aus der bestehenden metadata.description)
+start_url        = "/"
+display          = "standalone"
+orientation      = "portrait"
+theme_color      = "#161310"
+background_color  = "#161310"
+icons            = [ 192 any, 512 any, 512 maskable ]
+```
+
+### D) Änderungen an `src/app/layout.tsx`
+
+- `metadata.title`: von `'Whisky-Tasting'` auf
+  `{ default: 'Whizzky', template: '%s · Whizzky' }` — die vorhandenen
+  Seiten-Titel („Profil", „Bewerten", „Ergebnisse" …) erscheinen dann als
+  „Profil · Whizzky" im Tab. **Das ist der `<title>`-Tag, keine sichtbare
+  Seiten-Überschrift** — die bleibt PROJ-13.
+- `metadata.applicationName = 'Whizzky'`.
+- `metadata.appleWebApp = { capable: true, title: 'Whizzky', statusBarStyle:
+  'default' }`.
+- `viewport.themeColor` **unverändert** `#161310`.
+- Kein manuelles `<link>`-Markup — Next erzeugt alle Icon-/Manifest-Links aus
+  den `app/`-Metadateien.
+
+### E) Backend-Bedarf
+
+Keiner.
+
+### F) Neue Pakete
+
+- **`sharp`** (devDependency) — rendert `public/icon.svg` nach PNG in
+  `scripts/gen-icons.mjs`. Nur Autorenzeit. Kein `.ico`-Paket (SVG + PNG-32
+  decken die Fallback-Fälle ab).
+
+### G) Auswirkungen auf Bestehendes
+
+- **`src/app/layout.tsx`** — die drei Metadaten-Felder oben. Der Tab-Titel
+  ändert sich sichtbar (gewollt).
+- **`package.json`** — `sharp` in `devDependencies`, Script `icons:gen`.
+- Sonst nichts. Keine Route, keine Komponente, kein Test-Setup betroffen. Die
+  bestehenden `next.svg` / `vercel.svg` / … in `public/` bleiben unangetastet
+  (können später separat aufgeräumt werden, nicht Teil von PROJ-12).
+
+### H) Verifikation (Hinweis für `/qa`)
+
+- `npm run build` erzeugt `/manifest.webmanifest`, `/icon.svg`, `/icon.png`,
+  `/apple-icon.png`; im gerenderten `<head>` stehen die vier `<link>`-Tags und
+  die `apple-mobile-web-app-*`-Meta-Tags.
+- Manuell am Gerät: iOS „Zum Home-Bildschirm" + Android „Zum Startbildschirm"
+  zeigen Glas + „Whizzky", Start im Vollbild.
+- Lighthouse „Installable"/PWA ist **kein** Prüfkriterium (kein Service-Worker).
 
 ## QA Test Results
 _To be added by /qa_
