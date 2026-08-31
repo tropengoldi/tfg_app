@@ -7,8 +7,9 @@ import type { MyTastingRow } from '@/lib/queries/tastings'
 
 export function TastingRow({ row }: { row: MyTastingRow }) {
   const running = row.status === 'active'
-  // Mit Helfer steuert der Helfer den Abend, der Gastgeber verkostet dann blind mit (PROJ-11).
-  const hostControls = row.is_host && !row.has_helper
+  // Steuern darf: der Helfer, oder der Gastgeber solange kein Helfer benannt ist
+  // (mit Helfer verkostet der Gastgeber blind mit — PROJ-11).
+  const canControl = row.is_helper || (row.is_host && !row.has_helper)
   // Der Helfer verkostet nicht mit — seine Startseite ist der Steuern-Bereich.
   const primaryHref = row.is_helper
     ? `/tastings/${row.id}/gastgeber`
@@ -20,7 +21,7 @@ export function TastingRow({ row }: { row: MyTastingRow }) {
   if (running && !row.is_helper) {
     secondary.push({ href: `/tastings/${row.id}/whiskies`, label: 'Whiskys', icon: Wine })
   }
-  if (hostControls) {
+  if (canControl) {
     secondary.push({
       href: `/tastings/${row.id}/gastgeber`,
       label: 'Steuern',

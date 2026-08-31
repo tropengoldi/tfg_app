@@ -1,6 +1,6 @@
 # PROJ-11: Neutraler Helfer pro Event
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-08-31
 **Last Updated:** 2026-08-31
 
@@ -565,7 +565,7 @@ ist → `/qa`.**
 | `npm test` (Unit) | **112 / 112** grün — inkl. `auth-rules.test.ts` (`canAccessHostArea` mit `helper_id`, `isEventHelper`) |
 | `npm run test:rls` (Integration gegen die echte DB) | **101 / 101** grün — inkl. neuer `helper-role.integration.test.ts` (**11 / 11**) |
 | `npx tsc --noEmit` · `npm run lint` · `npm run build` | sauber |
-| `npm run test:e2e` → `PROJ-11-neutraler-helfer.spec.ts` | **4 / 5** — 1 Fehler = BUG-1 (siehe unten) |
+| `npm run test:e2e` → `PROJ-11-neutraler-helfer.spec.ts` | **5 / 5** (nach BUG-1-Fix) |
 
 Die Integrationssuite ist die **tragende Prüfung** dieses Features (RLS-erzwungene
 Blindheit). Die 6 bestehenden Integrationsdateien (PROJ-4/5/6/8/9) bleiben grün →
@@ -582,7 +582,7 @@ Blindheit). Die 6 bestehenden Integrationsdateien (PROJ-4/5/6/8/9) bleiben grün
 - [x] **AC6** Helfer im Draft entfernen → verhält sich wieder wie „ohne Helfer" — `test:rls` „Helfer entfernen: der Gastgeber bekommt Steuerung + Detail-Einblick zurück"
 
 #### Sicht & Rechte des Helfers
-- [~] **AC7** Helfer sieht Dashboard + Absprung „Steuern", nicht „Jetzt bewerten" — Dashboard-Absprung „Steuern" korrekt (`canControl = isHelper || …`), „Jetzt bewerten" ausgeblendet. **`/tastings`-Zeile zeigt keinen beschrifteten „Steuern"-Link → BUG-1.**
+- [x] **AC7** Helfer sieht Dashboard + Absprung „Steuern", nicht „Jetzt bewerten" — Dashboard-Absprung „Steuern" korrekt (`canControl = isHelper || …`), „Jetzt bewerten" ausgeblendet; `/tastings`-Zeile zeigt den „Steuern"-Link (nach BUG-1-Fix) — E2E ✓
 - [x] **AC8** Helfer sieht in der Vorbereitung alle Whiskys mit Details — über die **Namensliste in der Steuern-Ansicht** (`/tastings/[eventId]/gastgeber`), erreichbar für den Helfer; `wd_select`-Helfer-Zweig getestet (`test:rls`: „der Helfer sieht alle whisky_details"). Dokumentierte Abweichung: kein Eingriff in `/tastings/[eventId]/whiskies` (Architektur-Entscheidung).
 - [x] **AC9** Helfer steuert wie der Gastgeber ohne Helfer — `test:rls` „der Helfer darf steuern": `set_whisky_order`, `start_event`, `close_round`, `close_event`, `update_event_host_fields` alle ✓; E2E: Helfer öffnet `/gastgeber`, sieht Whisky-Namen (blockiert von BUG-1, aber Seite selbst über direkte URL geprüft)
 - [x] **AC10** Fortschritt als Zähler, ohne Punkte/Namen — `rating_progress` → `can_run_host_control`, gibt nur `whisky_position/rating_count/participant_count`
@@ -627,25 +627,23 @@ Blindheit). Die 6 bestehenden Integrationsdateien (PROJ-4/5/6/8/9) bleiben grün
 
 ### Bugs Found
 
-#### BUG-1: `/tastings`-Zeile zeigt dem Helfer keinen beschrifteten „Steuern"-Link
+#### BUG-1: `/tastings`-Zeile zeigt dem Helfer keinen beschrifteten „Steuern"-Link — ✅ BEHOBEN (2026-08-31)
 - **Severity:** Medium
 - **Steps to Reproduce:**
   1. Als Admin ein (laufendes) Event mit einem Helfer anlegen.
   2. Als **Helfer** anmelden, `/tastings` öffnen.
   3. Erwartet: die Event-Zeile trägt — wie beim Gastgeber ohne Helfer — einen sichtbaren Sekundär-Link **„Steuern"** (AC7 „Absprung Steuern"; so auch in den Frontend-Implementation-Notes festgehalten: „in der `/tastings`-Zeile nach genau derselben Regel wie beim Gastgeber — `isHelper || (isHost && !helper_id)`").
-  4. Tatsächlich: kein „Steuern"-Link. `src/components/tasting/tasting-row.tsx` pusht die Sekundäraktion nur bei `hostControls = row.is_host && !row.has_helper`; für den Helfer (`is_helper`) ist das `false`. Die Zeile verlinkt zwar im Rumpf auf `/gastgeber` (`primaryHref`), aber ohne erkennbare Beschriftung.
-- **Auswirkung:** Der Helfer erreicht die Steuerung weiterhin — über den Zeilen-Rumpf **und** über den (korrekt funktionierenden) „Steuern"-Absprung auf dem Dashboard. Es fehlt nur die beschriftete Affordance in der Liste; Discoverability leidet, und die Implementierung widerspricht ihren eigenen Notes/AC7.
-- **Fix-Vorschlag:** In `tasting-row.tsx` die „Steuern"-Sekundäraktion bei `row.is_helper || (row.is_host && !row.has_helper)` rendern; `primaryHref` für den Helfer weiterhin `/gastgeber` (die Redundanz „Rumpf + Button" entspricht dem Gastgeber-Fall).
-- **Regressions-Guard:** `tests/PROJ-11-neutraler-helfer.spec.ts` › „Helfer sieht „Steuern" auf der /tastings-Zeile …" (aktuell rot, wird mit dem Fix grün).
-- **Priority:** Fix before deployment
+  4. Tatsächlich: kein „Steuern"-Link. `src/components/tasting/tasting-row.tsx` pushte die Sekundäraktion nur bei `hostControls = row.is_host && !row.has_helper`; für den Helfer (`is_helper`) ist das `false`. Die Zeile verlinkte zwar im Rumpf auf `/gastgeber` (`primaryHref`), aber ohne erkennbare Beschriftung.
+- **Fix (`fix(PROJ-11)`):** In `tasting-row.tsx` `hostControls` → `canControl = row.is_helper || (row.is_host && !row.has_helper)`; die „Steuern"-Sekundäraktion hängt jetzt an `canControl`. `primaryHref` für den Helfer weiterhin `/gastgeber` (die Redundanz „Zeilen-Rumpf + Button" entspricht dem Gastgeber-Fall). Verifiziert: `tests/PROJ-11-neutraler-helfer.spec.ts` **5 / 5** grün, `npm test` 112/112, `tsc`/`lint` sauber.
+- **Priority:** Fix before deployment → erledigt
 
 ### Summary
-- **Acceptance Criteria:** 21 / 22 vollständig grün; **AC7 teilweise** (Dashboard-Absprung ✓, `/tastings`-Zeile → BUG-1)
+- **Acceptance Criteria:** **22 / 22** grün (AC7 nach BUG-1-Fix vollständig)
 - **Edge Cases:** 9 / 9
-- **Bugs Found:** 1 (0 Critical, 0 High, **1 Medium**, 0 Low)
+- **Bugs Found:** 1 (0 Critical, 0 High, 1 Medium, 0 Low) — **BUG-1 behoben und verifiziert**
 - **Security:** Pass — die RLS-erzwungene Blindheit hält (durch `helper-role.integration.test.ts` belegt)
-- **Production Ready:** **NO** — BUG-1 (Medium) sollte vor dem Deploy behoben werden; danach ist das Feature deploybar (kein Critical/High)
-- **Recommendation:** BUG-1 in `/frontend` beheben (2-Zeilen-Änderung), dann `/qa` kurz gegenprüfen (der Guard-Test wird grün), anschließend `/deploy`.
+- **Production Ready:** **YES** — kein offener Critical/High/Medium-Bug; alle Suiten grün
+- **Recommendation:** **Deploy** (`/deploy` → `v1.3.0`).
 
 ## Deployment
 _To be added by /deploy_
