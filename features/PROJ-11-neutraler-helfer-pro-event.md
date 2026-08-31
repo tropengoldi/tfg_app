@@ -488,6 +488,69 @@ Helfer-Pfade in der UI mangels Daten ins Leere, brechen aber nichts.
 
 `npx tsc --noEmit` sauber · `eslint` sauber · `npm test` → 112/112 · `npm run build` ok.
 
+## Implementation Notes (Backend)
+
+**Stand:** Migration geschrieben am 2026-08-31 —
+`supabase/migrations/20260831120000_helper_role.sql`. **Noch nicht angewandt.**
+Der Nutzer führt aus:
+
+```powershell
+npm run db:push      # Migration einspielen
+npm run db:types     # src/lib/supabase/types.ts neu generieren
+```
+
+`db:types` überschreibt die im `/frontend`-Schritt von Hand nachgetragenen
+Typen (`helper_id`, `p_helper_id`, `helper_name`, die drei neuen Funktionen) mit
+der echten Generierung — inhaltlich identisch. Danach `npm run test:rls`
+(inkl. der neuen `helper-role.integration.test.ts`) im `/qa`-Schritt.
+
+### Eine Migration — was sie tut
+
+| Bereich | Änderung |
+|---------|----------|
+| **Spalte** | `tasting_events.helper_id uuid NULL → profiles(id) ON DELETE RESTRICT`; Index `idx_events_helper`. |
+| **Funktionen** | `is_event_helper(uuid)`, `event_has_helper(uuid)`, `can_run_host_control(uuid) = is_admin() ∨ is_event_helper() ∨ (is_event_host() ∧ ¬event_has_helper())`. Alle `security definer · stable · search_path=''`, `execute` nur `authenticated`. |
+| **RLS `wd_select`** | Neuer Zweig `is_event_helper(event_id)` (wie der Admin-Zweig, außerhalb des Teilnehmer-`AND`). Gastgeber-Zweig eingeengt: `is_event_host(event_id) AND NOT event_has_helper(event_id)`. `brought_by = auth.uid()` und `is_event_closed` unverändert → der Gastgeber-mit-Helfer sieht weiterhin nur **seinen eigenen** Whisky, alle anderen erst nach Abschluss. |
+| **RLS `whiskies_select` / `events_select` / `participants_select`** | je `OR is_event_helper(...)`. `ratings_select` **unverändert**. |
+| **6 Steuerungs-RPCs** | `set_whisky_order`, `start_event`, `close_round`, `close_event`, `update_event_host_fields`, `rating_progress`: Guard `is_admin() OR is_event_host()` → `can_run_host_control(p_event)`. Signaturen unverändert → `create or replace` erhält die Grants. Rümpfe sonst byte-genau die zuletzt gültigen Fassungen. |
+| **`create_event` / `update_event`** | Neuer Parameter `p_helper_id uuid DEFAULT NULL` (an 4. Stelle, im Default-Block). Prüft: aktives Mitglied (`TS004`), `≠ p_host_id` (`TS017`); `update_event` zusätzlich `∉ event_participants` (`TS017`, „nichts gespeichert"). Signatur ändert sich → alte Fassung `DROP FUNCTION`, neu, `GRANT` neu. |
+| **`set_event_participants`** | lehnt ab, wenn der aktuelle `helper_id` in `p_profile_ids` steht (`TS017`). |
+| **`deactivate_member`** | die `TS013`-Sperre matcht jetzt `host_id = p_target OR helper_id = p_target` für nicht abgeschlossene Events; Meldung „Gastgeber **oder Helfer**". |
+| **`admin_list_events`** | Return-Table + `helper_id uuid`, `helper_name text` (Left-Join `profiles`). Return-Struktur ändert sich → `DROP FUNCTION` + neu + `GRANT`. |
+| **`past_tastings`-View** | + `e.helper_id`, `helper_name` (Left-Join `profiles`). `whisky_rankings` **unangetastet** (hängt nicht an `past_tastings`). |
+
+### Entscheidungen im Detail
+
+- **`update_event` „Helfer entfernen"** = `p_helper_id` weggelassen/`NULL` →
+  `helper_id = NULL`. Das Frontend sendet den Key gar nicht, wenn kein Helfer
+  gewählt ist (`p_helper_id: undefined`), was `supabase-js` aus dem Body
+  entfernt → die Funktion nimmt `DEFAULT NULL`. Robust gegen die
+  `db:types`-Neugenerierung (kein `| null` im Args-Typ nötig).
+- **Kein stiller Teilnehmer-Abzug** in `update_event`: statt den künftigen Helfer
+  automatisch aus `event_participants` zu werfen, wird `∉ Teilnehmerliste`
+  **abgelehnt** (`TS017`, AC „nichts gespeichert"). Das Formular kann diesen Fall
+  gar nicht erzeugen — die Helfer-Auswahl blendet aktuelle Teilnehmer aus — die
+  Server-Prüfung ist das Sicherheitsnetz.
+- **`create_event`** braucht keine `∉ Teilnehmerliste`-Prüfung: außer dem
+  Gastgeber (→ `≠ p_host_id` deckt es ab) gibt es beim Anlegen noch keine
+  Teilnehmer.
+
+### Neue Datei
+
+- `src/lib/supabase/__tests__/helper-role.integration.test.ts` — 11 Fälle:
+  `helper_id` gespeichert & kein Teilnehmer; `TS017` (Helfer = Gastgeber /
+  Helfer in Liste / `set_event_participants`); RLS (Helfer sieht alle Details,
+  Gastgeber-mit-Helfer nur den eigenen, Außenstehender keine, Event-Zeile /
+  Positionen / Teilnehmerliste für den Helfer); Steuerung (Helfer darf, Gastgeber
+  `TS004`, Außenstehender `TS004`); `deactivate_member` → `TS013`; Helfer
+  entfernen → Gastgeber bekommt Steuerung + Details zurück.
+
+### Verifikation (Backend, ohne DB-Zugriff in dieser Session)
+
+`npx tsc --noEmit` sauber · `eslint` sauber · `npm test` → 112/112 ·
+`npm run build` ok. **`npm run test:rls` steht aus bis die Migration angewandt
+ist → `/qa`.**
+
 ## QA Test Results
 _To be added by /qa_
 

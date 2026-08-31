@@ -26,7 +26,9 @@ interface EventPayload {
   p_event_date: string
   p_location: string
   p_host_id: string
-  p_helper_id: string | null
+  // undefined = kein Helfer. Weggelassen im RPC-Body ⇒ die Funktion nimmt
+  // `default null`; bei update_event heißt das „Helfer entfernen".
+  p_helper_id: string | undefined
   p_theme: string | undefined
   p_max_whiskies: number | undefined
   participantIds: string[]
@@ -51,7 +53,7 @@ function normalize(input: unknown): Normalized {
       p_event_date: d.eventDate,
       p_location: d.location,
       p_host_id: d.hostId,
-      p_helper_id: d.helperId === '' ? null : d.helperId,
+      p_helper_id: d.helperId === '' ? undefined : d.helperId,
       p_theme: theme,
       p_max_whiskies: maxWhiskies,
       participantIds: d.participantIds,

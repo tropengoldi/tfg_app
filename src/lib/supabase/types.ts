@@ -587,6 +587,7 @@ export type Database = {
         }[]
       }
       can_rate_whisky: { Args: { p_whisky: string }; Returns: boolean }
+      can_run_host_control: { Args: { p_event: string }; Returns: boolean }
       close_event: { Args: { p_event: string }; Returns: undefined }
       close_round: {
         Args: { p_event: string; p_expected_position: number }
@@ -596,7 +597,7 @@ export type Database = {
         Args: {
           p_event_date: string
           p_food_info?: string
-          p_helper_id?: string | null
+          p_helper_id?: string
           p_host_id: string
           p_location: string
           p_max_whiskies?: number
@@ -606,6 +607,7 @@ export type Database = {
       }
       deactivate_member: { Args: { p_target: string }; Returns: undefined }
       delete_event: { Args: { p_event: string }; Returns: undefined }
+      event_has_helper: { Args: { p_event: string }; Returns: boolean }
       event_status_of: {
         Args: { p_event: string }
         Returns: Database["public"]["Enums"]["event_status"]
@@ -613,6 +615,7 @@ export type Database = {
       is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_event_closed: { Args: { p_event: string }; Returns: boolean }
+      is_event_helper: { Args: { p_event: string }; Returns: boolean }
       is_event_host: { Args: { p_event: string }; Returns: boolean }
       is_event_participant: { Args: { p_event: string }; Returns: boolean }
       rating_progress: {
@@ -643,7 +646,7 @@ export type Database = {
           p_event: string
           p_event_date: string
           p_food_info?: string
-          p_helper_id?: string | null
+          p_helper_id?: string
           p_host_id: string
           p_location: string
           p_max_whiskies?: number
