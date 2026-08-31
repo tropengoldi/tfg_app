@@ -456,4 +456,31 @@ Admin-Passwort ändern) brechen ~11 bzw. 2 PROJ-2-Tests. Fix: Helper auf
 4. Bereits abgelegte alte Verknüpfungen: einmal neu anlegen (behalten sonst das alte Icon — bekannt).
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-08-31 · **Production URL:** https://tfg-app-self.vercel.app · **Tag:** `v1.1.0`
+
+Über den bestehenden Vercel-Auto-Deploy von `main` ausgeliefert (kein separater
+Schritt). Keine neuen Env-Vars, keine DB-Migration.
+
+**Pre-Deploy-Checks:** `npm run build` · `npm run lint` · `npm test` (108/108) ·
+`tests/PROJ-12-app-icon-homescreen.spec.ts` (12/12) — alle grün. QA: Approved,
+0 Bugs.
+
+**Live verifiziert (curl):**
+- `https://tfg-app-self.vercel.app/manifest.webmanifest` → HTTP 200
+  `application/manifest+json`, vollständiges Whizzky-Manifest.
+- `/login`-`<head>`: `<link rel="manifest">`, `icon` (SVG + PNG),
+  `apple-touch-icon`, `theme-color #161310`, `apple-mobile-web-app-title=Whizzky`,
+  `mobile-web-app-capable`; `<title>` = „Anmelden · Whizzky".
+- `/icon.svg`, `/apple-icon.png`, `/icon-512-maskable.png` → HTTP 200.
+
+**Im selben Release-Fenster mitgegangen** (seit `v1.0.0`, waren ungetaggt):
+- Security-Header in `next.config.ts` + PROJ-9 BUG-1-Fix (`getPastTastings`).
+- `scripts/set-admin-password.mjs`, `scripts/gen-icons.mjs`,
+  `scripts/delete-tasting.mjs` / `delete-user.mjs` (+ `_supa.mjs`).
+- Passwort-Reset / Einladung repariert — **Konfig-Änderung in Supabase**
+  (E-Mail-Vorlagen auf `{{ .TokenHash }}`-Form), war ohnehin schon live.
+
+**Offene manuelle Geräte-Prüfung** (nach diesem Deploy, siehe Checkliste unter
+QA Test Results): iOS/Android „Zum Startbildschirm" durchspielen, 32-px-Favicon
+anschauen. Kein Blocker.
