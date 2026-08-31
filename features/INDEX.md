@@ -84,6 +84,35 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
 - Details in den Datei-Köpfen von `scripts/delete-tasting.mjs` /
   `scripts/delete-user.mjs`.
 
+**Konkrete Beispiele (PowerShell, im Projektordner):**
+
+```powershell
+# 1) Events auflisten und die ID heraussuchen
+npm run tasting:list
+
+# 2) Trockenlauf für ein Event (zeigt nur, was gelöscht würde)
+$env:EVENT_ID='2c7cb11e-4157-4b53-94f3-75835f99f5c9'; npm run tasting:delete
+
+# 3) wirklich löschen (Event + Whiskys + Bewertungen + Teilnahme)
+$env:EVENT_ID='2c7cb11e-4157-4b53-94f3-75835f99f5c9'; $env:CONFIRM='yes'; npm run tasting:delete
+
+# 4) danach die gesetzten Variablen wieder entfernen
+Remove-Item Env:EVENT_ID, Env:CONFIRM
+```
+
+```powershell
+# Nutzer: Fußabdruck ansehen, dann deaktivieren (reversibel, Historie bleibt)
+$env:EMAIL='alt.mitglied@example.com'; $env:MODE='report'; npm run user:delete
+$env:MODE='soft'; $env:CONFIRM='yes'; npm run user:delete
+Remove-Item Env:EMAIL, Env:MODE, Env:CONFIRM
+```
+
+Als Einzeiler (setzt, führt aus, räumt auf):
+
+```powershell
+$env:EVENT_ID='<ID>'; $env:CONFIRM='yes'; npm run tasting:delete; Remove-Item Env:EVENT_ID, Env:CONFIRM
+```
+
 ---
 
 ## Feature Map
