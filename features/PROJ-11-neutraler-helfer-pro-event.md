@@ -701,3 +701,23 @@ Fenster, in dem das Live-Frontend die noch fehlende Spalte `helper_id` abfragte
 (mögliche 500er auf `/tastings` und dem Dashboard). Das Fenster ist geschlossen —
 die Migration ist eingespielt. Für künftige DB-Features: erst `db:push`, dann
 Code-Push.
+
+### Nachtrag `v1.3.1` (2026-09-09) — Gastgeber behält die Eckdaten
+
+Verfeinerung nach erstem Praxiseinsatz: der Gastgeber-mit-Helfer konnte kein
+Essen mehr eintragen (die ganze Eckdaten-Bearbeitung war mit dem Ablauf zum
+Helfer gewandert). Behoben:
+
+- Migration `20260909120000_host_keeps_event_basics.sql` — `db:push` +
+  `db:types` **vor** dem Code-Push. `update_event_host_fields` erlaubt wieder
+  `is_event_host()` (effektiv Admin ∨ Helfer ∨ Gastgeber); die anderen fünf
+  Ablauf-RPCs unverändert.
+- `/tastings/[eventId]/gastgeber` zeigt dem Gastgeber-mit-Helfer eine
+  abgespeckte Seite (nur das Eckdaten-Formular, keine geheimen Details);
+  „Eckdaten"-Absprung auf Dashboard + `/tastings`-Zeile.
+- **Verifiziert:** `npm test` 117 / 117 · `npm run test:rls` **102 / 102** ·
+  `npm run test:e2e` (`PROJ-11-neutraler-helfer.spec.ts`) **5 / 5** ·
+  `npm run build` ok.
+- Diesmal **ohne** 500er-Fenster: die Frontend-Änderung ist tolerant (der
+  Client-Guard lässt den Gastgeber durch, die alte RPC hätte nur `TS004`
+  geliefert), und der Push kam nach `db:push`.
