@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { getSessionContext } from '@/lib/auth'
-import { canAccessHostArea } from '@/lib/auth-rules'
+import { canAccessHostArea, canEditEventBasics } from '@/lib/auth-rules'
 import { messageForDbError } from '@/lib/errors'
 import { eckdatenSchema } from '@/lib/schemas/host'
 import { createClient } from '@/lib/supabase/server'
@@ -37,11 +37,33 @@ async function requireHostOr(eventId: string): Promise<ActionResult | null> {
   return null
 }
 
+/**
+ * Wie `requireHostOr`, aber für die Eckdaten (Thema / Essen / Anmerkungen):
+ * der Gastgeber darf immer, auch wenn ein Helfer benannt ist (PROJ-11-
+ * Verfeinerung). Spiegelt den DB-Guard von `update_event_host_fields`.
+ */
+async function requireEventBasicsOr(eventId: string): Promise<ActionResult | null> {
+  const session = await getSessionContext()
+  if (!session) return { error: 'Bitte melde dich neu an.' }
+
+  const supabase = await createClient()
+  const { data: event } = await supabase
+    .from('tasting_events')
+    .select('host_id, helper_id')
+    .eq('id', eventId)
+    .maybeSingle()
+
+  if (!canEditEventBasics(session.userId, session.profile, event)) {
+    return { error: 'Dazu fehlt dir die Berechtigung.' }
+  }
+  return null
+}
+
 export async function saveEckdatenAction(
   eventId: string,
   input: unknown,
 ): Promise<ActionResult> {
-  const guard = await requireHostOr(eventId)
+  const guard = await requireEventBasicsOr(eventId)
   if (guard) return guard
 
   const parsed = eckdatenSchema.safeParse(input)

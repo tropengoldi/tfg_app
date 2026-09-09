@@ -1,5 +1,12 @@
 import Link from 'next/link'
-import { ChevronRight, MapPin, SlidersHorizontal, UserRound, Wine } from 'lucide-react'
+import {
+  ChevronRight,
+  MapPin,
+  NotebookPen,
+  SlidersHorizontal,
+  UserRound,
+  Wine,
+} from 'lucide-react'
 
 import { EventStatusBadge } from '@/components/common/event-status-badge'
 import { formatEventDate } from '@/lib/dates'
@@ -26,6 +33,15 @@ export function TastingRow({ row }: { row: MyTastingRow }) {
       href: `/tastings/${row.id}/gastgeber`,
       label: 'Steuern',
       icon: SlidersHorizontal,
+    })
+  }
+  // Gastgeber-mit-Helfer: steuert nicht, pflegt aber weiter die Eckdaten
+  // (Thema / Essen / Anmerkungen) — PROJ-11-Verfeinerung.
+  if (row.is_host && row.has_helper && !row.is_helper) {
+    secondary.push({
+      href: `/tastings/${row.id}/gastgeber`,
+      label: 'Eckdaten',
+      icon: NotebookPen,
     })
   }
 

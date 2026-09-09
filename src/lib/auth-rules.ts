@@ -47,3 +47,24 @@ export function canAccessHostArea(
   if (event.helper_id) return isEventHelper(userId, event)
   return isEventHost(userId, event)
 }
+
+/**
+ * Darf dieser Nutzer die Eckdaten des Events (Thema / Info zum Essen /
+ * Anmerkungen) bearbeiten? Anders als der Ablauf (`canAccessHostArea`) bleibt
+ * das beim Gastgeber, auch wenn ein Helfer benannt ist — Essen und Anmerkungen
+ * sind Sache des Gastgebers und berühren die Blindheit nicht.
+ * Effektiv: Admin ∨ Helfer ∨ Gastgeber. Spiegelt den DB-Guard von
+ * `update_event_host_fields`.
+ */
+export function canEditEventBasics(
+  userId: string | null | undefined,
+  profile: Pick<Profile, 'role' | 'is_active'> | null | undefined,
+  event: { host_id: string; helper_id?: string | null } | null | undefined,
+): boolean {
+  if (!event) return false
+  return (
+    isAdmin(profile) ||
+    isEventHelper(userId, event) ||
+    isEventHost(userId, event)
+  )
+}

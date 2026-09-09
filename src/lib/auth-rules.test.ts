@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canAccessHostArea,
+  canEditEventBasics,
   isActiveMember,
   isAdmin,
   isEventHelper,
@@ -85,5 +86,31 @@ describe('isEventHelper', () => {
     expect(isEventHelper('h1', { helper_id: null })).toBe(false)
     expect(isEventHelper('h1', {})).toBe(false)
     expect(isEventHelper(null, { helper_id: 'h1' })).toBe(false)
+  })
+})
+
+describe('canEditEventBasics', () => {
+  const host = { role: 'teilnehmer', is_active: true } as const
+  const admin = { role: 'admin', is_active: true } as const
+
+  it('der Gastgeber darf die Eckdaten immer bearbeiten — auch mit Helfer', () => {
+    expect(canEditEventBasics('u1', host, { host_id: 'u1', helper_id: null })).toBe(true)
+    expect(canEditEventBasics('u1', host, { host_id: 'u1', helper_id: 'h1' })).toBe(true)
+  })
+
+  it('der Helfer darf ebenfalls', () => {
+    expect(canEditEventBasics('h1', host, { host_id: 'u1', helper_id: 'h1' })).toBe(true)
+  })
+
+  it('der Admin darf immer', () => {
+    expect(canEditEventBasics('admin1', admin, { host_id: 'u1', helper_id: 'h1' })).toBe(true)
+  })
+
+  it('ein fremder Teilnehmer darf nicht', () => {
+    expect(canEditEventBasics('u2', host, { host_id: 'u1', helper_id: 'h1' })).toBe(false)
+  })
+
+  it('ohne Event: false', () => {
+    expect(canEditEventBasics('u1', host, null)).toBe(false)
   })
 })

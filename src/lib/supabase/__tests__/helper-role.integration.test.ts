@@ -225,24 +225,33 @@ describe.skipIf(!RUN)('Ablauf-Steuerung', () => {
     const { data: ws } = await service.from('whiskies').select('id').eq('event_id', ev)
     const ids = (ws ?? []).map((w) => w.id)
 
-    // Gastgeber wird bei jeder Steueraktion abgewiesen
+    // Gastgeber wird bei jeder ABLAUF-Aktion abgewiesen
     expect(
       (await host.client.rpc('set_whisky_order', { p_event: ev, p_ordered: ids })).error?.code,
     ).toBe('TS004')
     expect((await host.client.rpc('start_event', { p_event: ev })).error?.code).toBe('TS004')
     expect((await host.client.rpc('rating_progress', { p_event: ev })).error?.code).toBe('TS004')
+
+    // … darf aber die ECKDATEN weiter pflegen (Verfeinerung: Essen ist Sache
+    // des Gastgebers, berührt die Blindheit nicht).
     expect(
       (
         await host.client.rpc('update_event_host_fields', {
           p_event: ev,
-          p_theme: 'x',
-          p_food_info: '',
+          p_theme: 'Islay',
+          p_food_info: 'Käse & Brot',
           p_host_notes: '',
         })
-      ).error?.code,
-    ).toBe('TS004')
+      ).error,
+    ).toBeNull()
+    const { data: afterEck } = await service
+      .from('tasting_events')
+      .select('food_info')
+      .eq('id', ev)
+      .single()
+    expect(afterEck!.food_info).toBe('Käse & Brot')
 
-    // Der Helfer darf
+    // Der Helfer darf den Ablauf
     expect(
       (await helper.client.rpc('set_whisky_order', { p_event: ev, p_ordered: ids })).error,
     ).toBeNull()
@@ -254,6 +263,17 @@ describe.skipIf(!RUN)('Ablauf-Steuerung', () => {
     expect((await helper.client.rpc('close_event', { p_event: ev })).error).toBeNull()
 
     await closeAllActive()
+  })
+
+  it('der Außenstehende darf die Eckdaten nicht bearbeiten (TS004)', async () => {
+    const ev = await buildEventWithHelper(`H-eck-out-${stamp}`)
+    const { error } = await outsider.client.rpc('update_event_host_fields', {
+      p_event: ev,
+      p_theme: 'x',
+      p_food_info: 'x',
+      p_host_notes: '',
+    })
+    expect(error?.code).toBe('TS004')
   })
 
   it('der Außenstehende wird weiterhin abgewiesen (TS004)', async () => {

@@ -30,6 +30,56 @@ export interface HostControlData {
   progress: RatingProgress | null
 }
 
+export interface EventBasics {
+  id: string
+  event_date: string
+  location: string
+  status: EventStatus
+  theme: string | null
+  food_info: string | null
+  host_notes: string | null
+  /** Anzeigename des Helfers, falls einer benannt ist (für den Hinweis). */
+  helper_name: string | null
+}
+
+/**
+ * Nur die Eckdaten eines Events (Thema / Essen / Anmerkungen) — für den
+ * Gastgeber-mit-Helfer, der den vollen Steuern-Bereich nicht sieht, aber die
+ * Eckdaten weiter pflegen darf (PROJ-11-Verfeinerung). Keine Whisky-Namen, kein
+ * Fortschritt. `null`, wenn das Event nicht (mehr) lesbar ist.
+ */
+export async function getEventBasics(eventId: string): Promise<EventBasics | null> {
+  const supabase = await createClient()
+
+  const { data: event } = await supabase
+    .from('tasting_events')
+    .select('id, event_date, location, status, theme, food_info, host_notes, helper_id')
+    .eq('id', eventId)
+    .maybeSingle()
+  if (!event) return null
+
+  let helperName: string | null = null
+  if (event.helper_id) {
+    const { data: helper } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', event.helper_id)
+      .maybeSingle()
+    helperName = helper?.display_name ?? null
+  }
+
+  return {
+    id: event.id,
+    event_date: event.event_date,
+    location: event.location,
+    status: event.status,
+    theme: event.theme,
+    food_info: event.food_info,
+    host_notes: event.host_notes,
+    helper_name: helperName,
+  }
+}
+
 /**
  * Die Steuer-Daten eines Abends für den Gastgeber (bzw. Admin).
  * Der Aufrufer hat den Zugriff bereits über `requireHost(eventId)` geprüft;

@@ -1,5 +1,12 @@
 import Link from 'next/link'
-import { ClipboardList, GlassWater, SlidersHorizontal, Trophy, Wine } from 'lucide-react'
+import {
+  ClipboardList,
+  GlassWater,
+  NotebookPen,
+  SlidersHorizontal,
+  Trophy,
+  Wine,
+} from 'lucide-react'
 
 import { GlassStrip } from '@/components/dashboard/glass-strip'
 import { EventStatusBadge } from '@/components/common/event-status-badge'
@@ -13,6 +20,8 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
   const { event, participants, whiskyCount, isParticipant, isHost, isHelper } = data
   // Mit Helfer steuert der Helfer den Abend, nicht der Gastgeber (PROJ-11).
   const canControl = isHelper || (isHost && !event.helper_id)
+  // Der Gastgeber-mit-Helfer steuert nicht, pflegt aber weiter die Eckdaten.
+  const eckdatenOnly = isHost && !!event.helper_id && !isHelper
   const states = glassStates(whiskyCount, event.current_position, event.status)
   const label = progressLabel(whiskyCount, event.current_position, event.status)
   const closed = event.status === 'closed'
@@ -49,6 +58,11 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
             {canControl ? (
               <Jump href={`/tastings/${event.id}/gastgeber`} icon={SlidersHorizontal}>
                 Steuern
+              </Jump>
+            ) : null}
+            {eckdatenOnly ? (
+              <Jump href={`/tastings/${event.id}/gastgeber`} icon={NotebookPen}>
+                Eckdaten
               </Jump>
             ) : null}
             {isHelper ? null : (

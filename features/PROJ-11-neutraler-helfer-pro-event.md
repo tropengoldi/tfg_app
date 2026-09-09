@@ -144,15 +144,20 @@ nicht nur in der Oberfläche.
       bekommt er sie **nicht** (nur Position/Whisky-Nummer, wie jeder
       Teilnehmer), bis das Event abgeschlossen ist.
 - [ ] Angenommen ein Event hat einen Helfer, wenn der Gastgeber
-      `/tastings/[eventId]/gastgeber` aufruft, dann bekommt er „Seite nicht
-      gefunden".
+      `/tastings/[eventId]/gastgeber` aufruft, dann bekommt er **eine abgespeckte
+      Seite mit nur dem Eckdaten-Formular** (Thema / Info zum Essen /
+      Anmerkungen) — ohne Ausschankreihenfolge, ohne Runden-/Abschluss-Steuerung,
+      ohne geheime Whisky-Namen. *(Verfeinerung 2026-09-09 — vorher „Seite nicht
+      gefunden".)*
 - [ ] Angenommen ein Event hat einen Helfer, wenn der Gastgeber eine
-      Steuerungs-Aktion direkt über die API auslöst (Reihenfolge setzen,
-      weiterschalten, abschließen), dann wird sie abgelehnt.
+      **Ablauf**-Aktion direkt über die API auslöst (Reihenfolge setzen,
+      weiterschalten, abschließen, Fortschritt), dann wird sie abgelehnt
+      (`TS004`). Nur `update_event_host_fields` (Eckdaten) steht ihm weiterhin
+      offen.
 - [ ] Angenommen ein Event hat einen Helfer, wenn der Gastgeber das Dashboard
       oder die Tastings-Liste betrachtet, dann sieht er **keinen**
-      „Steuern"-Absprung, aber „Jetzt bewerten" und „Meine Whiskys" wie ein
-      normaler Teilnehmer.
+      „Steuern"-Absprung, aber „Jetzt bewerten", „Meine Whiskys" und einen
+      **„Eckdaten"-Absprung** (zur abgespeckten Seite).
 - [ ] Angenommen ein Event mit Helfer läuft, wenn der Gastgeber seinen eigenen
       Whisky bewertet, dann funktioniert das wie bei jedem Teilnehmer (er
       verkostet blind mit, inkl. seines Gastgeber-Bonus-Whiskys).
@@ -254,6 +259,7 @@ nicht nur in der Oberfläche.
 | Der Helfer sieht den **Bewertungs-Fortschritt als Zähler** (wie der Gastgeber heute), **nie** Punkte oder fremde Notizen | Die Blindheit hält auch für den Helfer bis zum Abschluss | 2026-08-31 |
 | Whisky-Namen: in der **Steuerung mit Namen**, auf dem **Dashboard-Gläserstreifen namenlos** für alle | Der Helfer braucht Namen zum Ausschenken; der Streifen bleibt runden-konsistent | 2026-08-31 |
 | Nach dem Abschluss: **„Helfer: {Name}"** im Ergebnis-Kopf; Helfer **nicht** in „Wer war dabei" / Rangliste | Er war Teil des Abends, aber kein Verkoster | 2026-08-31 |
+| **Verfeinerung (2026-09-09): der Gastgeber behält die Eckdaten.** Mit Helfer verliert der Gastgeber die **Ablauf**-Steuerung (Reihenfolge, Start, Runden, Abschluss, Fortschritt) und die geheimen Details — aber **nicht** Thema / Info zum Essen / Anmerkungen. Er bekommt dafür eine abgespeckte Seite (nur das Eckdaten-Formular) und einen „Eckdaten"-Absprung. | Der Helfer übernimmt den *blinden Ablauf*; das Essen ist Sache des Gastgebers (er lädt zu sich ein) und berührt die Blindheit nicht. „Eckdaten" mit dem Ablauf zu bündeln war zu grob. | 2026-09-09 |
 | Persönliche Bilanz (PROJ-10) zählt eine Helfer-Rolle **nicht** als Tasting | Die Bilanz zählt Teilnahmen | 2026-08-31 |
 | Zugeordneten Helfer eines **nicht abgeschlossenen** Events kann der Admin nicht deaktivieren | Analog zur bestehenden Gastgeber-Regel; verhindert einen führerlosen Abend | 2026-08-31 |
 | Keine Steuerungs-Rückgabe an den Gastgeber im **laufenden** Event; nur der Admin greift dann noch ein | Klare, fixe Rollen ab Start; der Admin ist der Notausgang | 2026-08-31 |
@@ -271,6 +277,7 @@ nicht nur in der Oberfläche.
 | **`create_event` / `update_event`:** neuer Parameter `p_helper_id` (default null); prüft „aktives Mitglied ∧ ≠ Gastgeber ∧ ∉ Teilnehmerliste"; Änderung nur im `draft` | Zuordnung wie Gastgeber/Teilnehmer heute; Konsistenz serverseitig erzwungen | 2026-08-31 |
 | **`set_event_participants`:** lehnt ab, wenn der aktuelle `helper_id` in der neuen Liste steht (`TS017`) | Verhindert „verkostet und hilft" auch über den zweiten Eingabepfad | 2026-08-31 |
 | **Fünf Steuerungs-RPCs** (`set_whisky_order`, `start_event`, `close_round`, `close_event`, `update_event_host_fields`) **+ `rating_progress`:** Guard `is_admin() OR is_event_host()` → `can_run_host_control()` | Zentrale Stelle; der Gastgeber-mit-Helfer kann keine Steuerungs-Aktion mehr auslösen | 2026-08-31 |
+| **Verfeinerung (2026-09-09):** `update_event_host_fields` bekommt zusätzlich `OR is_event_host()` zurück (effektiv `Admin ∨ Helfer ∨ Gastgeber`). Die anderen fünf bleiben `can_run_host_control()`. Neue reine Funktion `canEditEventBasics()` spiegelt das im Frontend; `saveEckdatenAction` nutzt einen eigenen Guard `requireEventBasicsOr`. Neue Query `getEventBasics()` (nur Thema/Essen/Anmerkungen, keine Whisky-Namen). `/gastgeber` verzweigt: voller `HostPanel` **oder** `EventBasicsView` (nur Eckdaten). Dashboard + `/tastings`-Zeile bekommen einen „Eckdaten"-Absprung für den Gastgeber-mit-Helfer. Migration `20260909120000_host_keeps_event_basics.sql`. | Essen berührt die Blindheit nicht — der Gastgeber muss es immer eintragen können | 2026-09-09 |
 | **`deactivate_member`:** die bestehende „Gastgeber eines offenen Events"-Sperre (`TS013`) um „… oder Helfer" erweitern | Verhindert einen führerlosen Abend; ein Fehlercode weniger | 2026-08-31 |
 | **`admin_list_events`** um `helper_id` + `helper_name` erweitern; **`past_tastings`**-View um `helper_id` + Helfer-Name | Admin-Liste/Detail und der Ergebnis-Kopf („Helfer: {Name}") | 2026-08-31 |
 | Neuer Fehlercode **`TS017`** („helper_conflict") in `errors.ts` | Bessere Meldung als das generische `TS004` | 2026-08-31 |

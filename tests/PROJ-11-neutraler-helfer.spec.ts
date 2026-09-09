@@ -21,7 +21,7 @@ import {
  *
  * Deckt die UI-/Navigations-Ebene ab (Formularfeld + Ausschlusslogik, Anzeige
  * „Helfer: {Name}", die „Steuern"-Sichtbarkeit für Helfer vs. Gastgeber-mit-
- * Helfer, „Seite nicht gefunden" für den ausgesperrten Gastgeber,
+ * Helfer, die abgespeckte Eckdaten-Seite des Gastgeber-mit-Helfer,
  * Ergebnis-Kopf). Die DB-erzwungene Blindheit prüft
  * `src/lib/supabase/__tests__/helper-role.integration.test.ts`.
  *
@@ -135,7 +135,7 @@ test('Helfer sieht „Steuern" auf der /tastings-Zeile und öffnet die Steuern-S
   await closeAllActiveEvents()
 })
 
-test('Gastgeber-mit-Helfer: kein „Steuern", Steuern-Seite → „nicht gefunden" (AC14/AC16)', async ({
+test('Gastgeber-mit-Helfer: kein „Steuern", aber Eckdaten pflegbar (AC14/AC16, Verfeinerung)', async ({
   page,
 }) => {
   const evId = await eventWithHelper('lock', 2)
@@ -146,12 +146,30 @@ test('Gastgeber-mit-Helfer: kein „Steuern", Steuern-Seite → „nicht gefunde
 
   const row = page.locator('li', { hasText: LOC('lock') })
   await expect(row).toBeVisible()
+  // Kein „Steuern" — den Ablauf hat der Helfer.
   await expect(row.getByRole('link', { name: 'Steuern' })).toHaveCount(0)
   // „Jetzt bewerten" bleibt (der Gastgeber verkostet blind mit).
   await expect(row.getByRole('link', { name: /Bewerten|Whiskys/ }).first()).toBeVisible()
+  // … aber ein „Eckdaten"-Absprung ist da.
+  const eckdaten = row.getByRole('link', { name: 'Eckdaten' })
+  await expect(eckdaten).toBeVisible()
+  await eckdaten.click()
 
-  await page.goto(`/tastings/${evId}/gastgeber`, { waitUntil: 'networkidle' })
-  await expect(page.getByText(/nicht gefunden/i)).toBeVisible()
+  await page.waitForURL(`**/tastings/${evId}/gastgeber`)
+  // Abgespeckte Seite: Eckdaten-Formular ja, Ablauf-Steuerung nein.
+  await expect(page.getByRole('heading', { name: 'Eckdaten' })).toBeVisible()
+  await expect(page.getByLabel(/Info zum Essen/)).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: /Nächste Runde|Tasting abschließen|Tasting starten/ }),
+  ).toHaveCount(0)
+  await expect(page.getByRole('list', { name: 'Ausschankreihenfolge' })).toHaveCount(0)
+  // Keine geheimen Whisky-Namen.
+  await expect(page.getByText('lock-Dram-1')).toHaveCount(0)
+
+  // Essen eintragen und speichern.
+  await page.getByLabel(/Info zum Essen/).fill('Raclette')
+  await page.getByRole('button', { name: /Eckdaten speichern/ }).click()
+  await expect(page.getByText(/Eckdaten gespeichert/)).toBeVisible()
 
   await closeAllActiveEvents()
 })
