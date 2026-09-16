@@ -1,6 +1,6 @@
 # PROJ-14: Profil sichtbar für andere (Sichtbarkeits-Einstellungen)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-09-16
 **Last Updated:** 2026-09-16
 
@@ -548,4 +548,18 @@ Beides sind vorbestehende, bereits vor PROJ-14 bekannte und im Backlog nachverfo
 - **Recommendation:** **Approved.**
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-09-16 · **Production URL:** https://tfg-app-self.vercel.app · **Tag:** `v1.4.0`
+
+Hosting: Vercel (Auto-Deploy aus `main`). Backend: Supabase `ogwuwisutgaxxpknkgpg`
+(eu-central-1), Migration `20260916120000_profile_visibility.sql` bereits vor
+`/qa` per `npm run db:push` eingespielt und verifiziert (109/109
+Integrationstests, inkl. der neuen PROJ-14-Fälle).
+
+Keine neuen Umgebungsvariablen, kein Vercel-Konfigurationsschritt nötig — reine
+Code- + Migrations-Erweiterung eines bereits laufenden Deployments.
+
+Während der QA wurde außerdem das Seed-Konto `test.teilnehmer@example.com`
+reaktiviert (`is_active` stand fälschlich auf `false`, unabhängig von
+PROJ-14) — siehe QA-Abschnitt. Das Admin-Passwort-Problem aus dem
+Post-Deploy-Backlog bleibt offen, das ist eine bewusste Nutzerentscheidung.

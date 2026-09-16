@@ -28,7 +28,7 @@
 | PROJ-11 | Neutraler Helfer pro Event | Deployed | [PROJ-11-neutraler-helfer-pro-event.md](PROJ-11-neutraler-helfer-pro-event.md) | 2026-08-29 |
 | PROJ-12 | App-Icon & Homescreen | Deployed | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
-| PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Approved | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
+| PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Deployed | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
 | PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Roadmap | – | 2026-09-16 |
 
 <!-- Add features above this line -->
@@ -37,20 +37,19 @@
 
 ## Stand der Roadmap
 
-PROJ-1..13 **Deployed**. PROJ-11 (Neutraler Helfer) am 2026-08-31 als `v1.3.0`
+PROJ-1..14 **Deployed**. PROJ-11 (Neutraler Helfer) am 2026-08-31 als `v1.3.0`
 live (mit DB-Migration `20260831120000_helper_role.sql`). PROJ-14 (Profil für
-andere Teilnehmer einsehbar, mit granularer Sichtbarkeitssteuerung) ist seit
-2026-09-16 **Approved** — Migration `20260916120000_profile_visibility.sql`
-angewandt, 15/15 Acceptance Criteria bestanden (1 High-Bug während der QA
-gefunden und behoben — Bilanz-Berechnung für Nicht-Teilnehmer las
-Event-Status aus einer per RLS gesperrten Tabelle statt aus `past_tastings`),
-Security-Audit ohne Befund. Nächster Schritt `/deploy PROJ-14`. Die volle
-E2E-Regressionssuite zeigt daneben 29 vorbestehende, nicht PROJ-14-bezogene
-Fehlschläge durch zwei Seed-Konto-Probleme (Admin-Passwort ≠ Seed-Passwort;
-`test.teilnehmer@example.com` aktuell deaktiviert) — siehe QA-Abschnitt der
-Spec und die bestehenden Backlog-Punkte unten. PROJ-15 (persönliche, optional
-teilbare Whisky-Sammlung à la Vivino, baut auf PROJ-14 auf) ist noch
-**Roadmap**, kein Spec. Sonstige offene Arbeit siehe Post-Deploy-Backlog.
+andere Teilnehmer einsehbar, mit granularer Sichtbarkeitssteuerung) am
+2026-09-16 als `v1.4.0` live (mit DB-Migration
+`20260916120000_profile_visibility.sql`; 15/15 Acceptance Criteria, 1
+High-Bug während der QA gefunden und behoben, Security-Audit ohne Befund).
+Die volle E2E-Regressionssuite zeigt daneben 29 vorbestehende, nicht
+PROJ-14-bezogene Fehlschläge durch ein Seed-Konto-Problem
+(Admin-Passwort ≠ Seed-Passwort — `test.teilnehmer@example.com` wurde
+während der QA bereits reaktiviert) — siehe QA-Abschnitt der Spec und den
+Backlog-Punkt unten. PROJ-15 (persönliche, optional teilbare
+Whisky-Sammlung à la Vivino, baut auf PROJ-14 auf) ist noch **Roadmap**,
+kein Spec. Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 
