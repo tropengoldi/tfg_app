@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 
 import { canAccessHostArea, isActiveMember, isAdmin } from '@/lib/auth-rules'
 import { createClient } from '@/lib/supabase/server'
-import type { AppRole, Profile } from '@/lib/supabase/aliases'
+import type { AppRole, SessionProfile } from '@/lib/supabase/aliases'
 
 export {
   canAccessHostArea,
@@ -12,10 +12,20 @@ export {
 } from '@/lib/auth-rules'
 export type { AppRole }
 
+/**
+ * Genau die Spalten, die ein Direktzugriff auf `profiles` seit PROJ-14 noch
+ * liefert (`bio` / `favorite_dram` / `favorite_region` sind für fremde
+ * Zeilen per Spalten-Grant entzogen — nur `profiles_public` hat sie noch,
+ * und auch die eigene Zeile wird bewusst über denselben Pfad gelesen wie
+ * jede andere, damit es nur einen Lesepfad gibt).
+ */
+const SESSION_PROFILE_COLUMNS =
+  'id, display_name, role, avatar_url, is_active, created_at, updated_at, show_favorite_dram, show_favorite_region, show_bio, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points' as const
+
 export interface SessionContext {
   userId: string
   email: string | null
-  profile: Profile
+  profile: SessionProfile
 }
 
 /** Liest den angemeldeten Nutzer samt Profil, oder null. Kein Redirect. */
@@ -28,7 +38,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select(SESSION_PROFILE_COLUMNS)
     .eq('id', user.id)
     .maybeSingle()
   if (!profile) return null
@@ -49,7 +59,7 @@ export async function requireUser(): Promise<SessionContext> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select(SESSION_PROFILE_COLUMNS)
     .eq('id', user.id)
     .maybeSingle()
 
@@ -57,7 +67,7 @@ export async function requireUser(): Promise<SessionContext> {
     redirect('/auth/abmelden?reason=deactivated')
   }
 
-  return { userId: user.id, email: user.email ?? null, profile: profile as Profile }
+  return { userId: user.id, email: user.email ?? null, profile: profile as SessionProfile }
 }
 
 /** Wie requireUser, aber zusätzlich Rolle „admin". Sonst „nicht gefunden". */

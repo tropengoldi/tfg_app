@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { MapPin, UserRound } from 'lucide-react'
 
 import { EventStatusBadge } from '@/components/common/event-status-badge'
@@ -36,13 +37,27 @@ export function ResultsHeader({
 
         <p className="flex items-center gap-1.5 text-muted-foreground">
           <UserRound className="h-3.5 w-3.5 shrink-0" />
-          Gastgeber: {head.host_name}
+          Gastgeber:{' '}
+          {head.host_id ? (
+            <Link href={`/profil/${head.host_id}`} className="hover:underline">
+              {head.host_name}
+            </Link>
+          ) : (
+            head.host_name
+          )}
         </p>
 
         {head.helper_name ? (
           <p className="flex items-center gap-1.5 text-muted-foreground">
             <UserRound className="h-3.5 w-3.5 shrink-0" />
-            Helfer: {head.helper_name}
+            Helfer:{' '}
+            {head.helper_id ? (
+              <Link href={`/profil/${head.helper_id}`} className="hover:underline">
+                {head.helper_name}
+              </Link>
+            ) : (
+              head.helper_name
+            )}
           </p>
         ) : null}
 
@@ -53,7 +68,9 @@ export function ResultsHeader({
           <ul className="space-y-1.5">
             {participants.map((p) => (
               <li key={p.id} className="flex items-center gap-2">
-                {p.name}
+                <Link href={`/profil/${p.id}`} className="hover:underline">
+                  {p.name}
+                </Link>
                 {p.isHost ? (
                   <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
                     Gastgeber

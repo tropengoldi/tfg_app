@@ -104,7 +104,9 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
           <ul className="space-y-1.5 text-sm">
             {participants.map((p) => (
               <li key={p.id} className="flex items-center gap-2">
-                {p.name}
+                <Link href={`/profil/${p.id}`} className="hover:underline">
+                  {p.name}
+                </Link>
                 {p.isHost ? (
                   <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
                     Gastgeber

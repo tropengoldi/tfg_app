@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { ChevronDown, Play, Trophy } from 'lucide-react'
 
 import {
@@ -58,7 +59,14 @@ export function RankingRow({
                 </p>
               ) : null}
               <p className="text-sm text-muted-foreground">
-                mitgebracht von {row.broughtBy}
+                mitgebracht von{' '}
+                {row.broughtById ? (
+                  <Link href={`/profil/${row.broughtById}`} className="hover:underline">
+                    {row.broughtBy}
+                  </Link>
+                ) : (
+                  row.broughtBy
+                )}
               </p>
               {isWinnerRow ? (
                 <p className="flex items-center gap-1.5 text-sm font-medium text-gold">

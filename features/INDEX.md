@@ -28,16 +28,29 @@
 | PROJ-11 | Neutraler Helfer pro Event | Deployed | [PROJ-11-neutraler-helfer-pro-event.md](PROJ-11-neutraler-helfer-pro-event.md) | 2026-08-29 |
 | PROJ-12 | App-Icon & Homescreen | Deployed | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
+| PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Approved | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
+| PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Roadmap | – | 2026-09-16 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-14
+## Next Available ID: PROJ-16
 
 ## Stand der Roadmap
 
 PROJ-1..13 **Deployed**. PROJ-11 (Neutraler Helfer) am 2026-08-31 als `v1.3.0`
-live (mit DB-Migration `20260831120000_helper_role.sql`). Keine offenen
-Feature-Specs — nächste Arbeit siehe Post-Deploy-Backlog.
+live (mit DB-Migration `20260831120000_helper_role.sql`). PROJ-14 (Profil für
+andere Teilnehmer einsehbar, mit granularer Sichtbarkeitssteuerung) ist seit
+2026-09-16 **Approved** — Migration `20260916120000_profile_visibility.sql`
+angewandt, 15/15 Acceptance Criteria bestanden (1 High-Bug während der QA
+gefunden und behoben — Bilanz-Berechnung für Nicht-Teilnehmer las
+Event-Status aus einer per RLS gesperrten Tabelle statt aus `past_tastings`),
+Security-Audit ohne Befund. Nächster Schritt `/deploy PROJ-14`. Die volle
+E2E-Regressionssuite zeigt daneben 29 vorbestehende, nicht PROJ-14-bezogene
+Fehlschläge durch zwei Seed-Konto-Probleme (Admin-Passwort ≠ Seed-Passwort;
+`test.teilnehmer@example.com` aktuell deaktiviert) — siehe QA-Abschnitt der
+Spec und die bestehenden Backlog-Punkte unten. PROJ-15 (persönliche, optional
+teilbare Whisky-Sammlung à la Vivino, baut auf PROJ-14 auf) ist noch
+**Roadmap**, kein Spec. Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 
@@ -147,6 +160,8 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-11** | **Neutraler Helfer pro Event** | Optionale Rolle je Event: eine Person, die selbst nicht mitverkostet, aber Einblick in die geheimen Whisky-Details hat und den Ablauf steuern darf (Ausschankreihenfolge festlegen, Runden weiterschalten u. ä.). Ist ein Helfer für ein Event benannt, hat der Gastgeber dieses Abends nur noch die Einblicke eines normalen Teilnehmers (er verkostet dann blind mit). Betrifft Rollen-/Berechtigungsmodell (RLS, Helper-Funktionen), Event-Anlage (PROJ-4) und Gastgeber-Steuerung (PROJ-6). | P2 | PROJ-6 |
 | **PROJ-12** | **App-Icon & Homescreen** | Icon-Set für „Zum Startbildschirm hinzufügen" auf dem Handy: Web-App-Manifest (`manifest.webmanifest`), `apple-touch-icon`, Favicon-Varianten, `theme-color`. Kein Service-Worker / keine Offline-Fähigkeit (PRD-Non-Goal), nur das Icon + der Name auf dem Homescreen. | P2 | PROJ-2 |
 | **PROJ-13** | **Marken-Auftritt (Whizzky)** | Bündelt zwei visuelle Änderungen an denselben Bausteinen (Auth-Layout, App-Shell-Header, `PageHeader`): (a) Haupt-Überschrift auf **„Whizzky"** mit kleinerer Unterzeile **„Treffpunkt feiner Geister"** statt „Whisky Tasting"; (b) ein dezentes, thematisch passendes Hintergrundbild in der Anmelde-Maske und hinter den Seiten-Überschriften. Rein Frontend, keine DB-Änderung. Assets liegen unter `public/`. | P2 | PROJ-2 |
+| **PROJ-14** | **Profil sichtbar für andere** | Andere Teilnehmer können das Profil eines Nutzers read-only einsehen (Stammdaten + persönliche Bilanz aus PROJ-10). Jeder legt in seinem eigenen Profil pro Feld fest, ob es für andere sichtbar ist. Betrifft Datenmodell/RLS (neue Sichtbarkeits-Flags) und die PROJ-10-Profilseite (neue Detailansicht für fremde Profile). | P2 | PROJ-10 |
+| **PROJ-15** | **Persönliche Whisky-Datenbank** | Eigene Sammlung/Tasting-Log im Profilbereich, unabhängig von Events (Vivino-artig): Whiskies frei eintragen, eigene Bewertung/Notizen. Sichtbarkeit für andere Teilnehmer folgt denselben Einstellungen wie PROJ-14 — keine öffentliche, gemeinsame Datenbank und kein externer Katalog (das PRD-Non-Goal bleibt bestehen, siehe dort). | P2 | PROJ-14 |
 
 ### Anmerkungen zur Aufteilung
 
@@ -171,3 +186,7 @@ Whiskies existieren und eine Runde läuft.
   Verfeinerung dieses Rollenmodells, die die Runde erst nach dem ersten echten Einsatz
   wirklich beurteilen kann. Wird zusammen mit / nach PROJ-6 spezifiziert, weil sie dieselben
   Berechtigungspfade (Ausschankreihenfolge, Runden schalten) betrifft.
+- **PROJ-15 hängt an PROJ-14, nicht nur an PROJ-10**: „teilbar wie bei Vivino" heißt, die
+  Sammlung nutzt dieselbe Sichtbarkeits-Steuerung, die PROJ-14 einführt. Erst wenn geklärt
+  ist, was ein Nutzer über sich preisgibt, lässt sich sinnvoll festlegen, was er über seine
+  Whisky-Sammlung preisgibt.

@@ -105,8 +105,11 @@ Vercel. `.mcp.json` ist gitignored, weil sie einen Supabase Personal Access Toke
 ## Non-Goals
 
 - **Kein Zahlungs- oder Rechnungsmodul** — die Runde rechnet untereinander ab
-- **Keine öffentliche Whisky-Datenbank** — Whiskies werden pro Event frei eingetragen, es gibt
-  keinen Katalog und keine Anbindung an externe Whisky-APIs
+- **Keine öffentliche/gemeinsame Whisky-Datenbank** — Whiskies werden pro Event frei
+  eingetragen, es gibt keinen Katalog und keine Anbindung an externe Whisky-APIs. Die
+  persönliche, optional mit der Runde teilbare Whisky-Sammlung im Profil (PROJ-15) ist davon
+  zu unterscheiden: rein manuelle Einträge pro Nutzer, keine externe API, kein gemeinsamer
+  Katalog
 - **Keine YouTube-Integration** — das Verkostungsvideo ist eine gespeicherte Verknüpfung, die
   in einem neuen Tab öffnet. Kein eingebetteter Player, keine API-Abfrage, kein automatisches
   Suchen von Videos beim Anlegen eines Whiskys

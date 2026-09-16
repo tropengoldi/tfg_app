@@ -9,6 +9,7 @@ export interface PastTastingRow {
   id: string
   event_date: string
   location: string
+  host_id: string | null
   host_name: string
   /** `null`, wenn kein Whisky bewertet wurde → „— kein Sieger". */
   winner_name: string | null
@@ -24,7 +25,9 @@ export async function getPastTastings(): Promise<PastTastingRow[]> {
 
   const { data, error } = await supabase
     .from('past_tastings')
-    .select('event_id, event_date, location, host_name, winner_name, winner_points, closed_at')
+    .select(
+      'event_id, event_date, location, host_id, host_name, winner_name, winner_points, closed_at',
+    )
     .order('event_date', { ascending: false })
   if (error) throw error
 
@@ -41,6 +44,7 @@ export async function getPastTastings(): Promise<PastTastingRow[]> {
       id: r.event_id,
       event_date: r.event_date,
       location: r.location ?? '',
+      host_id: r.host_id,
       host_name: r.host_name ?? 'Unbekannt',
       // `winner_name` steht in der View auch dann, wenn niemand bewertet hat
       // (Rang 1 mit 0 Punkten). Ohne Punkte kein Sieger.
@@ -74,6 +78,8 @@ export interface RankingRow {
   region: string | null
   /** Aufgelöster Anzeigename des Bringers. */
   broughtBy: string
+  /** `null`, wenn keine `brought_by`-Zuordnung existiert (sollte nicht vorkommen). */
+  broughtById: string | null
   videoUrl: string | null
   noseTotal: number
   tasteTotal: number
@@ -91,7 +97,10 @@ export interface EventResults {
     event_date: string
     location: string
     theme: string | null
+    host_id: string | null
     host_name: string
+    /** Profil-ID des neutralen Helfers (PROJ-11), oder null. */
+    helper_id: string | null
     /** Anzeigename des neutralen Helfers (PROJ-11), oder null. */
     helper_name: string | null
   }
@@ -212,6 +221,7 @@ export async function getEventResults(
       distillery: r.distillery,
       region: r.region,
       broughtBy: r.brought_by ? names.get(r.brought_by) ?? 'Unbekannt' : 'Unbekannt',
+      broughtById: r.brought_by,
       videoUrl: r.video_url,
       noseTotal: r.nose_total ?? 0,
       tasteTotal: r.taste_total ?? 0,
@@ -227,7 +237,9 @@ export async function getEventResults(
       event_date: head.event_date,
       location: head.location ?? '',
       theme: head.theme,
+      host_id: (head.host_id as string | null) ?? null,
       host_name: head.host_name ?? 'Unbekannt',
+      helper_id: helperId,
       helper_name: helperId ? names.get(helperId) ?? 'Unbekannt' : null,
     },
     participants,

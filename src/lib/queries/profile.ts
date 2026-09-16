@@ -17,6 +17,35 @@ import {
  * Wirft bei einem Lesefehler — die aufrufende Seite fängt das ab und zeigt
  * statt der Karte den „nicht verfügbar"-Hinweis.
  */
+export interface OwnStammdaten {
+  bio: string | null
+  favoriteDram: string | null
+  favoriteRegion: string | null
+}
+
+/**
+ * Die drei Stammdaten-Felder für das EIGENE Profil (PROJ-14 hat den
+ * Direktzugriff auf `profiles.bio` / `favorite_dram` / `favorite_region` für
+ * fremde Zeilen entzogen; nur `profiles_public` führt sie noch). Für die
+ * eigene ID liefert die Sicht immer den vollen Wert, unabhängig von den
+ * eigenen Sichtbarkeits-Schaltern — die wirken nur nach außen.
+ */
+export async function getOwnStammdaten(userId: string): Promise<OwnStammdaten> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('profiles_public')
+    .select('bio, favorite_dram, favorite_region')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) throw error
+
+  return {
+    bio: data?.bio ?? null,
+    favoriteDram: data?.favorite_dram ?? null,
+    favoriteRegion: data?.favorite_region ?? null,
+  }
+}
+
 export async function getPersonalBalance(userId: string): Promise<PersonalBalance> {
   const supabase = await createClient()
 

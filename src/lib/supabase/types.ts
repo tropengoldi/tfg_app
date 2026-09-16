@@ -52,6 +52,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "event_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -65,6 +72,13 @@ export type Database = {
           id: string
           is_active: boolean
           role: Database["public"]["Enums"]["app_role"]
+          show_avg_points: boolean
+          show_best_placement: boolean
+          show_bio: boolean
+          show_favorite_dram: boolean
+          show_favorite_region: boolean
+          show_tasting_count: boolean
+          show_whisky_count: boolean
           updated_at: string
         }
         Insert: {
@@ -77,6 +91,13 @@ export type Database = {
           id: string
           is_active?: boolean
           role?: Database["public"]["Enums"]["app_role"]
+          show_avg_points?: boolean
+          show_best_placement?: boolean
+          show_bio?: boolean
+          show_favorite_dram?: boolean
+          show_favorite_region?: boolean
+          show_tasting_count?: boolean
+          show_whisky_count?: boolean
           updated_at?: string
         }
         Update: {
@@ -89,6 +110,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           role?: Database["public"]["Enums"]["app_role"]
+          show_avg_points?: boolean
+          show_best_placement?: boolean
+          show_bio?: boolean
+          show_favorite_dram?: boolean
+          show_favorite_region?: boolean
+          show_tasting_count?: boolean
+          show_whisky_count?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -150,6 +178,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
             referencedColumns: ["id"]
           },
           {
@@ -253,8 +288,29 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasting_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasting_events_helper_id_fkey"
             columns: ["helper_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasting_events_helper_id_fkey"
+            columns: ["helper_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasting_events_host_id_fkey"
+            columns: ["host_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -263,7 +319,7 @@ export type Database = {
             foreignKeyName: "tasting_events_host_id_fkey"
             columns: ["host_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "profiles_public"
             referencedColumns: ["id"]
           },
         ]
@@ -362,6 +418,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "whisky_details_brought_by_fkey"
+            columns: ["brought_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "whisky_details_whisky_id_event_id_fkey"
             columns: ["whisky_id", "event_id"]
             isOneToOne: false
@@ -424,13 +487,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasting_events_helper_id_fkey"
+            columns: ["helper_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasting_events_host_id_fkey"
             columns: ["host_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tasting_events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      profiles_public: {
+        Row: {
+          bio: string | null
+          display_name: string | null
+          favorite_dram: string | null
+          favorite_region: string | null
+          id: string | null
+          show_avg_points: boolean | null
+          show_best_placement: boolean | null
+          show_tasting_count: boolean | null
+          show_whisky_count: boolean | null
+        }
+        Insert: {
+          bio?: never
+          display_name?: string | null
+          favorite_dram?: never
+          favorite_region?: never
+          id?: string | null
+          show_avg_points?: boolean | null
+          show_best_placement?: boolean | null
+          show_tasting_count?: boolean | null
+          show_whisky_count?: boolean | null
+        }
+        Update: {
+          bio?: never
+          display_name?: string | null
+          favorite_dram?: never
+          favorite_region?: never
+          id?: string | null
+          show_avg_points?: boolean | null
+          show_best_placement?: boolean | null
+          show_tasting_count?: boolean | null
+          show_whisky_count?: boolean | null
+        }
+        Relationships: []
       }
       whisky_rankings: {
         Row: {
@@ -470,6 +583,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "whisky_details_brought_by_fkey"
+            columns: ["brought_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       whisky_score_breakdown: {
@@ -502,6 +622,13 @@ export type Database = {
             columns: ["rater_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_profile_id_fkey"
+            columns: ["rater_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
             referencedColumns: ["id"]
           },
           {
