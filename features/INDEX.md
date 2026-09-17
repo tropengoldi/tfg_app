@@ -29,7 +29,7 @@
 | PROJ-12 | App-Icon & Homescreen | Deployed | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
 | PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Deployed | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
-| PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Roadmap | – | 2026-09-16 |
+| PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Planned | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
 
 <!-- Add features above this line -->
 
@@ -48,8 +48,11 @@ PROJ-14-bezogene Fehlschläge durch ein Seed-Konto-Problem
 (Admin-Passwort ≠ Seed-Passwort — `test.teilnehmer@example.com` wurde
 während der QA bereits reaktiviert) — siehe QA-Abschnitt der Spec und den
 Backlog-Punkt unten. PROJ-15 (persönliche, optional teilbare
-Whisky-Sammlung à la Vivino, baut auf PROJ-14 auf) ist noch **Roadmap**,
-kein Spec. Sonstige offene Arbeit siehe Post-Deploy-Backlog.
+Whisky-Sammlung à la Vivino, baut auf PROJ-14 auf) ist jetzt **Planned** —
+Spec am 2026-09-17 geschrieben (Hybrid-Modell Sammlung+Bewertung, eigene
+1–10-Skala, achter Sichtbarkeits-Schalter, Übernehmen-Button mit
+Herkunftsfeld auf der PROJ-9-Ergebnisseite). Sonstige offene Arbeit siehe
+Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 
