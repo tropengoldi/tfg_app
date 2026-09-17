@@ -55,11 +55,14 @@ Sammlung+Bewertung, eigene 1–10-Skala, achter Sichtbarkeits-Schalter,
 eigene Tabelle mit zeilenweiser RLS), Frontend am selben Tag umgesetzt
 (`/profil/sammlung`, `/profil/[id]/sammlung`, Übernehmen-Button in
 `ranking-row.tsx`; `npm test` 127/127, `build` sauber), Backend-Migration am
-selben Tag geschrieben (`20260917120000_collection_entries.sql`: neue
-Tabelle mit zeilenweiser RLS statt einer maskierenden Sicht, Herkunftsfeld
-per Spalten-GRANT eingefroren, 9 neue Integrationstests). **Migration noch
-nicht angewandt** — `npm run db:push` + `npm run db:types` stehen aus, dann
-`/qa PROJ-15`. Sonstige offene Arbeit siehe Post-Deploy-Backlog.
+selben Tag geschrieben und angewandt (`20260917120000_collection_entries.sql`:
+neue Tabelle mit zeilenweiser RLS statt einer maskierenden Sicht,
+Herkunftsfeld per Spalten-GRANT eingefroren; ein erster `db:push`-Versuch
+scheiterte an der Anlage-Reihenfolge Spalte/Funktion, nach Fix erfolgreich
+eingespielt). Vollständig verifiziert: `tsc`/`eslint` sauber, `npm test`
+127/127, `npm run test:rls` **120/120** (inkl. 11 neuer Fälle), `build`
+sauber. Bereit für `/qa PROJ-15`. Sonstige offene Arbeit siehe
+Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 

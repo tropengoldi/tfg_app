@@ -832,6 +832,10 @@ export type Database = {
       is_event_helper: { Args: { p_event: string }; Returns: boolean }
       is_event_host: { Args: { p_event: string }; Returns: boolean }
       is_event_participant: { Args: { p_event: string }; Returns: boolean }
+      profile_shows_collection: {
+        Args: { p_profile: string }
+        Returns: boolean
+      }
       rating_progress: {
         Args: { p_event: string }
         Returns: {

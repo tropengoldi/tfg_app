@@ -595,17 +595,23 @@ vor der sie nutzenden Funktion `is_event_helper` steht.
 
 ### Verifikation
 
-`npx tsc --noEmit` sauber · `eslint .` sauber · `npm test` → 127/127
-(unverändert — die neue Datei ist eine `*.integration.test.ts` und damit laut
-`vitest.config.ts` vom normalen Testlauf ausgeschlossen, sie läuft nur über
-`npm run test:rls`) · `npm run build` ok. Kein lokales Docker/Supabase
-verfügbar in dieser Session (`supabase status` scheitert an fehlendem
-Docker/Podman) → die Migration ließ sich nicht lokal gegenprüfen, nur gegen
-die bestehenden Konventionen (Spaltentypen, Trigger, GRANT-Muster) abgleichen.
-`npm run test:rls` bewusst **nicht** in diesem Schritt ausgeführt — die
-Migration steht noch aus, ein Lauf würde an der fehlenden Tabelle/Spalte
-scheitern. Verifikation folgt in `/qa`, nachdem der Nutzer `db:push`
-ausgeführt hat.
+Migration am 2026-09-17 vom Nutzer per `npm run db:push` eingespielt (nach
+dem Reihenfolge-Fix oben) und `npm run db:types` neu generiert — die
+Handnachträge aus `/frontend` waren inhaltlich bereits identisch mit der
+echten Generierung. Danach vollständig gegengeprüft:
+
+| Check | Ergebnis |
+|-------|----------|
+| `npx tsc --noEmit` | sauber |
+| `eslint .` | sauber |
+| `npm test` (Vitest Unit) | **127/127** |
+| `npm run test:rls` (Integration) | **120/120** — inkl. der 11 neuen Fälle aus `collection-entries.integration.test.ts` |
+| `npm run build` | erzeugt `/profil/sammlung` und `/profil/[id]/sammlung` als dynamische Routen |
+
+Kein lokales Docker/Supabase in dieser Session verfügbar gewesen (`supabase
+status` scheitert an fehlendem Docker/Podman) — die Migration wurde deshalb
+nur gegen bestehende Konventionen abgeglichen, bevor sie live angewandt
+wurde; die Verifikation danach lief gegen die echte, geteilte DB.
 
 ## QA Test Results
 _To be added by /qa_
