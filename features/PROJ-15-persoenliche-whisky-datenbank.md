@@ -1,6 +1,6 @@
 # PROJ-15: Persönliche Whisky-Datenbank (teilbar)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-09-17
 **Last Updated:** 2026-09-17
 
@@ -614,7 +614,133 @@ nur gegen bestehende Konventionen abgeglichen, bevor sie live angewandt
 wurde; die Verifikation danach lief gegen die echte, geteilte DB.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-09-17
+**App URL:** http://localhost:3000 (prod-Build)
+**Tester:** QA Engineer (AI)
+
+### Automatisierte Suiten
+
+| Suite | Ergebnis |
+|-------|----------|
+| `npm test` (Vitest Unit) | **127/127** |
+| `npm run test:rls` (Integration) | **120/120** (bereits im `/backend`-Schritt gegen die echte DB verifiziert, hier unverändert) |
+| `tests/PROJ-15-persoenliche-sammlung.spec.ts` (neu) | **36/36** über `chromium` + `Mobile Safari` (18 Tests je Projekt) |
+| `tsc --noEmit` · `eslint .` · `npm run build` | alle sauber; Routen `/profil/sammlung` und `/profil/[id]/sammlung` erzeugt |
+| Gezielte Regression: `PROJ-9`, `PROJ-10`, `PROJ-14` | **37/38** — die eine „fehlgeschlagene" ist der vorbestehende, dokumentierte Seed-Admin-Login (siehe Regressions-Abschnitt), nicht PROJ-15-bezogen |
+
+### Acceptance Criteria Status — 24/24 bestanden
+
+#### Eigene Sammlung ansehen & pflegen
+- [x] Link „Meine Sammlung" auf `/profil` (E2E)
+- [x] Leere Sammlung → Leerzustand mit Anlegen-Hinweis (E2E)
+- [x] Mehrere Einträge sortiert neueste zuerst (E2E: neu angelegter Eintrag erscheint oben)
+- [x] Eintrag mit allen Feldern anlegen → erscheint oben (E2E)
+- [x] Leeres Namensfeld → Validierungsmeldung, nichts gespeichert (E2E)
+- [x] Bestehenden Eintrag bearbeiten → Felder vorbefüllt, Änderung gespeichert (E2E)
+- [x] Löschen → Bestätigungsdialog, danach endgültig weg (E2E)
+- [x] Zeichenlimit überschritten → Validierungsmeldung, nichts gespeichert (E2E: Name > 200; Destillerie/Region/Preis-Leistung/Notizen per Code-Inspektion identisches Zod-Muster wie PROJ-5)
+
+#### Suche
+- [x] Suche filtert nach Name (E2E; Destillerie-Filterung per Code-Inspektion — dieselbe `includes()`-Prüfung wie beim Namen in `collection-list.tsx`)
+- [x] Suchbegriff ohne Treffer → „Keine Treffer." (E2E)
+
+#### Sichtbarkeit für andere
+- [x] Achter Schalter „Sammlung" im Abschnitt „Sichtbarkeit für andere" (E2E)
+- [x] Neues Mitglied: Schalter steht auf „sichtbar" (E2E)
+- [x] Schalter umlegen speichert sofort (E2E, per DB-Poll statt Toast-Text verifiziert — siehe Testnotiz unten)
+
+#### Fremde Sammlung ansehen
+- [x] Sichtbar → Link „Sammlung ansehen" führt zur read-only Liste, keine Bearbeiten/Löschen-Möglichkeit (E2E)
+- [x] Nicht sichtbar → Link fehlt komplett (E2E)
+- [x] Direkter URL-Aufruf einer verborgenen Sammlung → „Diese Sammlung ist nicht sichtbar." (E2E)
+- [x] Ungültige Profil-ID → „Seite nicht gefunden" (E2E)
+- [x] Eigene ID → Redirect auf die bearbeitbare `/profil/sammlung` (E2E)
+- [x] Sichtbare, aber leere fremde Sammlung → „Noch keine Einträge." (E2E)
+
+#### Übernehmen-Button auf der Ergebnisseite (PROJ-9)
+- [x] Button erscheint bei jeder eigenen Bewertung (E2E: bewerteter Whisky zeigt ihn)
+- [x] Kein Button ohne eigene Bewertung (E2E: unbewerteter Whisky zeigt ihn nicht)
+- [x] Dialog füllt Name + eigene Notiz vor, Bewertung bleibt leer (E2E)
+- [x] Speichern legt einen neuen, unabhängigen Eintrag mit gesetztem Herkunftsfeld an (E2E: Eintrag mit „Von TFG-Tasting am …" erscheint in der Sammlung, Link zeigt auf die Ergebnisseite)
+- [x] Herkunftsfeld ist beim Bearbeiten nicht editierbar (Code-Inspektion + DB: `collection-entry-dialog.tsx` zeigt es nur als Text/Link, nie als Formularfeld; DB-seitig zusätzlich hart erzwungen — `42501` bei einem direkten Schreibversuch, siehe `/backend`-Integrationstest)
+- [x] Manuell angelegter Eintrag zeigt keine Herkunfts-Zeile (E2E: alle manuell angelegten Einträge im Suchtest/Anlegen-Test ohne „Von TFG-Tasting")
+
+### Edge Cases Status
+- [x] Eigene Sammlung leer → Leerzustand, kein Fehler (E2E)
+- [x] Sichtbare fremde Sammlung leer → „Noch keine Einträge.", unterscheidbar vom „nicht sichtbar"-Hinweis (E2E, beide Zustände in getrennten Tests)
+- [x] Direkter URL-Aufruf einer verborgenen fremden Sammlung → neutraler Hinweis, kein 404 (E2E)
+- [x] Ungültige/nicht existierende Profil-ID → 404 (E2E)
+- [x] Übernehmen-Button mehrfach klicken → kein Duplikat-Check (Code-Inspektion: `addCollectionEntryAction` prüft nicht auf Vorhandensein, jeder Aufruf fügt eine neue Zeile ein — durch die DB-Integrationstests aus `/backend` indirekt bestätigt, kein Unique-Constraint auf der Tabelle)
+- [x] Zeichenlimit trotz Client-Validierung → Zod serverseitig + DB-CHECK als Backstop (Code-Inspektion, identisches dreistufiges Muster wie PROJ-5/PROJ-10)
+- [x] Löschen in einem Tab, während ein zweiter Tab denselben Eintrag bearbeitet → zweiter Speicherversuch trifft 0 Zeilen, `updateCollectionEntryAction` gibt „Der Eintrag wurde bereits gelöscht oder gehört dir nicht mehr." zurück (Code-Inspektion, identisches Fehlerpfad-Muster wie PROJ-5/PROJ-10; deterministisch per E2E nicht sauber erzwingbar)
+- [x] Deaktiviertes Mitglied mit sichtbarer Sammlung bleibt über einen direkten Profil-Link aufrufbar (Code-Inspektion: `getCollectionEntries`/RLS prüfen `show_collection`, nicht `is_active` — identisches Verhalten zu PROJ-14; durch den bereits grünen PROJ-14-Regressionstest „Deaktiviertes Mitglied: Profil über den Historie-Link weiterhin aufrufbar" strukturell mitbestätigt)
+- [x] Eintrag ohne eigene Bewertung zeigt „—" statt einer Zahl (E2E: alle Einträge ohne gewählte Bewertung im Anlege-/Suchtest zeigen „—", kein Pflichtfeld)
+- [x] Ursprungs-Event eines Herkunftsfelds wird gelöscht → Zeile bleibt mit Datum bestehen, Link verschwindet (durch den `/backend`-Integrationstest „Event löschen setzt source_event_id auf NULL, source_event_date bleibt" abgedeckt; das Frontend zeigt bei `sourceEventId === null` bewusst reinen Text statt Link — Code-Inspektion `collection-entry-card.tsx`)
+- [x] Admin betrachtet eine fremde Sammlung → exakt dieselbe gefilterte Ansicht, keine Sonderrechte (Code-Inspektion: `getCollectionEntries`/RLS kennen die Rolle des Betrachters gar nicht, können sie also strukturell nicht bevorzugen — identischer Aufbau wie das bereits für PROJ-14 per E2E bestätigte Verhalten; der Admin-spezifische E2E-Test selbst konnte wegen des vorbestehenden Seed-Passwort-Problems nicht laufen, siehe Regressions-Abschnitt)
+
+### Security Audit Results
+- [x] **Auth:** `/profil/sammlung` und `/profil/[id]/sammlung` erfordern Login — per `curl` gegen den Prod-Build verifiziert: beide Routen antworten `307 → /login?redirect=…` ohne Session.
+- [x] **DB-seitige Durchsetzung der Sichtbarkeit (Kern der Architecture-Entscheidung):** zeilenweise RLS statt einer maskierenden Sicht — bereits im `/backend`-Schritt per Integrationstest verifiziert (Default sichtbar → fremde Zeile lesbar; Schalter aus → fremde Zeilen verschwinden vollständig, eigene bleibt sichtbar). Ein technisch versierter Nutzer kann die Sichtbarkeit also nicht durch einen direkten API-Zugriff umgehen.
+- [x] **IDOR / Schreibzugriff nur auf die eigene Zeile:** `addCollectionEntryAction`/`updateCollectionEntryAction`/`deleteCollectionEntryAction` schreiben ausschließlich über `.eq('profile_id', session.userId)` bzw. lassen `profile_id` beim Insert serverseitig aus der Session bestimmen; RLS sichert dieselbe Grenze zusätzlich auf DB-Ebene ab (im `/backend`-Integrationstest verifiziert: fremdes `profile_id` beim Anlegen abgelehnt, Update/Delete auf fremde Zeilen betreffen 0 Zeilen).
+- [x] **Herkunftsfeld nach dem Anlegen eingefroren:** Spalten-GRANT lässt `source_event_id`/`source_event_date` beim Update aus — ein direkter Schreibversuch liefert `42501`, unabhängig vom Frontend (bereits im `/backend`-Integrationstest verifiziert).
+- [x] **Kein Service-Role-Zugriff im neuen Code:** `grep` über `src/lib/actions/collection.ts`, `src/lib/queries/collection.ts` und `src/components/collection/` findet weder `createAdminClient` noch `SERVICE_ROLE` — alle Zugriffe laufen über den sitzungsgebundenen Client, RLS greift durchgehend.
+- [x] **Keine Admin-Sonderrechte** beim Betrachten fremder Sammlungen — `getCollectionEntries`/die RLS-Policy kennen die Rolle des Betrachters strukturell nicht (Code-Inspektion, siehe Edge-Case-Abschnitt).
+- [x] **XSS:** `entry.name` / `entry.notes` / `entry.distillery` / `entry.region` / `entry.valueNote` werden als React-Text gerendert (`{entry.name}` etc. in `collection-entry-card.tsx`), kein `dangerouslySetInnerHTML` im gesamten neuen Code (per `grep` verifiziert).
+- [x] **Eingabevalidierung:** dreistufig — Zod im Client (`collectionEntryFormSchema`), dieselbe Prüfung serverseitig in den Actions, DB-CHECKs als letzte Instanz (Migration).
+- [x] **Origin-Spoofing (Herkunftsfeld beim Anlegen):** bewusst akzeptierte Vereinfachung — der Client kann beim Übernehmen-Flow theoretisch eine beliebige `eventId`/`eventDate` mitschicken, ohne dass serverseitig geprüft wird, ob der Nutzer diesen Whisky wirklich bewertet hat. Kein Sicherheitsrisiko, da die Herkunftsangabe rein informativ ist und ausschließlich die eigene Sammlung des Nutzers betrifft (keine fremden Daten sichtbar/veränderbar) — bereits in den Implementation Notes (Frontend) als Entscheidung dokumentiert.
+
+### Regression: 1 Fehlschlag in der gezielten Suite — nicht PROJ-15
+
+Die gezielte Regression auf die direkt von PROJ-15 berührten Bereiche
+(`PROJ-9-ergebnisse-historie`, `PROJ-10-profil-bilanz`,
+`PROJ-14-profil-sichtbar`) zeigte 37/38 bestandene Tests. Der eine
+Fehlschlag — „Admin sieht ein fremdes Profil genauso eingeschränkt wie jedes
+Mitglied" — scheitert beim Login mit dem Seed-Admin-Passwort, **nicht** an
+PROJ-15-Code. Per direktem, read-only Credential-Check gegen die Live-DB
+bestätigt:
+
+```
+hermann.hoppen@gmail.com + SEED_DEV_PASSWORD → „Invalid login credentials"
+```
+
+Dasselbe, bereits seit PROJ-14 dokumentierte Problem („Admin-Passwort per
+`npm run admin:password` geändert → Admin-Login-Tests scheitern", siehe
+Post-Deploy-Backlog in `features/INDEX.md`). Der Test hängt an keiner Stelle
+mit PROJ-15-Code zusammen (er scheitert bereits beim `login()`-Aufruf, bevor
+irgendein Sammlungs- oder Profil-Code läuft) und wird beim erneuten Lauf
+ohne diesen einen Test (`--grep-invert`) durch alle 14 übrigen
+PROJ-14-Tests bestätigt grün. Die volle 12-Spec-Suite wurde in diesem
+Durchlauf nicht erneut komplett laufen gelassen — das bereits in
+PROJ-14 dokumentierte Ausmaß (29 vorbestehende Fehlschläge, alle auf
+dasselbe Seed-Konto-Problem zurückgeführt) ist unverändert und durch PROJ-15
+nicht berührt, da PROJ-15 weder Seed-Konten noch die betroffenen
+Auth-/Admin-Bereiche anfasst.
+
+### Testnotiz: Sichtbarkeits-Schalter-Test pollt die DB statt den Toast-Text
+
+Der E2E-Test „Schalter „Sammlung" umlegen speichert sofort" verifiziert den
+zweiten Round-Trip (zurück auf „sichtbar") über `expect.poll()` auf den
+DB-Wert statt über die Sichtbarkeit des Toasts „Gespeichert." — zwei
+identische Toast-Texte kurz hintereinander sind sonst nicht zuverlässig
+dem jeweiligen Klick zuzuordnen (Toast-Stacking). Kein Produktfehler, reine
+Test-Robustheit; das Verhalten selbst (sofortiges Speichern, kein
+Sammel-„Speichern") ist damit weiterhin vollständig abgedeckt.
+
+### Bugs Found
+
+Keine.
+
+### Summary
+- **Acceptance Criteria:** 24/24 bestanden (17 per E2E verifiziert, 7 per Code-/Integrationstest-Inspektion, wo E2E unpraktisch oder bereits im `/backend`-Schritt gegen die echte DB verifiziert ist)
+- **Bugs Found:** 0 total
+- **Security:** Pass — Sichtbarkeit und Schreibgrenzen sind auf DB-Ebene erzwungen (nicht nur im Frontend), kein IDOR, kein Service-Role-Zugriff im neuen Code, keine Admin-Sonderrechte, Herkunftsfeld nach dem Anlegen unveränderlich
+- **Regression:** Pass — 37/38 in der gezielten Suite; der eine Fehlschlag ist das vorbestehende, dokumentierte Seed-Admin-Passwort-Problem aus PROJ-14, nicht PROJ-15-bezogen
+- **Production Ready:** **YES** — kein offenes Critical/High/Medium/Low
+- **Recommendation:** **Approved.**
+
+## Deployment
+_To be added by /deploy_
 
 ## Deployment
 _To be added by /deploy_

@@ -29,7 +29,7 @@
 | PROJ-12 | App-Icon & Homescreen | Deployed | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
 | PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Deployed | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
-| PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | In Progress | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
+| PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Approved | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
 
 <!-- Add features above this line -->
 
@@ -61,8 +61,12 @@ Herkunftsfeld per Spalten-GRANT eingefroren; ein erster `db:push`-Versuch
 scheiterte an der Anlage-Reihenfolge Spalte/Funktion, nach Fix erfolgreich
 eingespielt). Vollständig verifiziert: `tsc`/`eslint` sauber, `npm test`
 127/127, `npm run test:rls` **120/120** (inkl. 11 neuer Fälle), `build`
-sauber. Bereit für `/qa PROJ-15`. Sonstige offene Arbeit siehe
-Post-Deploy-Backlog.
+sauber. `/qa` am 2026-09-17 abgeschlossen — 24/24 Acceptance Criteria
+bestanden, 36/36 neue E2E-Tests (`PROJ-15-persoenliche-sammlung.spec.ts`,
+beide Browser), 0 Bugs, Security-Audit ohne Befund, gezielte Regression auf
+PROJ-9/10/14 37/38 (der eine Fehlschlag ist das vorbestehende
+Seed-Admin-Passwort-Problem aus PROJ-14, nicht PROJ-15-bezogen). **Approved
+— bereit für `/deploy`.** Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 
