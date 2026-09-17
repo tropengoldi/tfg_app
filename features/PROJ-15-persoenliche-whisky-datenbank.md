@@ -1,6 +1,6 @@
 # PROJ-15: Persönliche Whisky-Datenbank (teilbar)
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-09-17
 **Last Updated:** 2026-09-17
 
@@ -253,10 +253,10 @@ auch dann erhalten bleibt, wenn der Nutzer seine Notiz später überschreibt.
 
 ## Open Questions
 
-- [ ] Feld-Zeichenlimits final festlegen (Vorschlag angelehnt an bestehende
-      Muster: Name 1–200 wie PROJ-5-Whiskynamen, Destillerie/Region je ≤120
-      wie PROJ-10, Alter/Jahrgang ≤50, Preis-Leistung ≤200, Notizen ≤2000 wie
-      PROJ-5-Notizen) — final zu bestätigen in `/architecture`.
+- [x] ~~Feld-Zeichenlimits final festlegen~~ **Gelöst (`/architecture`):** Name
+      1–200 (wie PROJ-5-Whiskynamen), Destillerie/Region je ≤120 (wie
+      PROJ-10), Alter/Jahrgang ≤50, Preis-Leistung ≤200, Notizen ≤2000 (wie
+      PROJ-5-Notizen), eigene Bewertung ganzzahlig 1–10.
 
 ## Decision Log
 
@@ -282,12 +282,143 @@ auch dann erhalten bleibt, wenn der Nutzer seine Notiz später überschreibt.
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| **Neue, eigene Tabelle** für Sammlungs-Einträge statt einer Erweiterung von `whisky_details` | Andere Datensemantik: personenbezogen statt event-bezogen, eigener Lebenszyklus (Hard-Delete statt `ON DELETE RESTRICT`), eigene Sichtbarkeitsregel. Eine gemeinsame Tabelle mit `whisky_details` würde beide Konzepte künstlich verschränken | 2026-09-17 |
+| Sichtbarkeit fremder Einträge über eine **normale RLS-Regel auf der Basistabelle** (nicht wie bei `profiles_public` über eine maskierende Sicht) | Bei den Profil-Stammdaten musste eine Spalte innerhalb einer sonst sichtbaren Zeile verborgen werden — das geht nur über eine Sicht/Spalten-Grant. Hier ist die Sichtbarkeit **pro Zeile, alles oder nichts**: „meine eigenen Zeilen immer, fremde Zeilen nur wenn deren Besitzer den Schalter an hat" — das lässt sich direkt als `USING`-Bedingung ausdrücken, kein Sicht-Umweg nötig | 2026-09-17 |
+| **Hard-Delete** ohne Fremdschlüssel-Einschränkung anderer Tabellen auf die Sammlung | Kein anderer Datensatz im System verweist auf einen Sammlungs-Eintrag (anders als `whisky_details` ⇄ `ratings`) — ein echtes Löschen ist gefahrlos | 2026-09-17 |
+| **Herkunftsfeld** = Verweis auf das Ursprungs-Event **mit `ON DELETE SET NULL`** (nicht `RESTRICT`) **plus** ein eigener, unveränderlicher Datums-Textwert, der beim Anlegen kopiert wird | Ein gelöschtes Event (Wartungsskript `tasting:delete`) darf den Sammlungs-Eintrag nicht blockieren oder mitreißen — er ist rein persönlich. Der kopierte Datumswert stellt sicher, dass die Herkunfts-Zeile auch nach dem Verlust der Verknüpfung noch „Von TFG-Tasting am [Datum]" zeigen kann (ohne Link, siehe Edge Case) | 2026-09-17 |
+| Anlegen/Bearbeiten/Löschen als **Server Actions mit direktem, RLS-abgesichertem Tabellenzugriff** (kein RPC) | Identisches, bereits etabliertes Muster wie `updateWhiskyAction` (PROJ-5) / `updateProfileAction` (PROJ-10): einfache Spaltenprüfung + „eigene Zeile" reicht als Sicherheitsgrenze, ein RPC brächte keinen Mehrwert | 2026-09-17 |
+| Der **Übernehmen-Button** basiert auf einem neuen, einfachen Signal „habe ich diesen Whisky überhaupt bewertet" — nicht (wie bisher) nur „habe ich eine Notiz dazu geschrieben" | Die bestehende Ergebnis-Abfrage (PROJ-9) merkt sich aktuell nur *Notizen* zur eigenen Bewertung, keine leere Bewertung. Da jeder Teilnehmer verpflichtend jeden Whisky bewertet, muss die Abfrage nur um „meine Bewertungszeile existiert" ergänzt werden — eine kleine, rückwärtskompatible Erweiterung der bestehenden Abfrage, keine neue Tabelle | 2026-09-17 |
+| Der achte Sichtbarkeits-Schalter „Sammlung sichtbar" folgt **exakt dem PROJ-14-Muster**: neues Flag an der bestehenden Profiltabelle, gleiche Liste erlaubter Schalter-Namen im Code erweitert | Kein neuer Mechanismus — Wiederverwendung von `VisibilitySettings`, `updateVisibilityAction`, demselben Schalter-Speicherverhalten (sofort, mit Rollback bei Fehler) | 2026-09-17 |
+| **Client-seitige Suche** über die vollständig geladene eigene/fremde Liste, keine Server-Suche | Passt zur Performance-Einschätzung der Spec (Dutzende, nicht Hunderte Einträge) — eine serverseitige Suche wäre für diese Datenmenge unnötiger Mehraufwand | 2026-09-17 |
+| Keine neuen npm-Pakete | Dialog, Form, Input, Textarea, Switch, Badge, Card, Collapsible, AlertDialog sind alle bereits installiert | 2026-09-17 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+
+PROJ-15 braucht sowohl Frontend (zwei neue Seiten, ein neuer Schalter auf
+`/profil`, ein neuer Button auf der Ergebnisseite) als auch Backend (eine
+neue Tabelle für die Sammlungs-Einträge, ein achtes Sichtbarkeits-Flag am
+Profil, eine kleine Erweiterung der bestehenden Ergebnis-Abfrage).
+
+### A) Komponentenstruktur
+
+```
+/profil  (bestehend, erweitert)
+├─ Sichtbarkeit für andere (PROJ-14)
+│   └─ NEU: dritte Gruppe „Sammlung" mit einem Schalter „Sammlung sichtbar"
+└─ NEU: Link „Meine Sammlung" → /profil/sammlung
+
+/profil/sammlung  (NEU — eigene Sammlung, bearbeitbar)
+├─ Kopfzeile + Suchfeld (Name/Destillerie)
+├─ Button „Neuer Eintrag" → Anlegen-Dialog
+├─ Liste der Einträge, neueste zuerst
+│   └─ pro Eintrag (Karte): Name, Destillerie/Region, „besitze ich"-Kennzeichen,
+│      Bewertung (oder „—"), Herkunfts-Zeile falls vorhanden
+│      ├─ Tap auf die Karte → Bearbeiten-Dialog (identisches Formular, vorbefüllt)
+│      └─ Aktionsmenü → „Löschen" → Bestätigungsdialog → endgültig entfernt
+├─ Zustand „leer" → Hinweis + „Ersten Eintrag anlegen"
+└─ Zustand „Suche ohne Treffer" → „Keine Treffer"
+
+/profil/[id]/sammlung  (NEU — fremde Sammlung, read-only)
+├─ Gleiche Kartenliste wie oben, ohne Anlegen/Bearbeiten/Löschen/Aktionsmenü
+├─ Zustand „nicht sichtbar" → neutraler Hinweis „Diese Sammlung ist nicht sichtbar."
+├─ Zustand „sichtbar, aber leer" → „Noch keine Einträge."
+└─ Zustand „ungültige ID" → 404 (wie /profil/[id])
+
+/profil/[id]  (bestehend, erweitert)
+└─ NEU: Link „Sammlung ansehen" → /profil/[id]/sammlung
+   (erscheint nur, wenn „Sammlung sichtbar" bei dieser Person an ist —
+   sonst fehlt der Link komplett, wie jedes andere verborgene PROJ-14-Feld)
+
+/tastings/[eventId]/ergebnisse  (bestehend, erweitert)
+└─ ranking-row.tsx: NEU „Zur Sammlung hinzufügen"-Button bei jeder eigenen
+   Bewertung (auch ohne eigene Notiz) → öffnet denselben Anlegen-Dialog wie
+   /profil/sammlung, vorausgefüllt mit Whisky-Name + eigener Notiz (falls
+   vorhanden) und gesetztem Herkunftsfeld
+```
+
+**Neue Bausteine (Auswahl, keine abschließende Liste — Details entstehen in
+`/frontend`):**
+
+- Seite + Formular-Dialog für die eigene Sammlung (`/profil/sammlung`),
+  spiegelt Aufbau und Verhalten von `whisky-form-dialog.tsx` (PROJ-5): ein
+  Dialog für Anlegen **und** Bearbeiten, Server-Action-Aufruf, Toast,
+  Button-Sperre während des Speicherns.
+- Read-only Liste + Seite für fremde Sammlungen (`/profil/[id]/sammlung`),
+  spiegelt `public-profile-view.tsx` (PROJ-14): rein serverseitig gerenderte
+  Darstellung bereits maskierter/gefilterter Daten.
+- Dritte Gruppe „Sammlung" in `visibility-settings.tsx`, ein weiterer Eintrag
+  in `VISIBILITY_FIELDS`.
+- Ergänzung von `ranking-row.tsx` um den Übernehmen-Button, der denselben
+  Anlegen-Dialog wie `/profil/sammlung` mit Startwerten öffnet.
+
+### B) Datenmodell (in Worten)
+
+**Neue Tabelle „Sammlungs-Einträge"** — jede Zeile gehört genau einem
+Mitglied und enthält:
+
+- Name (Pflicht, 1–200 Zeichen)
+- Destillerie (optional, ≤120 Zeichen)
+- Region (optional, ≤120 Zeichen)
+- Alter/Jahrgang (optional, Freitext ≤50 Zeichen)
+- Verkostet am (optional, Datum)
+- Preis-Leistung (optional, Freitext ≤200 Zeichen)
+- Eigene Bewertung (optional, ganze Zahl 1–10)
+- Notizen (optional, Freitext ≤2000 Zeichen)
+- Besitze ich (Ja/Nein, Standard „Nein")
+- Herkunft (optional): ein Verweis auf das Ursprungs-Event **plus** ein
+  eigener, unveränderlicher Datumstext — beides wird nur beim Anlegen über
+  den Übernehmen-Button gesetzt und danach nie mehr verändert. Verschwindet
+  das Ursprungs-Event später (Wartungsskript), bleibt nur der Datumstext
+  übrig; die Herkunfts-Zeile zeigt dann Text statt Link.
+- Angelegt am / zuletzt geändert am (steuert „neueste zuerst")
+
+**Ein neues Sichtbarkeits-Flag „Sammlung sichtbar"** an der bestehenden
+Profiltabelle — achter Schalter neben den sieben aus PROJ-14, Standard „Ja".
+
+**Kleine Erweiterung der bestehenden Ergebnis-Abfrage (PROJ-9):** Neben der
+schon vorhandenen eigenen Notiz pro Whisky wird zusätzlich festgehalten, ob
+überhaupt eine eigene Bewertung zu diesem Whisky existiert (unabhängig davon,
+ob eine Notiz dabei ist) — das steuert, wann der Übernehmen-Button
+erscheint.
+
+### C) Backend-Bedarf
+
+- Migration: neue Tabelle für Sammlungs-Einträge mit den oben genannten
+  Feldern, Fremdschlüssel auf das anlegende Mitglied und (optional) auf das
+  Ursprungs-Event.
+- Migration: achtes Sichtbarkeits-Flag an der Profiltabelle, Default „Ja".
+- Zugriffsregeln (RLS) auf der neuen Tabelle: Lesen der eigenen Zeilen immer;
+  Lesen fremder Zeilen nur, wenn deren Besitzer das achte Flag gesetzt hat;
+  Schreiben (Anlegen, Ändern, Löschen) ausschließlich der eigenen Zeilen.
+- Keine neue View/Sicht nötig (anders als bei den Profil-Stammdaten aus
+  PROJ-14) — die Sichtbarkeit ist hier zeilenweise, nicht feldweise, das
+  deckt eine normale Zugriffsregel direkt ab.
+- Ergebnis-Abfrage (PROJ-9) um das „habe ich bewertet"-Signal ergänzt (siehe
+  Datenmodell) — kein neuer Datenzugriff, nur ein zusätzliches Feld an einer
+  bestehenden Abfrage.
+
+### D) Sicherheits-Betrachtung
+
+- Schreibzugriff strikt auf die eigene Zeile — wie bei allen bisherigen
+  Mustern im Projekt (Whiskys, Profil, Sichtbarkeits-Schalter).
+- Sichtbarkeit fremder Sammlungen ist auf Datenbankebene erzwungen, nicht nur
+  im Frontend versteckt — deckt sich mit dem Projektprinzip „RLS ist die
+  tragende Sicherheitsschicht" (identisch zu PROJ-14).
+- Der direkte URL-Aufruf einer verborgenen fremden Sammlung liefert serverseitig
+  konsequent 0 Zeilen — der neutrale „nicht sichtbar"-Hinweis im Frontend ist
+  reine Darstellung eines ohnehin leeren, durch die Zugriffsregel blockierten
+  Ergebnisses, keine zusätzliche Bloßstellung von Daten.
+- Admin hat keine Sonderrechte beim Betrachten fremder Sammlungen (konsistent
+  mit PROJ-14).
+
+### E) Neue Pakete
+
+Keine.
 
 ## QA Test Results
 _To be added by /qa_
