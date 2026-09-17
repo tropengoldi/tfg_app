@@ -17,6 +17,7 @@ const FIELD_LABELS: Record<VisibilityField, string> = {
   show_whisky_count: 'Mitgebrachte Whiskys',
   show_best_placement: 'Beste Platzierung',
   show_avg_points: 'Ø vergebene Punkte',
+  show_collection: 'Sammlung',
 }
 
 const GROUPS: { title: string; fields: VisibilityField[] }[] = [
@@ -32,6 +33,10 @@ const GROUPS: { title: string; fields: VisibilityField[] }[] = [
       'show_best_placement',
       'show_avg_points',
     ],
+  },
+  {
+    title: 'Sammlung',
+    fields: ['show_collection'],
   },
 ]
 

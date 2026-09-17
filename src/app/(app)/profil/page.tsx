@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Users } from 'lucide-react'
+import { Library, Users } from 'lucide-react'
 
 import { BalanceCard } from '@/components/profile/balance-card'
 import { ProfileForm } from '@/components/profile/profile-form'
@@ -75,8 +75,17 @@ export default async function ProfilPage() {
             show_whisky_count: profile.show_whisky_count,
             show_best_placement: profile.show_best_placement,
             show_avg_points: profile.show_avg_points,
+            show_collection: profile.show_collection,
           }}
         />
+
+        <Link
+          href="/profil/sammlung"
+          className="flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <Library className="h-4 w-4" />
+          Meine Sammlung
+        </Link>
 
         <Link
           href="/community"

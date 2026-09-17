@@ -89,6 +89,10 @@ export interface RankingRow {
   breakdown: BreakdownEntry[]
   /** Die eigene Notiz zu diesem Whisky, falls vorhanden. Nie eine fremde. */
   ownNote: string | null
+  /** PROJ-15: ob überhaupt eine eigene Bewertung zu diesem Whisky existiert
+   * (unabhängig von `ownNote`, die nur bei vorhandenem Notiztext gesetzt
+   * ist) — steuert den „Zur Sammlung hinzufügen"-Button. */
+  hasOwnRating: boolean
 }
 
 export interface EventResults {
@@ -205,8 +209,11 @@ export async function getEventResults(
   }
 
   const ownNotes = new Map<string, string>()
+  const ownRatedWhiskyIds = new Set<string>()
   for (const r of ownRes.data ?? []) {
-    if (r.whisky_id && r.notes && r.notes.trim().length > 0) {
+    if (!r.whisky_id) continue
+    ownRatedWhiskyIds.add(r.whisky_id)
+    if (r.notes && r.notes.trim().length > 0) {
       ownNotes.set(r.whisky_id, r.notes)
     }
   }
@@ -229,6 +236,7 @@ export async function getEventResults(
       ratingCount: r.rating_count ?? 0,
       breakdown: byWhisky.get(r.whisky_id) ?? [],
       ownNote: ownNotes.get(r.whisky_id) ?? null,
+      hasOwnRating: ownRatedWhiskyIds.has(r.whisky_id),
     }))
 
   return {

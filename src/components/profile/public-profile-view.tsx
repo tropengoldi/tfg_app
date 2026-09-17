@@ -1,3 +1,6 @@
+import Link from 'next/link'
+import { Library } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatEventDate } from '@/lib/dates'
 import { ordinalPlace } from '@/lib/personal-balance'
@@ -76,6 +79,16 @@ export function PublicProfileView({ profile }: { profile: PublicProfileData }) {
             )}
           </CardContent>
         </Card>
+      ) : null}
+
+      {profile.collectionVisible ? (
+        <Link
+          href={`/profil/${profile.id}/sammlung`}
+          className="flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <Library className="h-4 w-4" />
+          Sammlung ansehen
+        </Link>
       ) : null}
     </div>
   )

@@ -37,3 +37,7 @@ export type WhiskyRanking = Tables<'whisky_rankings'>
 export type PastTasting = Tables<'past_tastings'>
 export type WhiskyScoreBreakdown = Tables<'whisky_score_breakdown'>
 export type ProfilePublic = Tables<'profiles_public'>
+
+export type CollectionEntryRow = Tables<'collection_entries'>
+export type CollectionEntryInsert = TablesInsert<'collection_entries'>
+export type CollectionEntryUpdate = TablesUpdate<'collection_entries'>

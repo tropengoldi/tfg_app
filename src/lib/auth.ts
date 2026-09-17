@@ -20,7 +20,7 @@ export type { AppRole }
  * jede andere, damit es nur einen Lesepfad gibt).
  */
 const SESSION_PROFILE_COLUMNS =
-  'id, display_name, role, avatar_url, is_active, created_at, updated_at, show_favorite_dram, show_favorite_region, show_bio, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points' as const
+  'id, display_name, role, avatar_url, is_active, created_at, updated_at, show_favorite_dram, show_favorite_region, show_bio, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points, show_collection' as const
 
 export interface SessionContext {
   userId: string

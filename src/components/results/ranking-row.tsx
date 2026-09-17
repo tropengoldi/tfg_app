@@ -2,13 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Play, Trophy } from 'lucide-react'
+import { ChevronDown, Library, Play, Trophy } from 'lucide-react'
 
+import { CollectionEntryDialog } from '@/components/collection/collection-entry-dialog'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import type { RankingRow as Row } from '@/lib/queries/results'
 import {
@@ -24,13 +26,18 @@ export function RankingRow({
   participantCount,
   isWinnerRow,
   isTie,
+  eventId,
+  eventDate,
 }: {
   row: Row
   participantCount: number
   isWinnerRow: boolean
   isTie: boolean
+  eventId: string
+  eventDate: string
 }) {
   const [open, setOpen] = useState(false)
+  const [collectionOpen, setCollectionOpen] = useState(false)
 
   const avg = formatAverage(row.totalPoints, row.ratingCount)
   const medal = medalClass(row.rank)
@@ -107,6 +114,19 @@ export function RankingRow({
             </p>
           ) : null}
 
+          {row.hasOwnRating ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => setCollectionOpen(true)}
+            >
+              <Library className="h-4 w-4" />
+              Zur Sammlung hinzufügen
+            </Button>
+          ) : null}
+
           {breakdown.length > 0 ? (
             <Collapsible open={open} onOpenChange={setOpen}>
               <CollapsibleTrigger className="flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary">
@@ -135,6 +155,20 @@ export function RankingRow({
           ) : null}
         </CardContent>
       </Card>
+
+      {row.hasOwnRating ? (
+        <CollectionEntryDialog
+          open={collectionOpen}
+          onOpenChange={setCollectionOpen}
+          origin={{
+            eventId,
+            eventDate,
+            whiskyName: row.name,
+            note: row.ownNote,
+          }}
+          onSaved={() => {}}
+        />
+      ) : null}
     </li>
   )
 }

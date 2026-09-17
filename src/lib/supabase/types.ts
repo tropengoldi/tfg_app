@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      collection_entries: {
+        Row: {
+          age_label: string | null
+          created_at: string
+          distillery: string | null
+          id: string
+          name: string
+          notes: string | null
+          owned: boolean
+          profile_id: string
+          rating: number | null
+          region: string | null
+          source_event_date: string | null
+          source_event_id: string | null
+          tasted_on: string | null
+          updated_at: string
+          value_note: string | null
+        }
+        Insert: {
+          age_label?: string | null
+          created_at?: string
+          distillery?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          owned?: boolean
+          profile_id: string
+          rating?: number | null
+          region?: string | null
+          source_event_date?: string | null
+          source_event_id?: string | null
+          tasted_on?: string | null
+          updated_at?: string
+          value_note?: string | null
+        }
+        Update: {
+          age_label?: string | null
+          created_at?: string
+          distillery?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          owned?: boolean
+          profile_id?: string
+          rating?: number | null
+          region?: string | null
+          source_event_date?: string | null
+          source_event_id?: string | null
+          tasted_on?: string | null
+          updated_at?: string
+          value_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_entries_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "collection_entries_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_participants: {
         Row: {
           created_at: string
@@ -75,6 +158,7 @@ export type Database = {
           show_avg_points: boolean
           show_best_placement: boolean
           show_bio: boolean
+          show_collection: boolean
           show_favorite_dram: boolean
           show_favorite_region: boolean
           show_tasting_count: boolean
@@ -94,6 +178,7 @@ export type Database = {
           show_avg_points?: boolean
           show_best_placement?: boolean
           show_bio?: boolean
+          show_collection?: boolean
           show_favorite_dram?: boolean
           show_favorite_region?: boolean
           show_tasting_count?: boolean
@@ -113,6 +198,7 @@ export type Database = {
           show_avg_points?: boolean
           show_best_placement?: boolean
           show_bio?: boolean
+          show_collection?: boolean
           show_favorite_dram?: boolean
           show_favorite_region?: boolean
           show_tasting_count?: boolean

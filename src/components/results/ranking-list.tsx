@@ -9,10 +9,14 @@ export function RankingList({
   ranking,
   participantCount,
   hasAnyRatings,
+  eventId,
+  eventDate,
 }: {
   ranking: EventResults['ranking']
   participantCount: number
   hasAnyRatings: boolean
+  eventId: string
+  eventDate: string
 }) {
   const ties = tieRanks(
     ranking.map((r) => ({ rank: r.rank, totalPoints: r.totalPoints })),
@@ -39,6 +43,8 @@ export function RankingList({
             participantCount={participantCount}
             isWinnerRow={row.rank === 1 && hasAnyRatings}
             isTie={ties.has(row.rank)}
+            eventId={eventId}
+            eventDate={eventDate}
           />
         ))}
       </ol>

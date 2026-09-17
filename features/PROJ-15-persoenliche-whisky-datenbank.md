@@ -1,6 +1,6 @@
 # PROJ-15: Persönliche Whisky-Datenbank (teilbar)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-09-17
 **Last Updated:** 2026-09-17
 
@@ -419,6 +419,105 @@ erscheint.
 ### E) Neue Pakete
 
 Keine.
+
+## Implementation Notes (Frontend)
+
+**Stand:** Frontend umgesetzt am 2026-09-17. **Kein Backend** — die
+Datenbank-Tabelle `collection_entries` und die achte Sichtbarkeits-Spalte
+`profiles.show_collection` existieren noch nicht → `/backend PROJ-15`. Bis
+dahin brechen `/profil/sammlung` und `/profil/[id]/sammlung` mit dem
+Ladefehler-Zustand ab (Tabelle/Spalte fehlen in der echten DB), die
+`profiles`-Query in `getPublicProfile` liefert für `show_collection`
+`null`/`undefined` → `collectionVisible: false` — der „Sammlung
+ansehen"-Link bleibt bis zur Migration unsichtbar. `npm run build`,
+`npm test` (127/127) und `npx tsc --noEmit` sind sauber; der Dev-Server
+liefert `/login` und `/community` unverändert 200 (ungeprüfter Smoke-Test,
+kein Login möglich ohne echte Tabelle).
+
+### Neue Bausteine
+
+**Formular-Logik** — `src/lib/schemas/collection.ts`
+(`collectionEntryFormSchema`, 10 Unit-Tests in `collection.test.ts`): Name
+1–200 Pflicht, Destillerie/Region ≤120, Alter/Jahrgang ≤50, Preis-Leistung
+≤200, Notizen ≤2000 (identische Grenzen wie in der Architecture-Phase
+festgelegt), Bewertung als String „1"–„10" oder leer, Verkostet-am als
+`yyyy-MM-dd`-String oder leer.
+
+**Datenzugriff** — `src/lib/queries/collection.ts` (`getCollectionEntries`,
+liest `collection_entries` sortiert nach `updated_at desc`; funktioniert
+unverändert für eigene **und** fremde Sammlungen, weil RLS die Filterung
+übernimmt) · `src/lib/actions/collection.ts` (`addCollectionEntryAction` mit
+optionalem `origin`-Parameter fürs Herkunftsfeld,
+`updateCollectionEntryAction` — Herkunft bewusst nicht im Payload,
+`deleteCollectionEntryAction` — Hard-Delete, alle drei nach dem Muster von
+`updateWhiskyAction`/PROJ-5).
+
+**Komponenten** — `src/components/collection/collection-entry-dialog.tsx`
+(Client, Anlegen **und** Bearbeiten in einem Formular, spiegelt
+`whisky-form-dialog.tsx`; zeigt bei vorhandener Herkunft eine nicht
+editierbare Info-Zeile „Von TFG-Tasting am …" mit Link, wenn das
+Ursprungs-Event noch existiert) · `src/components/collection/
+collection-entry-card.tsx` (eine Karte für eigene **und** fremde Ansicht,
+`editable`-Prop steuert das Aktionsmenü) · `src/components/collection/
+collection-list.tsx` (Client: Suche über Name/Destillerie, Leerzustand,
+„Keine Treffer", Anlegen/Bearbeiten/Löschen-Dialoge, `router.refresh()`
+nach jeder Aktion — identisches Muster wie `whisky-section.tsx`) ·
+`src/components/collection/public-collection-view.tsx` (reine
+Server-Darstellung: „Noch keine Einträge." oder die Kartenliste
+read-only).
+
+**Seiten** — `src/app/(app)/profil/sammlung/{page,loading,error}.tsx` (eigene
+Sammlung) · `src/app/(app)/profil/[id]/sammlung/{page,loading,error}.tsx`
+(fremde Sammlung: eigene ID → Redirect auf `/profil/sammlung`, unbekannte ID
+→ 404, `collectionVisible === false` → neutraler Text „Diese Sammlung ist
+nicht sichtbar.", sonst die Liste).
+
+### Bestehende Dateien erweitert
+
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/supabase/types.ts` | Handnachtrag (wird von `db:types` reproduziert): neue Tabelle `collection_entries` (Row/Insert/Update/Relationships), `profiles.show_collection` in Row/Insert/Update. |
+| `src/lib/supabase/aliases.ts` | `CollectionEntryRow`/`CollectionEntryInsert`/`CollectionEntryUpdate`. |
+| `src/lib/auth.ts` | `SESSION_PROFILE_COLUMNS` um `show_collection` ergänzt (sonst fehlt der Schalter-Startwert auf `/profil`). |
+| `src/lib/schemas/profile-visibility.ts` | `VISIBILITY_FIELDS` um `show_collection` ergänzt (achter Schalter). |
+| `src/components/profile/visibility-settings.tsx` | Dritte Gruppe „Sammlung" mit dem neuen Schalter. |
+| `src/app/(app)/profil/page.tsx` | `show_collection` an `VisibilitySettings` durchgereicht; Link „Meine Sammlung" ergänzt. |
+| `src/lib/queries/public-profile.ts` | `PublicProfileData.collectionVisible` (liest `profiles.show_collection` direkt — dieser Flag ist nicht Teil der PROJ-14-Spaltensperre). |
+| `src/components/profile/public-profile-view.tsx` | Link „Sammlung ansehen", nur wenn `collectionVisible`. |
+| `src/lib/queries/results.ts` | `RankingRow.hasOwnRating` (ob überhaupt eine eigene Bewertungszeile existiert, unabhängig von `ownNote`) — steuert den Übernehmen-Button. |
+| `src/components/results/ranking-list.tsx`, `.../ergebnisse/page.tsx` | `eventId`/`eventDate` bis zu `RankingRow` durchgereicht. |
+| `src/components/results/ranking-row.tsx` | „Zur Sammlung hinzufügen"-Button bei `hasOwnRating`, öffnet `CollectionEntryDialog` mit `origin` (Name + eigene Notiz vorausgefüllt, Herkunft gesetzt). |
+
+### Reine Frontend-Entscheidungen (nicht in der Architecture-Phase festgelegt)
+
+- **Karten-Aktionen über ein Dropdown-Menü** (Bearbeiten/Löschen), nicht ein
+  Tap auf die ganze Karte: vermeidet verschachtelte klickbare Flächen
+  (dieselbe Überlegung wie beim Nested-Link-Problem aus PROJ-14) und
+  unterscheidet klar zwischen „Notiz lesen" und „bearbeiten wollen". Ein Tap
+  auf „Bearbeiten" im Menü erfüllt die Spec-AC unverändert.
+- **Bewertung als `Select` mit Sentinel-Wert `"none"`** statt Slider — Radix
+  `Select` erlaubt keinen leeren String als Item-Wert; identisches Muster
+  wie das bestehende Helfer-Feld in `event-form.tsx` (`"none"` → „Kein
+  Helfer").
+- **Verkostet-am-Kalender sperrt Tage nach heute** (`disabled={{ after:
+  today }}`) — eigene, kleine Umkehrung von `EventDateField` (die sperrt
+  Tage *vor* heute, weil Events in der Zukunft liegen); nicht in der Spec
+  vorgeschrieben, aber „man kann nichts verkosten, was noch nicht war" ist
+  die naheliegende Lesart.
+- **`origin` (Herkunft) wird ungeprüft aus dem Client übernommen** (kein
+  serverseitiger Abgleich, ob der Nutzer den Whisky wirklich bewertet hat) —
+  bewusste Vereinfachung: die Herkunftsangabe ist rein informativ, kein
+  Sicherheits- oder Berechtigungsmerkmal; ein manipulierter Wert hätte
+  keinerlei Auswirkung außerhalb der eigenen Sammlung des Nutzers.
+
+### Verifikation
+
+`npx tsc --noEmit` sauber · `eslint` (betroffene Pfade) sauber · `npm test`
+→ 127/127 (12 → 13 Testdateien, +10 aus `collection.test.ts`) · `npm run
+build` erzeugt `/profil/sammlung` und `/profil/[id]/sammlung` als dynamische
+Routen. Dev-Server-Smoke-Test ohne Login (Tabelle fehlt noch) nicht
+aussagekräftig — echte Verifikation der neuen Seiten folgt nach `/backend`
+in `/qa`.
 
 ## QA Test Results
 _To be added by /qa_

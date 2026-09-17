@@ -29,6 +29,11 @@ export interface PublicProfileData {
   /** `null`, wenn `showAnyBalance` falsch ist ODER das Laden fehlgeschlagen
    * ist (Seite bleibt nutzbar, Karte zeigt „nicht verfügbar"). */
   balance: PublicBalance | null
+  /** PROJ-15: ob `/profil/[id]/sammlung` für andere sichtbar ist. Kommt aus
+   * `profiles.show_collection` — dieser Flag ist (wie alle Sichtbarkeits-
+   * Schalter) nicht Teil der drei per PROJ-14 entzogenen Spalten, ein
+   * Direktzugriff auf die Basistabelle bleibt dafür erlaubt. */
+  collectionVisible: boolean
 }
 
 type VisibilityFlags = {
@@ -55,13 +60,16 @@ type VisibilityFlags = {
 export async function getPublicProfile(targetId: string): Promise<PublicProfileData | null> {
   const supabase = await createClient()
 
-  const { data: row, error: profileError } = await supabase
-    .from('profiles_public')
-    .select(
-      'id, display_name, bio, favorite_dram, favorite_region, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points',
-    )
-    .eq('id', targetId)
-    .maybeSingle()
+  const [{ data: row, error: profileError }, { data: flagsRow }] = await Promise.all([
+    supabase
+      .from('profiles_public')
+      .select(
+        'id, display_name, bio, favorite_dram, favorite_region, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points',
+      )
+      .eq('id', targetId)
+      .maybeSingle(),
+    supabase.from('profiles').select('show_collection').eq('id', targetId).maybeSingle(),
+  ])
   if (profileError) throw profileError
   if (!row || !row.id || !row.display_name) return null
 
@@ -88,6 +96,7 @@ export async function getPublicProfile(targetId: string): Promise<PublicProfileD
     bio: row.bio,
     showAnyBalance,
     balance,
+    collectionVisible: Boolean(flagsRow?.show_collection),
   }
 }
 

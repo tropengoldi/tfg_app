@@ -60,6 +60,8 @@ export default async function ErgebnissePage({
               ranking={data.ranking}
               participantCount={data.participants.length}
               hasAnyRatings={data.hasAnyRatings}
+              eventId={eventId}
+              eventDate={data.head.event_date}
             />
           </div>
         </>
