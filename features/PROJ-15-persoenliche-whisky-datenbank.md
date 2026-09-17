@@ -1,6 +1,6 @@
 # PROJ-15: Persönliche Whisky-Datenbank (teilbar)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-09-17
 **Last Updated:** 2026-09-17
 
@@ -740,7 +740,21 @@ Keine.
 - **Recommendation:** **Approved.**
 
 ## Deployment
-_To be added by /deploy_
 
-## Deployment
-_To be added by /deploy_
+**Deployed:** 2026-09-17 · **Production URL:** https://tfg-app-self.vercel.app · **Tag:** `v1.5.0`
+
+Hosting: Vercel (Auto-Deploy aus `main`). Backend: Supabase `ogwuwisutgaxxpknkgpg`
+(eu-central-1), Migration `20260917120000_collection_entries.sql` bereits vor
+`/qa` per `npm run db:push` eingespielt und verifiziert (120/120
+Integrationstests, inkl. der 11 neuen PROJ-15-Fälle).
+
+Keine neuen Umgebungsvariablen, kein Vercel-Konfigurationsschritt nötig —
+reine Code- + Migrations-Erweiterung eines bereits laufenden Deployments.
+
+**Verifikation nach dem Deploy:** Vercel-Build-Log sauber (`✓ Compiled
+successfully`, alle 17 Routen erzeugt, inkl. `/profil/sammlung` und
+`/profil/[id]/sammlung`), Deployment-Status `Ready`. Production-Routen per
+`curl` gegengeprüft: beide neuen Seiten sowie `/login` liefern `200` nach
+Redirect-Auflösung; nicht angemeldete Zugriffe werden serverseitig auf
+`/login` umgeleitet (Proxy-Middleware), identisch zum lokal verifizierten
+Verhalten aus `/qa`.

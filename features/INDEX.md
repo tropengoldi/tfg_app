@@ -29,7 +29,7 @@
 | PROJ-12 | App-Icon & Homescreen | Deployed | [PROJ-12-app-icon-homescreen.md](PROJ-12-app-icon-homescreen.md) | 2026-08-30 |
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
 | PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Deployed | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
-| PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Approved | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
+| PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Deployed | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
 
 <!-- Add features above this line -->
 
@@ -37,7 +37,7 @@
 
 ## Stand der Roadmap
 
-PROJ-1..14 **Deployed**. PROJ-11 (Neutraler Helfer) am 2026-08-31 als `v1.3.0`
+PROJ-1..15 **Deployed**. PROJ-11 (Neutraler Helfer) am 2026-08-31 als `v1.3.0`
 live (mit DB-Migration `20260831120000_helper_role.sql`). PROJ-14 (Profil für
 andere Teilnehmer einsehbar, mit granularer Sichtbarkeitssteuerung) am
 2026-09-16 als `v1.4.0` live (mit DB-Migration
@@ -48,25 +48,16 @@ PROJ-14-bezogene Fehlschläge durch ein Seed-Konto-Problem
 (Admin-Passwort ≠ Seed-Passwort — `test.teilnehmer@example.com` wurde
 während der QA bereits reaktiviert) — siehe QA-Abschnitt der Spec und den
 Backlog-Punkt unten. PROJ-15 (persönliche, optional teilbare
-Whisky-Sammlung à la Vivino, baut auf PROJ-14 auf) ist jetzt **In
-Progress** — Spec + Tech-Design am 2026-09-17 (Hybrid-Modell
-Sammlung+Bewertung, eigene 1–10-Skala, achter Sichtbarkeits-Schalter,
-Übernehmen-Button mit Herkunftsfeld auf der PROJ-9-Ergebnisseite, neue
-eigene Tabelle mit zeilenweiser RLS), Frontend am selben Tag umgesetzt
-(`/profil/sammlung`, `/profil/[id]/sammlung`, Übernehmen-Button in
-`ranking-row.tsx`; `npm test` 127/127, `build` sauber), Backend-Migration am
-selben Tag geschrieben und angewandt (`20260917120000_collection_entries.sql`:
+Whisky-Sammlung à la Vivino, baut auf PROJ-14 auf) am 2026-09-17 als
+`v1.5.0` live (mit DB-Migration `20260917120000_collection_entries.sql` —
 neue Tabelle mit zeilenweiser RLS statt einer maskierenden Sicht,
 Herkunftsfeld per Spalten-GRANT eingefroren; ein erster `db:push`-Versuch
 scheiterte an der Anlage-Reihenfolge Spalte/Funktion, nach Fix erfolgreich
-eingespielt). Vollständig verifiziert: `tsc`/`eslint` sauber, `npm test`
-127/127, `npm run test:rls` **120/120** (inkl. 11 neuer Fälle), `build`
-sauber. `/qa` am 2026-09-17 abgeschlossen — 24/24 Acceptance Criteria
-bestanden, 36/36 neue E2E-Tests (`PROJ-15-persoenliche-sammlung.spec.ts`,
-beide Browser), 0 Bugs, Security-Audit ohne Befund, gezielte Regression auf
-PROJ-9/10/14 37/38 (der eine Fehlschlag ist das vorbestehende
-Seed-Admin-Passwort-Problem aus PROJ-14, nicht PROJ-15-bezogen). **Approved
-— bereit für `/deploy`.** Sonstige offene Arbeit siehe Post-Deploy-Backlog.
+eingespielt; 24/24 Acceptance Criteria, 36/36 neue E2E-Tests, 0 Bugs,
+Security-Audit ohne Befund). Die gezielte Regression auf PROJ-9/10/14 zeigt
+daneben 1 vorbestehenden, nicht PROJ-15-bezogenen Fehlschlag durch dasselbe
+Seed-Admin-Passwort-Problem wie bei PROJ-14 (siehe QA-Abschnitt der Spec und
+den Backlog-Punkt unten). Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 
