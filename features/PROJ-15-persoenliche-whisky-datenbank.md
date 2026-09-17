@@ -519,6 +519,81 @@ Routen. Dev-Server-Smoke-Test ohne Login (Tabelle fehlt noch) nicht
 aussagekräftig — echte Verifikation der neuen Seiten folgt nach `/backend`
 in `/qa`.
 
+## Implementation Notes (Backend)
+
+**Stand:** Migration geschrieben am 2026-09-17 —
+`supabase/migrations/20260917120000_collection_entries.sql`. **Noch nicht
+angewandt.** Der Nutzer führt aus:
+
+```powershell
+npm run db:push      # Migration einspielen
+npm run db:types     # src/lib/supabase/types.ts neu generieren
+```
+
+`db:types` überschreibt die im `/frontend`-Schritt von Hand nachgetragenen
+Typen (Tabelle `collection_entries`, `profiles.show_collection`) mit der
+echten Generierung — inhaltlich identisch, Feldreihenfolge alphabetisch wie
+vom Generator gewohnt. Danach `npm run test:rls` (inkl. der neuen
+`collection-entries.integration.test.ts`) im `/qa`-Schritt.
+
+### Eine Migration — was sie tut
+
+| Bereich | Änderung |
+|---------|----------|
+| **Neue Tabelle `collection_entries`** | Eine Zeile pro Sammlungs-Eintrag: `profile_id` (→ `profiles`, `on delete cascade` — rein persönliche Daten, anders als die `on delete restrict`-Historie eines Events), `name` (1–200 Pflicht), `distillery`/`region` (≤120), `age_label` (≤50), `tasted_on` (Datum), `value_note` (≤200), `rating` (1–10), `notes` (≤2000), `owned` (Boolean), `source_event_id` (→ `tasting_events`, `on delete set null`), `source_event_date` (Datums-Snapshot, unabhängig von der Verknüpfung), `created_at`/`updated_at` (Trigger `tg_set_updated_at`, PROJ-1). Index `(profile_id, updated_at desc)` für die „neueste zuerst"-Sortierung. |
+| **Helfer-Funktion `profile_shows_collection(uuid)`** | `SECURITY DEFINER`, liest `profiles.show_collection` der Zielperson (Projekt-Konvention: keine RLS-Policy referenziert eine andere Tabelle direkt). |
+| **RLS auf `collection_entries`** | `select`: eigene Zeilen immer, fremde nur wenn `profile_shows_collection(profile_id)` wahr ist — zeilenweise Sichtbarkeit, keine maskierende Sicht nötig (anders als PROJ-14). `insert`/`update`/`delete`: nur die eigene Zeile (`profile_id = auth.uid()`). |
+| **Herkunftsfeld eingefroren** | `revoke update` + `grant update (…)` auf genau die neun editierbaren Spalten — `source_event_id`/`source_event_date` (und `id`/`profile_id`/`created_at`) sind darüber nicht änderbar. Ein direkter Schreibversuch liefert `42501`, unabhängig vom Frontend. |
+| **8. Sichtbarkeits-Schalter `profiles.show_collection`** | `boolean not null default true`, additiv zu den sieben PROJ-14-Spalten-GRANTs ergänzt (`grant select/update (show_collection) …` — Spaltenrechte akkumulieren pro Rolle/Tabelle, kein erneutes Auflisten der übrigen sechs nötig). |
+
+### Entscheidungen im Detail
+
+- **Zeilenweise RLS statt einer maskierenden Sicht:** Bei den PROJ-14-Profil-
+  Stammdaten musste eine einzelne Spalte innerhalb einer sonst sichtbaren
+  Zeile verborgen werden — das geht nur über eine Sicht/Spalten-Grant. Hier
+  ist die Sichtbarkeit alles-oder-nichts pro Zeile, das drückt eine normale
+  `USING`-Klausel direkt aus (siehe Architecture-Entscheidung).
+- **`on delete cascade` für `profile_id`, `on delete set null` für
+  `source_event_id`:** Ein Sammlungs-Eintrag hängt an nichts außer seinem
+  Besitzer — verschwindet die Person (per `user:delete MODE=cascade`), darf
+  auch die Sammlung mitgehen. Ein gelöschtes Event dagegen darf den Eintrag
+  nicht mitreißen, nur die Verknüpfung verlieren (Edge Case aus der Spec).
+- **`source_event_date` als eigene Spalte statt nur aus `source_event_id`
+  abgeleitet:** Nach einem `on delete set null` wäre das Datum sonst
+  ersatzlos weg — der Snapshot ist der einzige Weg, „Von TFG-Tasting am …"
+  auch nach dem Verlust der Verknüpfung noch anzuzeigen.
+- **Kein serverseitiger Abgleich, ob der Nutzer den Whisky beim Übernehmen
+  wirklich bewertet hat:** bereits in der Frontend-Phase als bewusste
+  Vereinfachung dokumentiert — die Herkunftsangabe ist rein informativ, kein
+  Sicherheitsmerkmal. Die RLS-`insert`-Policy verlangt nur `profile_id =
+  auth.uid()`, keine Prüfung gegen `ratings`.
+
+### Neue Datei
+
+- `src/lib/supabase/__tests__/collection-entries.integration.test.ts` — 9
+  Fälle: eigene Zeile anlegen/lesen/bearbeiten; fremdes `profile_id` beim
+  Anlegen wird abgelehnt; Default sichtbar → fremde Zeile lesbar; Schalter
+  aus → fremde Zeilen verschwinden, eigene bleibt vollständig sichtbar;
+  Schreibzugriff (Update/Delete) auf fremde Zeilen betrifft 0 Zeilen statt
+  eines Fehlers (RLS-Filterung); Herkunftsfeld lässt sich beim Anlegen setzen
+  aber nicht mehr ändern (`42501`), andere Felder desselben Eintrags bleiben
+  änderbar; gelöschtes Ursprungs-Event setzt `source_event_id` auf `NULL`,
+  `source_event_date` bleibt erhalten.
+
+### Verifikation
+
+`npx tsc --noEmit` sauber · `eslint .` sauber · `npm test` → 127/127
+(unverändert — die neue Datei ist eine `*.integration.test.ts` und damit laut
+`vitest.config.ts` vom normalen Testlauf ausgeschlossen, sie läuft nur über
+`npm run test:rls`) · `npm run build` ok. Kein lokales Docker/Supabase
+verfügbar in dieser Session (`supabase status` scheitert an fehlendem
+Docker/Podman) → die Migration ließ sich nicht lokal gegenprüfen, nur gegen
+die bestehenden Konventionen (Spaltentypen, Trigger, GRANT-Muster) abgleichen.
+`npm run test:rls` bewusst **nicht** in diesem Schritt ausgeführt — die
+Migration steht noch aus, ein Lauf würde an der fehlenden Tabelle/Spalte
+scheitern. Verifikation folgt in `/qa`, nachdem der Nutzer `db:push`
+ausgeführt hat.
+
 ## QA Test Results
 _To be added by /qa_
 

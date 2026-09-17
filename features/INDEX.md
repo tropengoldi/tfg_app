@@ -54,10 +54,12 @@ Sammlung+Bewertung, eigene 1–10-Skala, achter Sichtbarkeits-Schalter,
 Übernehmen-Button mit Herkunftsfeld auf der PROJ-9-Ergebnisseite, neue
 eigene Tabelle mit zeilenweiser RLS), Frontend am selben Tag umgesetzt
 (`/profil/sammlung`, `/profil/[id]/sammlung`, Übernehmen-Button in
-`ranking-row.tsx`; `npm test` 127/127, `build` sauber). **Kein Backend** —
-Tabelle `collection_entries` und `profiles.show_collection` fehlen noch in
-der DB → `/backend PROJ-15` vor dem nächsten `/qa`. Sonstige offene Arbeit
-siehe Post-Deploy-Backlog.
+`ranking-row.tsx`; `npm test` 127/127, `build` sauber), Backend-Migration am
+selben Tag geschrieben (`20260917120000_collection_entries.sql`: neue
+Tabelle mit zeilenweiser RLS statt einer maskierenden Sicht, Herkunftsfeld
+per Spalten-GRANT eingefroren, 9 neue Integrationstests). **Migration noch
+nicht angewandt** — `npm run db:push` + `npm run db:types` stehen aus, dann
+`/qa PROJ-15`. Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 
