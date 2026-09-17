@@ -8,22 +8,25 @@
 -- Das lässt sich direkt als RLS-USING-Klausel ausdrücken — keine maskierende
 -- Sicht nötig.
 --
--- Bausteine:
+-- Bausteine (Reihenfolge ist relevant: die Helfer-Funktion ist `language
+-- sql` und wird deshalb schon bei CREATE FUNCTION gegen die referenzierten
+-- Spalten geprüft — profiles.show_collection muss also VOR der Funktion
+-- angelegt werden, nicht erst danach):
 --   1. Neue Tabelle collection_entries (eine Zeile pro Sammlungs-Eintrag).
 --      source_event_id verweist optional auf das Ursprungs-Event (gesetzt nur
 --      über den PROJ-9-„Zur Sammlung hinzufügen"-Button) mit ON DELETE SET
 --      NULL — ein gelöschtes Event darf den Eintrag nicht mitreißen.
 --      source_event_date ist ein unveränderlicher Datums-Snapshot, der auch
 --      nach dem Verlust der Verknüpfung noch die Herkunfts-Zeile trägt.
---   2. Helfer-Funktion profile_shows_collection(uuid) — liest
+--   2. Achter Sichtbarkeits-Schalter profiles.show_collection (Default
+--      sichtbar, wie die sieben aus PROJ-14) inkl. Spalten-GRANT.
+--   3. Helfer-Funktion profile_shows_collection(uuid) — liest
 --      profiles.show_collection (SECURITY DEFINER, Projekt-Konvention: keine
 --      Policy referenziert eine andere Tabelle direkt).
---   3. RLS: eigene Zeilen immer lesbar; fremde nur bei show_collection = true.
+--   4. RLS: eigene Zeilen immer lesbar; fremde nur bei show_collection = true.
 --      Schreiben (Insert/Update/Delete) nur die eigene Zeile. Das
 --      Herkunftsfeld ist nach dem Anlegen nicht mehr änderbar (Spalten-GRANT
 --      lässt source_event_id/source_event_date beim Update aus).
---   4. Achter Sichtbarkeits-Schalter profiles.show_collection (Default
---      sichtbar, wie die sieben aus PROJ-14) inkl. Spalten-GRANT.
 
 begin;
 
@@ -55,7 +58,22 @@ create trigger set_updated_at before update on public.collection_entries
   for each row execute function public.tg_set_updated_at();
 
 -- ===========================================================================
--- 2 · Helfer-Funktion  (SECURITY DEFINER + STABLE + search_path = '')
+-- 2 · Achter Sichtbarkeits-Schalter (PROJ-14-Muster)
+--   Muss vor der Helfer-Funktion in Abschnitt 3 stehen — die Funktion ist
+--   `language sql` und wird schon bei CREATE FUNCTION gegen die Spalte
+--   geprüft.
+-- ===========================================================================
+alter table public.profiles
+  add column if not exists show_collection boolean not null default true;
+
+-- Additiv zu den bestehenden Spalten-GRANTs aus PROJ-14 (Spaltenrechte
+-- akkumulieren pro Rolle/Tabelle, kein erneutes Auflisten der übrigen sechs
+-- nötig).
+grant select (show_collection) on public.profiles to authenticated;
+grant update (show_collection) on public.profiles to authenticated;
+
+-- ===========================================================================
+-- 3 · Helfer-Funktion  (SECURITY DEFINER + STABLE + search_path = '')
 -- ===========================================================================
 create or replace function public.profile_shows_collection(p_profile uuid)
 returns boolean
@@ -74,7 +92,7 @@ revoke execute on function public.profile_shows_collection(uuid) from public, an
 grant  execute on function public.profile_shows_collection(uuid) to authenticated;
 
 -- ===========================================================================
--- 3 · RLS
+-- 4 · RLS
 -- ===========================================================================
 revoke all on public.collection_entries from anon;
 alter table public.collection_entries enable row level security;
@@ -107,17 +125,5 @@ grant  update (
   name, distillery, region, age_label, tasted_on,
   value_note, rating, notes, owned
 ) on public.collection_entries to authenticated;
-
--- ===========================================================================
--- 4 · Achter Sichtbarkeits-Schalter (PROJ-14-Muster)
--- ===========================================================================
-alter table public.profiles
-  add column if not exists show_collection boolean not null default true;
-
--- Additiv zu den bestehenden Spalten-GRANTs aus PROJ-14 (Spaltenrechte
--- akkumulieren pro Rolle/Tabelle, kein erneutes Auflisten der übrigen sechs
--- nötig).
-grant select (show_collection) on public.profiles to authenticated;
-grant update (show_collection) on public.profiles to authenticated;
 
 commit;

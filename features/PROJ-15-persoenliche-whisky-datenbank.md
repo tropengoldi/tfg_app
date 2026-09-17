@@ -580,6 +580,19 @@ vom Generator gewohnt. Danach `npm run test:rls` (inkl. der neuen
   änderbar; gelöschtes Ursprungs-Event setzt `source_event_id` auf `NULL`,
   `source_event_date` bleibt erhalten.
 
+### Fix nach fehlgeschlagenem `db:push`
+
+Erster `db:push`-Versuch scheiterte mit `column "show_collection" does not
+exist` (42703) beim Anlegen der Helfer-Funktion. Ursache: die Funktion ist
+`language sql` und wird deshalb schon bei `CREATE FUNCTION` gegen die
+referenzierten Spalten geprüft (anders als `plpgsql`, dessen Rumpf erst bei
+der ersten Ausführung geparst wird) — `show_collection` stand in der
+ursprünglichen Abschnittsreihenfolge aber erst *nach* der Funktion. Fix:
+Abschnitt „Achter Sichtbarkeits-Schalter" vor die Helfer-Funktion gezogen
+(neue Reihenfolge: Tabelle → Spalte → Funktion → RLS). Gleiches Muster wie
+in `20260831120000_helper_role.sql`, wo `tasting_events.helper_id` ebenfalls
+vor der sie nutzenden Funktion `is_event_helper` steht.
+
 ### Verifikation
 
 `npx tsc --noEmit` sauber · `eslint .` sauber · `npm test` → 127/127
