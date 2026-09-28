@@ -212,6 +212,7 @@ bestehenden Daten aufbaut statt bei null anzufangen.
 | Obergrenze 50 Empfänger pro Nachricht in der Datenbankfunktion | Reines Sicherheitsnetz gegen Fehlbedienung/Missbrauch, schränkt die reale Rundengröße nie ein | 2026-09-28 |
 | Neue Umgebungsvariablen für eigene SMTP-Zugangsdaten (Host/Port/Nutzer/Passwort), getrennt von Supabases eigener SMTP-Konfiguration | Die App braucht eigene Zugangsdaten für den Versand — Supabase kennt sein SMTP-Passwort nur intern, die App hat aktuell keinen Zugriff darauf | 2026-09-28 |
 | **Beim Bauen verfeinert:** zwei Datenbankfunktionen (`resolve_message_recipients` zum reinen Validieren/Auflösen, `record_sent_message` zum Speichern) statt der ursprünglich geplanten einen | Postgres kann keine E-Mails verschicken — eine einzelne Funktion hätte vor dem Versand committen müssen und bei einem kompletten SMTP-Ausfall eine „gesendete" Nachricht hinterlassen, die nie ankam. Erst nach mindestens einem erfolgreichen Versand wird überhaupt gespeichert, und nur für die tatsächlich erreichten Empfänger | 2026-09-28 |
+| **Post-Deploy-Fix:** der Helfer eines Tastings (PROJ-11) gilt in `resolve_message_recipients` zusätzlich zu `event_participants` als beteiligt, wenn er `tasting_events.helper_id` ist; `getComposeData` nimmt ihn ebenso in die Teilnehmerliste auf | Der Helfer steht bewusst nicht in `event_participants` (er verkostet nicht mit), gehört aber als jemand, der den Abend steuert, klar zu den Empfängern einer Tasting-Nachricht — im Betrieb aufgefallen, kein bewusster Ausschluss der Spec | 2026-09-28 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
@@ -542,3 +543,29 @@ pausierten VPS-Self-Hosting-Pfad brach `next start`) — siehe QA-Abschnitt.
 Die zugehörigen Docker/VPS-Dateien selbst sind weiterhin bewusst nicht
 committed (Mission pausiert, siehe `docs/production/vps-self-hosted.md`
 lokal).
+
+### Post-Deploy-Fix (2026-09-28): Helfer fehlte als Empfänger
+
+**Fund aus dem echten Betrieb** (Nutzer-Meldung nach dem Go-Live, kein
+QA-Fund): Der Helfer eines Tastings (PROJ-11) tauchte in der
+Empfänger-Auswahl einer tasting-bezogenen Nachricht gar nicht erst auf — die
+Auswahl kam ausschließlich aus `event_participants`, in der der Helfer
+bewusst nicht steht (er verkostet nicht mit). War kein bewusster
+Scope-Entscheid der Spec, sondern ein Übersehen bei der Umsetzung — der
+Helfer steuert den Abend und gehört als Empfänger klar dazu.
+
+**Fix:**
+- Migration `20260928130000_messages_include_helper.sql` — `resolve_message_recipients`
+  erneuert: ein Empfänger gilt zusätzlich als beteiligt, wenn er
+  `tasting_events.helper_id` des gewählten Tastings ist (nicht nur
+  `event_participants`). `record_sent_message` profitiert automatisch mit
+  (ruft `resolve_message_recipients` intern auf).
+- `getComposeData` (`src/lib/queries/messages.ts`) nimmt den Helfer jetzt in
+  die Teilnehmerliste jedes betroffenen Tastings mit auf, inkl. Namensauflösung.
+- Neue Tests: 2 zusätzliche Fälle in `messages.integration.test.ts` (Helfer
+  ist gültiger Empfänger, auch als eigener Absender), 1 zusätzliche
+  Prüfzeile im bestehenden E2E-Test (Helfer erscheint vorausgewählt).
+  `npm run test:rls` → 133/133, `tests/PROJ-16-nachrichten.spec.ts` → 18/18
+  (beide Browser).
+
+**Deployed:** 2026-09-28 · **Tag:** `v1.6.1`

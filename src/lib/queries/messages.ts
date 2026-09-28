@@ -33,18 +33,18 @@ export async function getComposeData(userId: string): Promise<ComposeData> {
     getActiveMembers(),
     supabase
       .from('event_participants')
-      .select('tasting_events(id, event_date, location)')
+      .select('tasting_events(id, event_date, location, helper_id)')
       .eq('profile_id', userId),
   ])
   if (participantRows.error) throw participantRows.error
 
   const { data: helperRows, error: helperErr } = await supabase
     .from('tasting_events')
-    .select('id, event_date, location')
+    .select('id, event_date, location, helper_id')
     .eq('helper_id', userId)
   if (helperErr) throw helperErr
 
-  type EventShape = { id: string; event_date: string; location: string }
+  type EventShape = { id: string; event_date: string; location: string; helper_id: string | null }
   type Row = { tasting_events: EventShape | null }
 
   const byId = new Map<string, EventShape>()
@@ -65,8 +65,16 @@ export async function getComposeData(userId: string): Promise<ComposeData> {
       .in('event_id', eventIds)
     if (partsErr) throw partsErr
 
+    // Der Helfer eines Tastings steht bewusst nicht in event_participants
+    // (er verkostet nicht mit, siehe PROJ-11) — gehört als Empfänger einer
+    // Tasting-Nachricht aber klar dazu, er steuert schließlich den Abend.
+    const helperPairs = events
+      .filter((e) => e.helper_id)
+      .map((e) => ({ event_id: e.id, profile_id: e.helper_id as string }))
+
+    const allPairs = [...(parts ?? []), ...helperPairs]
     const neededIds = [
-      ...new Set((parts ?? []).map((p) => p.profile_id).filter((id) => id !== userId)),
+      ...new Set(allPairs.map((p) => p.profile_id).filter((id) => id !== userId)),
     ]
     const namesById = new Map<string, string>()
     if (neededIds.length > 0) {
@@ -78,8 +86,12 @@ export async function getComposeData(userId: string): Promise<ComposeData> {
       for (const p of profs ?? []) namesById.set(p.id, p.display_name)
     }
 
-    for (const p of parts ?? []) {
+    const seen = new Set<string>() // "eventId:profileId", falls je doppelt
+    for (const p of allPairs) {
       if (p.profile_id === userId) continue
+      const key = `${p.event_id}:${p.profile_id}`
+      if (seen.has(key)) continue
+      seen.add(key)
       const name = namesById.get(p.profile_id)
       if (!name) continue // deaktiviert oder anderweitig nicht (mehr) auflösbar
       const list = participantsByEvent.get(p.event_id) ?? []

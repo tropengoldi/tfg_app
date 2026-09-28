@@ -8,6 +8,7 @@ import {
   deleteUser,
   hasServiceClient,
   login,
+  serviceClient,
 } from './helpers/auth'
 
 const STAMP = `${Date.now()}p${process.pid}`
@@ -22,6 +23,9 @@ let recipient: { id: string; email: string }
 let outsider: { id: string; email: string }
 /** Nie an einem Tasting beteiligt, nie eine Nachricht verschickt. */
 let freshMember: { id: string; email: string }
+/** Helfer (PROJ-11) des Tastings — steht nicht in der Teilnehmerliste,
+ * muss aber trotzdem als Empfänger wählbar sein (Post-Deploy-Fund). */
+let helper: { id: string; email: string }
 
 let evId = ''
 
@@ -38,6 +42,7 @@ test.beforeAll(async () => {
   recipient = await createDisposableUser(`r16r${STAMP}`, { active: true })
   outsider = await createDisposableUser(`r16o${STAMP}`, { active: true })
   freshMember = await createDisposableUser(`r16f${STAMP}`, { active: true })
+  helper = await createDisposableUser(`r16h${STAMP}`, { active: true })
 
   evId = await createEventDirect({
     hostId: sender.id,
@@ -46,6 +51,7 @@ test.beforeAll(async () => {
     eventDate: '2026-11-11',
   })
   await addParticipant(evId, recipient.id)
+  await serviceClient().from('tasting_events').update({ helper_id: helper.id }).eq('id', evId)
 })
 
 test.afterAll(async () => {
@@ -55,6 +61,7 @@ test.afterAll(async () => {
   if (recipient) await deleteUser(recipient.id)
   if (outsider) await deleteUser(outsider.id)
   if (freshMember) await deleteUser(freshMember.id)
+  if (helper) await deleteUser(helper.id)
 })
 
 // ===========================================================================
@@ -144,6 +151,10 @@ test('Tasting-Modus: eigenes Tasting mit vorausgewählten Teilnehmern, Außenste
   const recipientCheckbox = page.getByRole('checkbox', { name: `QA r16r${STAMP}` })
   await expect(recipientCheckbox).toBeChecked()
   await expect(page.getByRole('checkbox', { name: `QA r16o${STAMP}` })).toHaveCount(0)
+
+  // Post-Deploy-Fund: der Helfer steht nicht in der Teilnehmerliste, muss
+  // aber trotzdem als Empfänger vorausgewählt auftauchen.
+  await expect(page.getByRole('checkbox', { name: `QA r16h${STAMP}` })).toBeChecked()
 })
 
 test('Tasting-Modus: ohne eigene Tastings erscheint ein Hinweis', async ({ page }) => {

@@ -67,7 +67,11 @@ Nodemailer-Versand korrumpierte den wiederverwendeten Supabase-Client vor dem
 zweiten RPC-Aufruf — jeder Versand schlug zuverlässig fehl; außerdem brach
 ein für den pausierten VPS-Pfad gesetztes `output: 'standalone'` die
 komplette lokale E2E-Infrastruktur, betraf also nicht nur PROJ-16. Security-
-Audit inkl. gezielt getesteter E-Mail-Header-Injection ohne Befund).
+Audit inkl. gezielt getesteter E-Mail-Header-Injection ohne Befund). Am
+2026-09-28 als `v1.6.1` nachgezogen: der Helfer (PROJ-11) fehlte als
+möglicher Empfänger einer tasting-bezogenen Nachricht (Nutzer-Fund nach dem
+Go-Live) — Migration `20260928130000_messages_include_helper.sql` behebt es,
+133/133 Integrationstests, 18/18 E2E-Tests.
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)

@@ -61,6 +61,10 @@ let admin: Person
 let sender: Person
 let member: Person // Teilnehmer des Tastings, gültiger Empfänger
 let outsider: Person // aktives Mitglied, aber NICHT im Tasting
+/** Helfer des Tastings (PROJ-11) — steht NICHT in event_participants, ist
+ * aber trotzdem ein gültiger Empfänger (Post-Deploy-Fund, siehe
+ * 20260928130000_messages_include_helper.sql). */
+let helper: Person
 let evId = ''
 
 beforeAll(async () => {
@@ -75,11 +79,13 @@ beforeAll(async () => {
   sender = await makeUser('sender')
   member = await makeUser('member')
   outsider = await makeUser('outsider')
+  helper = await makeUser('helper')
 
   const { data: evData, error: evErr } = await admin.client.rpc('create_event', {
     p_event_date: FUTURE,
     p_location: `Msg-${stamp}`,
     p_host_id: sender.id,
+    p_helper_id: helper.id,
   })
   if (evErr) throw evErr
   evId = evData as string
@@ -161,6 +167,24 @@ describe.skipIf(!RUN)('resolve_message_recipients — Tasting-bezogen', () => {
 
   it('gültiger Absender + gültiger Empfänger → aufgelöst', async () => {
     const { data, error } = await sender.client.rpc('resolve_message_recipients', {
+      p_recipient_ids: [member.id],
+      p_event_id: evId,
+    })
+    expect(error).toBeNull()
+    expect(data!.map((r) => r.recipient_id)).toEqual([member.id])
+  })
+
+  it('der Helfer ist ein gültiger Empfänger, obwohl er kein event_participants-Eintrag ist', async () => {
+    const { data, error } = await sender.client.rpc('resolve_message_recipients', {
+      p_recipient_ids: [member.id, helper.id],
+      p_event_id: evId,
+    })
+    expect(error).toBeNull()
+    expect(data!.map((r) => r.recipient_id).sort()).toEqual([helper.id, member.id].sort())
+  })
+
+  it('der Helfer selbst darf eine Nachricht an sein Tasting schicken', async () => {
+    const { data, error } = await helper.client.rpc('resolve_message_recipients', {
       p_recipient_ids: [member.id],
       p_event_id: evId,
     })
