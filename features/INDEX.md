@@ -30,7 +30,7 @@
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
 | PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Deployed | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
 | PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Deployed | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
-| PROJ-16 | Nachrichten an Teilnehmer | Approved | [PROJ-16-nachrichten-an-teilnehmer.md](PROJ-16-nachrichten-an-teilnehmer.md) | 2026-09-28 |
+| PROJ-16 | Nachrichten an Teilnehmer | Deployed | [PROJ-16-nachrichten-an-teilnehmer.md](PROJ-16-nachrichten-an-teilnehmer.md) | 2026-09-28 |
 
 <!-- Add features above this line -->
 
@@ -38,7 +38,7 @@
 
 ## Stand der Roadmap
 
-PROJ-1..15 **Deployed**. PROJ-11 (Neutraler Helfer) am 2026-08-31 als `v1.3.0`
+PROJ-1..16 **Deployed**. PROJ-11 (Neutraler Helfer) am 2026-08-31 als `v1.3.0`
 live (mit DB-Migration `20260831120000_helper_role.sql`). PROJ-14 (Profil für
 andere Teilnehmer einsehbar, mit granularer Sichtbarkeitssteuerung) am
 2026-09-16 als `v1.4.0` live (mit DB-Migration
@@ -59,14 +59,15 @@ Security-Audit ohne Befund). Die gezielte Regression auf PROJ-9/10/14 zeigt
 daneben 1 vorbestehenden, nicht PROJ-15-bezogenen Fehlschlag durch dasselbe
 Seed-Admin-Passwort-Problem wie bei PROJ-14 (siehe QA-Abschnitt der Spec und
 den Backlog-Punkt unten). PROJ-16 (Nachrichten an Teilnehmer — tasting-bezogen
-oder allgemein, v1 per E-Mail, spätere Ausbaustufe als In-App-Push) ist seit
-2026-09-28 **Approved** — 16/16 Acceptance Criteria, 2 High-Bugs während der
-QA gefunden und behoben (Nodemailer-Versand korrumpierte den wiederverwendeten
-Supabase-Client vor dem zweiten RPC-Aufruf — jeder Versand schlug zuverlässig
-fehl; außerdem brach ein für den pausierten VPS-Pfad gesetztes
-`output: 'standalone'` die komplette lokale E2E-Infrastruktur), Security-Audit
-inkl. gezielt getesteter E-Mail-Header-Injection ohne Befund. Nächster Schritt
-`/deploy PROJ-16`.
+oder allgemein, v1 per E-Mail, spätere Ausbaustufe als In-App-Push) am
+2026-09-28 als `v1.6.0` live (mit DB-Migration `20260928120000_messages.sql`
+— 2 Tabellen, 2 SECURITY-DEFINER-RPCs, kein Direktschreibzugriff; 16/16
+Acceptance Criteria, 2 High-Bugs während der QA gefunden und behoben:
+Nodemailer-Versand korrumpierte den wiederverwendeten Supabase-Client vor dem
+zweiten RPC-Aufruf — jeder Versand schlug zuverlässig fehl; außerdem brach
+ein für den pausierten VPS-Pfad gesetztes `output: 'standalone'` die
+komplette lokale E2E-Infrastruktur, betraf also nicht nur PROJ-16. Security-
+Audit inkl. gezielt getesteter E-Mail-Header-Injection ohne Befund).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)

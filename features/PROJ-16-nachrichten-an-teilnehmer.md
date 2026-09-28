@@ -1,6 +1,6 @@
 # PROJ-16: Nachrichten an Teilnehmer
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-09-28
 **Last Updated:** 2026-09-28
 
@@ -524,4 +524,21 @@ Bei der gezielten Regression auf die drei Features, die sich die `/profil`-Seite
 - **Recommendation:** **Approved.**
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-09-28 · **Production URL:** https://tfg-app-self.vercel.app · **Tag:** `v1.6.0`
+
+Hosting: Vercel (Auto-Deploy aus `main`). Backend: Supabase `ogwuwisutgaxxpknkgpg`
+(eu-central-1), Migration `20260928120000_messages.sql` bereits vor `/qa` per
+`npm run db:push` eingespielt und verifiziert (131/131 Integrationstests, inkl.
+der neuen PROJ-16-Fälle).
+
+**Neue Umgebungsvariablen** (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/
+`SMTP_FROM`, eigenes Gmail-App-Passwort) waren bereits vor der QA lokal und in
+Vercel hinterlegt — kein zusätzlicher Schritt nötig.
+
+Während der QA wurde außerdem ein Konfigurationsfehler behoben, der die
+gesamte lokale E2E-Testinfrastruktur betraf (`output: 'standalone'` aus dem
+pausierten VPS-Self-Hosting-Pfad brach `next start`) — siehe QA-Abschnitt.
+Die zugehörigen Docker/VPS-Dateien selbst sind weiterhin bewusst nicht
+committed (Mission pausiert, siehe `docs/production/vps-self-hosted.md`
+lokal).
