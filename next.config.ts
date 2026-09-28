@@ -15,6 +15,12 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  // `output: 'standalone'` (für den pausierten VPS-Docker-Pfad, siehe
+  // docs/production/vps-self-hosted.md) ist hier bewusst NICHT gesetzt:
+  // "next start" — das Playwright lokal für alle E2E-Tests nutzt — läuft
+  // damit nicht mehr richtig (Next warnt explizit davor). Bei Bedarf des
+  // VPS-Pfads separat wieder aktivieren und dabei playwright.config.ts
+  // (webServer-Befehl) mitziehen, statt es hier dauerhaft zu setzen.
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },

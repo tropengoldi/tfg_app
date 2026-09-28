@@ -19,3 +19,12 @@ export function formatEventDate(iso: string): string {
 export function toISODate(d: Date): string {
   return format(d, 'yyyy-MM-dd')
 }
+
+/** ISO-Zeitstempel → z. B. „4. Sep 2026, 18:42" (PROJ-16, Gesendet-Liste). */
+export function formatDateTime(iso: string): string {
+  try {
+    return format(parseISO(iso), 'd. MMM yyyy, HH:mm', { locale: de })
+  } catch {
+    return iso
+  }
+}

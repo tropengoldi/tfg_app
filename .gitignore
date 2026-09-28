@@ -31,6 +31,9 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# VPS-Self-Hosting (docker-compose.app.yml liest ".env", nicht ".env.local")
+.env
+
 # vercel
 .vercel
 

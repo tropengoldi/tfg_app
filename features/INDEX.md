@@ -30,10 +30,11 @@
 | PROJ-13 | Marken-Auftritt (Whizzky) | Deployed | [PROJ-13-marken-auftritt-whizzky.md](PROJ-13-marken-auftritt-whizzky.md) | 2026-08-30 |
 | PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Deployed | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
 | PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Deployed | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
+| PROJ-16 | Nachrichten an Teilnehmer | Approved | [PROJ-16-nachrichten-an-teilnehmer.md](PROJ-16-nachrichten-an-teilnehmer.md) | 2026-09-28 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-16
+## Next Available ID: PROJ-17
 
 ## Stand der Roadmap
 
@@ -57,7 +58,16 @@ eingespielt; 24/24 Acceptance Criteria, 36/36 neue E2E-Tests, 0 Bugs,
 Security-Audit ohne Befund). Die gezielte Regression auf PROJ-9/10/14 zeigt
 daneben 1 vorbestehenden, nicht PROJ-15-bezogenen Fehlschlag durch dasselbe
 Seed-Admin-Passwort-Problem wie bei PROJ-14 (siehe QA-Abschnitt der Spec und
-den Backlog-Punkt unten). Sonstige offene Arbeit siehe Post-Deploy-Backlog.
+den Backlog-Punkt unten). PROJ-16 (Nachrichten an Teilnehmer — tasting-bezogen
+oder allgemein, v1 per E-Mail, spätere Ausbaustufe als In-App-Push) ist seit
+2026-09-28 **Approved** — 16/16 Acceptance Criteria, 2 High-Bugs während der
+QA gefunden und behoben (Nodemailer-Versand korrumpierte den wiederverwendeten
+Supabase-Client vor dem zweiten RPC-Aufruf — jeder Versand schlug zuverlässig
+fehl; außerdem brach ein für den pausierten VPS-Pfad gesetztes
+`output: 'standalone'` die komplette lokale E2E-Infrastruktur), Security-Audit
+inkl. gezielt getesteter E-Mail-Header-Injection ohne Befund. Nächster Schritt
+`/deploy PROJ-16`.
+Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
 
@@ -169,6 +179,7 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-13** | **Marken-Auftritt (Whizzky)** | Bündelt zwei visuelle Änderungen an denselben Bausteinen (Auth-Layout, App-Shell-Header, `PageHeader`): (a) Haupt-Überschrift auf **„Whizzky"** mit kleinerer Unterzeile **„Treffpunkt feiner Geister"** statt „Whisky Tasting"; (b) ein dezentes, thematisch passendes Hintergrundbild in der Anmelde-Maske und hinter den Seiten-Überschriften. Rein Frontend, keine DB-Änderung. Assets liegen unter `public/`. | P2 | PROJ-2 |
 | **PROJ-14** | **Profil sichtbar für andere** | Andere Teilnehmer können das Profil eines Nutzers read-only einsehen (Stammdaten + persönliche Bilanz aus PROJ-10). Jeder legt in seinem eigenen Profil pro Feld fest, ob es für andere sichtbar ist. Betrifft Datenmodell/RLS (neue Sichtbarkeits-Flags) und die PROJ-10-Profilseite (neue Detailansicht für fremde Profile). | P2 | PROJ-10 |
 | **PROJ-15** | **Persönliche Whisky-Datenbank** | Eigene Sammlung/Tasting-Log im Profilbereich, unabhängig von Events (Vivino-artig): Whiskies frei eintragen, eigene Bewertung/Notizen. Sichtbarkeit für andere Teilnehmer folgt denselben Einstellungen wie PROJ-14 — keine öffentliche, gemeinsame Datenbank und kein externer Katalog (das PRD-Non-Goal bleibt bestehen, siehe dort). | P2 | PROJ-14 |
+| **PROJ-16** | **Nachrichten an Teilnehmer** | Mitglieder schreiben Nachrichten an andere Mitglieder — entweder an alle Teilnehmer eines bestimmten Tastings (Adressaten automatisch aus der Teilnehmerliste) oder frei an eine Auswahl aktiver Mitglieder. Erste Ausbaustufe per E-Mail-Versand, spätere Ausbaustufe als In-App-Push. | P2 | PROJ-4 |
 
 ### Anmerkungen zur Aufteilung
 

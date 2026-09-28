@@ -144,6 +144,99 @@ export type Database = {
           },
         ]
       }
+      message_recipients: {
+        Row: {
+          created_at: string
+          message_id: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          message_id: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          message_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_recipients_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_recipients_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_recipients_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          event_id: string | null
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "messages_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -832,6 +925,7 @@ export type Database = {
       is_event_helper: { Args: { p_event: string }; Returns: boolean }
       is_event_host: { Args: { p_event: string }; Returns: boolean }
       is_event_participant: { Args: { p_event: string }; Returns: boolean }
+      is_own_message: { Args: { p_message: string }; Returns: boolean }
       profile_shows_collection: {
         Args: { p_profile: string }
         Returns: boolean
@@ -845,7 +939,19 @@ export type Database = {
         }[]
       }
       reactivate_member: { Args: { p_target: string }; Returns: undefined }
+      record_sent_message: {
+        Args: { p_body: string; p_event_id?: string; p_recipient_ids: string[] }
+        Returns: string
+      }
       remove_whisky: { Args: { p_whisky: string }; Returns: undefined }
+      resolve_message_recipients: {
+        Args: { p_event_id?: string; p_recipient_ids: string[] }
+        Returns: {
+          recipient_email: string
+          recipient_id: string
+          recipient_name: string
+        }[]
+      }
       set_event_participants: {
         Args: { p_event: string; p_profile_ids: string[] }
         Returns: undefined

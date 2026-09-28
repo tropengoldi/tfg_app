@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Library, Users } from 'lucide-react'
+import { Library, Mail, Users } from 'lucide-react'
 
 import { BalanceCard } from '@/components/profile/balance-card'
 import { ProfileForm } from '@/components/profile/profile-form'
@@ -93,6 +93,14 @@ export default async function ProfilPage() {
         >
           <Users className="h-4 w-4" />
           Die Runde ansehen
+        </Link>
+
+        <Link
+          href="/nachrichten"
+          className="flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <Mail className="h-4 w-4" />
+          Nachrichten
         </Link>
 
         <form method="post" action="/auth/abmelden">
