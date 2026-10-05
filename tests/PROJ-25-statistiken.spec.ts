@@ -306,3 +306,88 @@ test('Historie: nur 0-Punkte vergeben → Sieger wird trotzdem genannt', async (
   await expect(row).toContainText('Null-Dram')
   await expect(row).not.toContainText('kein Sieger')
 })
+
+// ===========================================================================
+// QA-Ergänzungen: Grenzfälle & Sicherheit
+// ===========================================================================
+test('10 Whiskies mit langen Namen auf 360 px: Balken ohne Scrollen, kein horizontaler Overflow', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  const evId = await createEventDirect({
+    hostId: a.id,
+    createdBy: adminId,
+    location: LOC('ten'),
+    eventDate: '2025-02-01',
+    maxWhiskies: 10,
+  })
+  for (let i = 1; i <= 10; i++) {
+    await addWhiskyAs(a.email, evId, `Glenfarclas Family Cask ${1980 + i} Sherry Butt`)
+  }
+  const ids = await whiskyIdsByPosition(evId)
+  for (const [i, w] of ids.entries()) {
+    await insertRatingDirect({ whiskyId: w, eventId: evId, profileId: a.id, nose: (i % 5) + 1, taste: 10 - (i % 10) })
+  }
+  await closeEvent(evId)
+
+  await login(page, a.email)
+  await openResults(page, evId)
+  const stats = page.getByRole('region', { name: 'Statistiken' })
+  await expect(stats.locator('.recharts-bar-rectangle')).toHaveCount(10)
+  const box = await stats.locator('[aria-label^="Balkendiagramm"]').boundingBox()
+  expect(box!.height).toBeLessThanOrEqual(400) // passt in eine Handy-Bildschirmhöhe
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(0)
+})
+
+test('ein einziger Whisky: Punktdiagramm meldet „Zu wenige Angaben", keine Nase-gegen-Gaumen-Karte', async ({
+  page,
+}) => {
+  const evId = await createEventDirect({
+    hostId: a.id,
+    createdBy: adminId,
+    location: LOC('single'),
+    eventDate: '2025-02-02',
+  })
+  await addWhiskyAs(a.email, evId, 'Solo-Dram')
+  const [w] = await whiskyIdsByPosition(evId)
+  await insertRatingDirect({ whiskyId: w, eventId: evId, profileId: a.id, nose: 4, taste: 7 })
+  await closeEvent(evId)
+
+  await login(page, a.email)
+  await openResults(page, evId)
+  const stats = page.getByRole('region', { name: 'Statistiken' })
+  await expect(stats.getByText('Zu wenige Angaben für dieses Diagramm.')).toBeVisible()
+  await expect(stats.getByText('Nase gegen Gaumen')).toHaveCount(0)
+  await expect(stats.getByText('Deine Übereinstimmung')).toHaveCount(0)
+  await expect(stats.getByText('Preis-Leistungs-Sieger')).toHaveCount(0)
+})
+
+test('Sicherheit: Whisky-Name mit HTML/Script wird in Karten und Diagrammen nur als Text gezeigt', async ({
+  page,
+}) => {
+  const evil = '<img src=x onerror="window.__xss=1">Evil'
+  const evId = await createEventDirect({
+    hostId: a.id,
+    createdBy: adminId,
+    location: LOC('xss'),
+    eventDate: '2025-02-03',
+  })
+  await addParticipant(evId, b.id)
+  await addWhiskyAs(a.email, evId, evil)
+  await addWhiskyAs(b.email, evId, 'Harmlos')
+  const [w1, w2] = await whiskyIdsByPosition(evId)
+  for (const p of [a.id, b.id]) {
+    await insertRatingDirect({ whiskyId: w1, eventId: evId, profileId: p, nose: 5, taste: 10 })
+    await insertRatingDirect({ whiskyId: w2, eventId: evId, profileId: p, nose: 1, taste: 1 })
+  }
+  await closeEvent(evId)
+
+  await login(page, b.email)
+  await openResults(page, evId)
+  await page.getByRole('region', { name: 'Statistiken' }).locator('.recharts-bar-rectangle').first().hover()
+  expect(await page.evaluate(() => (window as unknown as { __xss?: number }).__xss)).toBeUndefined()
+  await expect(page.locator('img[src="x"]')).toHaveCount(0)
+})

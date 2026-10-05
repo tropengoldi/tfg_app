@@ -1,6 +1,6 @@
 # PROJ-25: Erweiterte Ergebnis-Statistiken
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -396,7 +396,114 @@ die neuen Spalten.
   Regression PROJ-5/9/15/19 (Chromium): **63/63 grün**.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-05
+**App URL:** http://localhost:3000 (Production-Build) gegen die Live-DB mit eingespielter
+Migration `20261007120000_results_stats.sql` (vorher geprüft: kein echtes Tasting aktiv)
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### Erfassung im Eintrage-Formular
+- [x] Felder Alkohol / Alter / Preis vorhanden (Anlegen + Bearbeiten) — E2E
+- [x] „46,3" mit Komma gespeichert — E2E (DB geprüft) + Unit
+- [x] Ungültige Werte → Meldung am Feld, nichts gespeichert — E2E + Unit
+- [x] Leer → ohne Angaben gespeichert — Unit + Integration
+- [x] Bearbeiten: Werte mit Komma vorausgefüllt — E2E
+- [x] 360 px, Zahlentastatur (`inputMode`) — E2E (Overflow) + Code
+
+#### Freigabe von Alkohol, Alter, Preis
+- [x] Nach dem Abschluss für alle Mitglieder sichtbar — Integration + E2E
+- [x] Vorher verborgen, auch auf DB-Ebene (Sicht **und** Tabelle) — Integration
+- [x] Hinweis zur Sichtbarkeit im Formular — E2E
+
+#### Rangliste
+- [x] Ausschank-Nummer „#N" — E2E
+- [x] „Dein Platz: X" — E2E
+- [x] Gleichstand Gaumen → Nase → Ausschank — Unit
+- [x] Nicht bewertet → „—" — Unit + Code
+- [x] Ohne eigene Bewertung keine „Dein Platz"-Angabe — E2E (Nicht-Teilnehmer)
+- [x] 10 Whiskies auf 360 px ohne horizontales Scrollen — E2E
+
+#### Statistik-Karten
+- [x] Preis-Leistung ab 2 Preisen („7,4 Punkte pro 10 €"), sonst keine Karte — E2E + Unit
+- [x] Konsens / umstritten ab 3 Bewertungen; nur ein Kandidat → nur Konsens — E2E + Unit
+- [x] Keine ≥ 3 Bewertungen → keine Karten — Unit + E2E (einzelner Whisky)
+- [x] Nase gegen Gaumen inkl. „Nase Platz 1, Gaumen Platz 6"-Text; Abstand 0 → keine Karte — Unit + Sichtprüfung
+- [x] Übereinstimmung ab 2 eigenen Bewertungen („stimmte genau …" bzw. „Ø X Plätze") — E2E + Unit
+- [x] Weniger als 2 eigene Bewertungen → keine Karte — Unit + E2E
+
+#### Balkendiagramm
+- [x] Umschalter Platzierung · Nase · Gaumen · Alkohol · Alter · Preis — E2E
+- [x] Balken je Whisky „#3 Name" + Wert — E2E + Sichtprüfung (Screenshot 360 px)
+- [x] Platzierung: Platz 1 = längster Balken — Sichtprüfung
+- [x] Fehlender Alkohol/Preis → „keine Angabe" — E2E
+- [x] Fehlendes Alter → 3 J., blasser, „angenommen" — E2E + Sichtprüfung
+- [x] 10 Whiskies auf 360 px ohne Scrollen (Diagrammhöhe ≤ 400 px) — E2E
+
+#### Punktdiagramm
+- [x] Start Alter × Gesamtpunkte — E2E
+- [x] Beide Achsen frei wählbar — E2E
+- [x] Antippen zeigt #, Name, Werte (Tooltip) — Code + Sichtprüfung
+- [x] Fehlende Werte weggelassen + „N Whiskies ohne Angabe nicht dargestellt" — E2E
+- [x] Fehlendes Alter → 3 Jahre, markiert („Blasse Punkte …") — E2E
+- [x] < 2 darstellbare → „Zu wenige Angaben" — E2E
+
+#### Allgemein & Leerzustände
+- [x] Ohne jede Bewertung kein Abschnitt „Statistiken" — Code (`hasAnyRatings`) + PROJ-9-Regression
+- [x] Laufendes Tasting: nur „läuft noch"-Hinweis — PROJ-9-Regression
+- [x] Halbe Punkte mit Komma — Unit (`formatMetric`)
+- [x] Dark- und Light-Mode — E2E (Dark) + Design-Tokens `--chart-1`
+
+#### Mitbehobene PROJ-19-Bugs
+- [x] BUG-2: Historie nennt Sieger bei reinen 0-Punkten — E2E + Integration
+- [x] BUG-1: „Nur ganze oder halbe Punkte" (TS022) — Integration
+
+### Edge Cases Status
+- [x] Ein einziger Whisky — E2E
+- [x] Alle gleich gestreut → nur Konsens — Unit
+- [x] Gleichstände bei Karten → besser platziert — Unit
+- [x] Preis 0 € → nicht in Preis-Leistung — Unit
+- [x] Whisky ohne Bewertungen → 0 Punkte, keine Streuung — Unit
+- [x] Admin / Nicht-Teilnehmer → kein „Dein Platz" / keine Übereinstimmung — E2E
+- [x] Sehr lange Namen → gekürzt, voller Name im Tooltip — E2E (10 lange Namen) + Sichtprüfung
+
+### Security Audit Results
+- [x] Blindheit unverändert: Alkohol/Alter/Preis eines laufenden Tastings weder über die
+  Ranglisten-Sicht noch über `whisky_details` lesbar — Integration
+- [x] Freigabe nur für aktive Mitglieder (bestehender Sicht-Filter) — unverändert, Regression grün
+- [x] XSS über Whisky-Namen (`<img onerror>`) in Karten, Achsen und Tooltips: nur als Text
+  dargestellt, kein Skript ausgeführt — E2E
+- [x] Eingaben Alkohol/Alter/Preis serverseitig (Zod) und per DB-CHECK begrenzt
+- [x] Keine RLS-Änderung, keine neue Route, keine neuen Umgebungsvariablen; neues Paket
+  `recharts` über die shadcn-Chart-Komponente
+
+### Automatisierte Tests
+- Unit: **173/173** (u. a. `result-stats.test.ts` 19 Fälle, Whisky-Schema)
+- DB-Integration: **156/156** (u. a. `results-stats.integration.test.ts`)
+- E2E `PROJ-25-statistiken.spec.ts`: **13 Tests × Chromium + Mobile Safari = 26/26 grün**
+  (inkl. QA-Ergänzungen: 10 Whiskies / 360 px, einzelner Whisky, XSS)
+- Regression E2E (Chromium) PROJ-4/5/6/7/8/9/10/11/14/15/16/18/19: alles grün bis auf die
+  **3 vorbestehenden** Seed-Admin-Tests (PROJ-4, PROJ-6, PROJ-14) — bekanntes Backlog-Problem
+
+### Bugs Found
+
+#### BUG-1: Diagramme haben keine Textalternative für Screenreader
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Abgeschlossenes Tasting → Ergebnisseite → Abschnitt „Statistiken"
+  2. Mit Screenreader zu den Diagrammen navigieren
+  3. Expected: Name/Beschreibung des Diagramms (z. B. „Balkendiagramm: Platzierung") oder eine Tabelle
+  4. Actual: das `aria-label` sitzt auf einem `div` ohne Rolle und wird ignoriert; die SVG-Inhalte sind nicht sinnvoll vorlesbar
+- **Abmilderung:** alle Werte stehen auch in der Rangliste (Punkte, Angaben) und in den Karten
+- **Priority:** Nice to have — z. B. `role="img"` am Diagramm-Container plus eine kurze Textzusammenfassung
+
+### Summary
+- **Acceptance Criteria:** 41/41 bestanden
+- **Bugs Found:** 1 total (0 critical, 0 high, 0 medium, 1 low)
+- **Security:** Pass
+- **Production Ready:** YES
+- **Recommendation:** Deploy. Migration ist bereits eingespielt. Nicht während eines laufenden Tastings deployen.
 
 ## Deployment
 _To be added by /deploy_
