@@ -367,7 +367,7 @@ die neuen Spalten.
   `results-stats.integration.test.ts` (6 Fälle: Erfassen, Ändern, verborgen während des
   Tastings über Sicht **und** Tabelle, sichtbar nach Abschluss, Historie-Sieger bei 0-Punkten,
   ohne Bewertung); `rating-scale` erwartet jetzt strikt TS022. Laufen nach `db:push`.
-- Nach `db:push`: `npm run db:types` (bis dahin meldet `tsc` die neuen Spalten im Test als unbekannt).
+- `db:push` durch den Nutzer am 2026-10-05, danach `db:types` (4 neue Zeilen). `npm run test:rls`: **156/156** grün (inkl. 6 neue + TS022 strikt).
 
 ## QA Test Results
 _To be added by /qa_

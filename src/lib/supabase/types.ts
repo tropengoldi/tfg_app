@@ -658,6 +658,7 @@ export type Database = {
           theme: string | null
           winner_name: string | null
           winner_points: number | null
+          winner_rating_count: number | null
           winner_whisky_id: string | null
         }
         Relationships: [
@@ -729,12 +730,15 @@ export type Database = {
       }
       whisky_rankings: {
         Row: {
+          abv: number | null
+          age_years: number | null
           brought_by: string | null
           distillery: string | null
           event_id: string | null
           name: string | null
           nose_total: number | null
           position: number | null
+          price_eur: number | null
           rank: number | null
           rating_count: number | null
           region: string | null
