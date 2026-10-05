@@ -1,6 +1,6 @@
 # PROJ-18: Begriffe: Gaumenpunkte & Whisky-Steward
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -169,8 +169,8 @@ Dateinamen, Kommentare) bleiben unverändert.
 - Eine Datenbank-Migration ist **zulässig**, aber nur, um sichtbare Meldungstexte zu ändern.
 
 ## Open Questions
-- [ ] Fehlermeldungen aus der Datenbank: Meldungstexte per Migration ändern oder in der App
-  durch eigene Texte ersetzen? → Entscheidung in `/architecture`.
+- [x] Fehlermeldungen aus der Datenbank: Meldungstexte per Migration ändern oder in der App
+  durch eigene Texte ersetzen? → **Per Migration** (siehe Tech Design C, 2026-10-05).
 
 ## Decision Log
 
@@ -188,13 +188,90 @@ Dateinamen, Kommentare) bleiben unverändert.
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| Datenbank-Meldungstexte per Migration umtexten (nicht per Ersatztext in der App) | Die DB ist laut bestehender Konvention (`messageForDbError`) die Quelle der deutschen TS-Meldungen; ein Wortersatz in der App wäre eine versteckte Übersetzungsschicht, die künftige DB-Meldungen still „korrigiert". PROJ-20/21 bauen ohnehin auf denselben Funktionen auf und sollen saubere Texte vorfinden | 2026-10-05 |
+| Migration ändert ausschließlich Meldungstexte, nicht Logik, Signaturen oder Rechte | Hält das Risiko bei 10 neu definierten Funktionen klein; Funktionsrümpfe werden 1:1 aus ihrer jeweils jüngsten Fassung übernommen | 2026-10-05 |
+| Keine neue Komponente, keine zentrale Begriffs-Konstante | Es sind ~10 Textstellen in bestehenden Komponenten; eine Konstanten-Datei wäre mehr Struktur als Nutzen. Die Begriffe stehen verbindlich in `docs/design-system.md` | 2026-10-05 |
+| Fehlercode-Tabelle der App (TS017-Fallback) wird mit umgetextet | Wird angezeigt, falls die DB einmal keine Meldung mitliefert | 2026-10-05 |
+| Bestehende E2E-Tests (PROJ-9, PROJ-11) werden auf die neuen Texte umgestellt, nicht dupliziert | Sie prüfen dasselbe Verhalten; nur der erwartete Wortlaut ändert sich | 2026-10-05 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Reine Textänderung an zwei Schichten — **App-Oberfläche** und **Datenbank-Fehlermeldungen**
+— plus Dokumentation. Kein neues Datenfeld, keine neue Seite, keine neue Abhängigkeit,
+keine Änderung an Rechten oder Abläufen.
+
+### A) Betroffene Bausteine (bestehende Komponenten, nur Texte)
+
+```
+Bewertungsansicht (PROJ-7)
++-- Slider „Nasenpunkte"   (Beschriftung + Screenreader-Name)
++-- Slider „Gaumenpunkte"  (Beschriftung + Screenreader-Name)
+
+Ergebnisseite (PROJ-9)
++-- Kopf: „Whisky-Steward: Name"
++-- Ranglisten-Zeile
+    +-- Summenzeile „Nase X · Gaumen Y"
+    +-- aufgeklappte Einzelwertungen „Nase X · Gaumen Y · Gesamt"
+
+Admin-Bereich (PROJ-4 / PROJ-11)
++-- Event-Formular: Feld „Whisky-Steward (optional)", „Kein Whisky-Steward", Erklärtext
++-- Event-Formular-Prüfung: zwei Validierungsmeldungen
++-- Event-Liste: „· Whisky-Steward: Name"
+
+Fehlermeldungen
++-- Fehlercode-Tabelle der App (TS017)
++-- Datenbank-Meldungen (siehe C)
+```
+
+### B) Datenmodell
+**Unverändert.** Spalten, Tabellen und Rollen-Felder behalten ihre Namen
+(`nose_points`, `taste_points`, `helper_id`). Bestehende Daten werden nicht angefasst.
+
+### C) Datenbank-Fehlermeldungen
+Eine kleine Migration definiert die **10 Datenbank-Funktionen** neu, die heute „Helfer" in
+einer Fehlermeldung tragen — mit identischer Logik, nur neuem Wortlaut (15 Meldungen):
+
+| Funktion (Zweck) | Meldung neu (sinngemäß) |
+|---|---|
+| Eckdaten pflegen | „Nur Gastgeber, Whisky-Steward oder Admin." |
+| Reihenfolge setzen / Starten / Weiterschalten / Abschließen / Fortschritt abfragen | „Nur Gastgeber, Whisky-Steward oder Admin dürfen …" |
+| Event anlegen / bearbeiten | „Der gewählte Whisky-Steward ist kein aktives Mitglied." / „Der Whisky-Steward kann nicht gleichzeitig Gastgeber (bzw. Teilnehmer) dieses Abends sein." |
+| Teilnehmerliste setzen | „Der Whisky-Steward dieses Abends kann nicht zugleich Teilnehmer sein." |
+| Mitglied deaktivieren | „Diese Person ist Gastgeber oder Whisky-Steward eines Tastings, das noch nicht abgeschlossen ist …" |
+
+Jede Funktion wird aus ihrer **jüngsten** Fassung übernommen (z. B. „Eckdaten pflegen" aus
+der Verfeinerung vom 2026-09-09, nicht aus PROJ-11), damit keine spätere Änderung
+versehentlich zurückgedreht wird.
+
+### D) Dokumentation
+- `docs/PRD.md` — Vision, Kernablauf, Non-Goals auf „Nasenpunkte"/„Gaumenpunkte".
+- `docs/design-system.md` — Slider-Passage und Fachbegriffe-Liste (+ „Nasenpunkte,
+  Gaumenpunkte, Whisky-Steward").
+- `features/PROJ-11-…md` — einzeiliger Hinweis oben.
+
+### E) Tests
+- **E2E:** PROJ-9 (Einzelwertungen „Nase · Geschmack") und PROJ-11 (Formularfeld,
+  „Kein Helfer", „Helfer: Name" in Liste und Ergebnis-Kopf) auf neue Texte umstellen.
+- **Integrationstests (`npm run test:rls`):** müssen nach der Migration unverändert grün
+  sein — das ist der Nachweis, dass sich an der Logik der 10 Funktionen nichts geändert hat.
+- Unit-Tests prüfen keine sichtbaren Texte — keine Änderung nötig.
+
+### F) Reihenfolge beim Ausrollen
+1. Migration einspielen (`db:push`, durch den Nutzer).
+2. App deployen.
+Dazwischen sehen Nutzer im Fehlerfall kurz „Whisky-Steward" in DB-Meldungen bei noch altem
+Formular — harmlos.
+
+### G) Abhängigkeiten (Pakete)
+Keine.
+
+### Arbeitsaufteilung
+- `/frontend` — alle App-Texte, Fehlercode-Tabelle, Doku, E2E-Anpassungen.
+- `/backend` — die Text-Migration + `test:rls`-Lauf.
 
 ## QA Test Results
 _To be added by /qa_
