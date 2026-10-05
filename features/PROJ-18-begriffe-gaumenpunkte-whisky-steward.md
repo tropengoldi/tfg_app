@@ -287,6 +287,20 @@ Keine.
   Texte umgestellt — 19/19 grün (Chromium). Lint, 127/127 Unit-Tests, Production-Build grün.
 - Offen für `/backend`: Migration für die 15 DB-Meldungstexte (Tech Design C).
 
+### Implementation Notes (Backend, 2026-10-05)
+- Migration `supabase/migrations/20261005120000_whisky_steward_messages.sql`: 10 Funktionen
+  per `create or replace` neu definiert (`update_event_host_fields` aus der 09-09-Fassung,
+  die übrigen 9 aus `20260831120000_helper_role.sql`), 15 Meldungstexte „Helfer" →
+  „Whisky-Steward".
+- Maschinell gegen die Quellfassungen gedifft: Einzige Abweichungen sind die 15
+  `raise exception`-Zeilen und zweimal `create function` → `create or replace function`
+  (bei `create_event`/`update_event`, gleiche Signatur → bestehende GRANTs bleiben).
+- Keine Signatur-Änderung → keine neuen TypeScript-Typen (`db:types`) nötig. Keine neue
+  API-Route, kein neuer Integrationstest (reine Textänderung); Nachweis der unveränderten
+  Logik ist der volle `npm run test:rls`-Lauf nach dem Einspielen.
+- Keine Test-Assertion prüft die alten DB-Texte (PROJ-3-Regex auf „… eines Tastings, das
+  noch nicht abgeschlossen ist" bleibt unberührt).
+
 ## QA Test Results
 _To be added by /qa_
 
