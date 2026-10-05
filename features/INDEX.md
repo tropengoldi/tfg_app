@@ -40,10 +40,11 @@
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
 | PROJ-24 | Eigene Live-Rangliste | Roadmap | – | 2026-10-05 |
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Roadmap | – | 2026-10-05 |
+| PROJ-26 | Testkonten für normale Nutzer unsichtbar | Roadmap | – | 2026-10-05 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-26
+## Next Available ID: PROJ-27
 
 ## Stand der Roadmap
 
@@ -203,6 +204,7 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-23** | **Vergleichs-Merker** | Privater Merker während des Tastings: Pro Whisky kann man per Mehrfachauswahl festhalten, mit welchen anderen Whiskies man ihn noch einmal direkt vergleichen möchte (z. B. „Whisky 2 ↔ 5"). Nur für einen selbst sichtbar. | P2 | – |
 | **PROJ-24** | **Eigene Live-Rangliste** | Während des Tastings sieht jeder Teilnehmer seine **persönliche** Rangliste, berechnet nur aus den eigenen bisherigen Wertungen (blinde Nummern, keine Namen, keine fremden Punkte). | P2 | PROJ-19 |
 | **PROJ-25** | **Erweiterte Ergebnis-Statistiken** | Nach dem Abschluss: (1) Rangliste zeigt die **Ausschank-Nummer** jedes Whiskys; (2) Rangliste zeigt je Whisky die **eigene Platzierung** des Betrachters; (3) **Vergleichsdiagramm** der Tasting-Whiskies über Gesamtplatzierung, Nasenpunkte, Gaumenpunkte, Alkoholgehalt und Alter (ohne Altersangabe: 3 Jahre angenommen, im Diagramm als „angenommen" markiert). Zusatzvorschläge für die Spec: **Preis-Leistungs-Sieger** (Punkte je Euro, nur wenn Preise erfasst sind — `price_eur` existiert bereits), **Konsens- vs. umstrittenster Whisky** (Streuung der Bewertungen), **Nase-/Gaumen-Diskrepanz** (größte Abweichung zwischen Nasen- und Gaumenrang), **persönliche Übereinstimmung** mit der Gesamtrangliste. Alles pro Tasting, keine Auswertung über die Runde hinweg. | P1 | PROJ-19 |
+| **PROJ-26** | **Testkonten für normale Nutzer unsichtbar** | Der Admin markiert Konten als **Testkonto**. Normale Mitglieder sehen markierte Konten nirgends (Teilnehmerauswahl, Nachrichten-Empfänger, Teilnehmerlisten, Profile, „mitgebracht von"); **Tastings mit Testkonten-Beteiligung** werden für normale Nutzer komplett ausgeblendet (Dashboard, Historie, Ergebnisse, Bilanz). Testkonten sehen sich gegenseitig, damit Testläufe funktionieren; der Admin sieht alle, Testkonten mit Kennzeichen. Durchsetzung auf **Datenbankebene (RLS/Views)**, nicht nur im Frontend. Gilt auf Staging und Produktion. Für die Spec offen: Wegwerf-Konten der E2E-Suite automatisch markieren; Zusammenspiel mit dem Backlog-Punkt „E2E-Suite hängt an den Seed-Konten". | P2 | PROJ-3, PROJ-14 |
 
 ### Anmerkungen zur Aufteilung
 
