@@ -32,7 +32,7 @@
 | PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Deployed | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
 | PROJ-16 | Nachrichten an Teilnehmer | Deployed | [PROJ-16-nachrichten-an-teilnehmer.md](PROJ-16-nachrichten-an-teilnehmer.md) | 2026-09-28 |
 | PROJ-17 | Web Push Benachrichtigungen für Nachrichten | Roadmap | – | 2026-09-29 |
-| PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | Approved | [PROJ-18-begriffe-gaumenpunkte-whisky-steward.md](PROJ-18-begriffe-gaumenpunkte-whisky-steward.md) | 2026-10-05 |
+| PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | Deployed | [PROJ-18-begriffe-gaumenpunkte-whisky-steward.md](PROJ-18-begriffe-gaumenpunkte-whisky-steward.md) | 2026-10-05 |
 | PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Roadmap | – | 2026-10-05 |
 | PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Roadmap | – | 2026-10-05 |
 | PROJ-21 | Whisky-Steward bringt Whiskies mit | Roadmap | – | 2026-10-05 |
@@ -82,6 +82,11 @@ Audit inkl. gezielt getesteter E-Mail-Header-Injection ohne Befund). Am
 möglicher Empfänger einer tasting-bezogenen Nachricht (Nutzer-Fund nach dem
 Go-Live) — Migration `20260928130000_messages_include_helper.sql` behebt es,
 133/133 Integrationstests, 18/18 E2E-Tests.
+PROJ-18 (Begriffe: Nasenpunkte/Gaumenpunkte, Rolle „Whisky-Steward") am
+2026-10-05 als `v1.7.0` live (mit DB-Migration
+`20261005120000_whisky_steward_messages.sql` — nur Meldungstexte; 18/19
+Prüfpunkte, 1 vorbestehender Low-Bug (Slider ohne zugänglichen Namen, BUG-1)
+wird mit PROJ-19 behoben).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)

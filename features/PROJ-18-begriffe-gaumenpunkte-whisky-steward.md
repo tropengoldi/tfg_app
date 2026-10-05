@@ -1,6 +1,6 @@
 # PROJ-18: Begriffe: Gaumenpunkte & Whisky-Steward
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -385,4 +385,15 @@ Migration `20261005120000_whisky_steward_messages.sql`
 - **Recommendation:** Deploy; BUG-1 mit PROJ-19 beheben
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-05 als `v1.7.0` (Push `85bcd81` auf `main` → Vercel-Auto-Deploy)
+- **DB-Migration:** `20261005120000_whisky_steward_messages.sql` vorab per `db:push` durch
+  den Nutzer eingespielt (Reihenfolge DB → App eingehalten)
+- **Pre-Deploy:** Lint + Production-Build grün, keine neuen Umgebungsvariablen
+- **Post-Deploy-Verifikation:** `tests/PROJ-18-begriffe.spec.ts` gegen die Produktions-URL
+  ausgeführt — Chromium 3/3, Mobile Safari 3/3 grün (BUG-1-Tests weiter `fixme`). Vorher
+  geprüft, dass kein echtes Tasting aktiv war (die Tests starten/schließen Wegwerf-Events).
+- **Offen:** BUG-1 (Low, vorbestehend) — mit PROJ-19 beheben.
+- **Rollback:** Vercel → Deployments → vorherige Version „Promote to Production". Die
+  Migration ändert nur Meldungstexte und kann bei einem App-Rollback stehen bleiben.
