@@ -1,0 +1,202 @@
+# PROJ-19: Flexible Punkteskala (0 Punkte, 0,5er-Schritte)
+
+## Status: Planned
+**Created:** 2026-10-05
+**Last Updated:** 2026-10-05
+
+## Dependencies
+- **Requires: PROJ-18 (Begriffe)** — alle Texte verwenden bereits „Nasenpunkte" / „Gaumenpunkte".
+- **Ändert PROJ-4 (Admin – Tasting-Events)** — neue Einstellung „Schrittweite" im Event-Formular.
+- **Ändert PROJ-7 (Bewertungsansicht)** — Slider-Bereich, Startwert, −/+-Tasten, Rückfrage bei 0/0.
+- **Ändert PROJ-9 (Ergebnisse)** und **PROJ-10/14 (Bilanz)** — Summen und Durchschnitte mit halben Punkten.
+- **Ändert PROJ-15 (Private Sammlung)** — Note 0–10 in 0,5er-Schritten.
+- **Behebt PROJ-18 BUG-1** — Slider ohne zugänglichen Namen.
+- **Ist Voraussetzung für PROJ-22, PROJ-24, PROJ-25** — alles, was mit Punkten rechnet.
+
+## Kontext
+
+Bisher: Nasenpunkte **1–5**, Gaumenpunkte **1–10**, nur ganze Zahlen; Slider starten
+bei 3 bzw. 5. Private Sammlung: eine optionale Gesamtnote 1–10 (ganze Zahl).
+
+Neu:
+
+| | Tasting (1er-Schritte) | Tasting (0,5er-Schritte) | Private Sammlung |
+|---|---|---|---|
+| Nasenpunkte | 0, 1 … 5 | 0, 0,5 … 5 | – |
+| Gaumenpunkte | 0, 1 … 10 | 0, 0,5 … 10 | – |
+| Gesamtnote | – | – | keine **oder** 0, 0,5 … 10 |
+| Wer legt fest | Admin pro Tasting | Admin pro Tasting | immer 0,5er |
+
+**Kernregeln**
+- Die Schrittweite ist eine Eigenschaft des **Tastings**. Voreinstellung **1er-Schritte**.
+  Nur der **Admin** stellt sie ein, im Event-Formular; änderbar, solange das Tasting **in
+  Vorbereitung** ist, ab dem Start gesperrt.
+- Alle bestehenden Tastings gelten als **1er-Tastings**; ihre Bewertungen bleiben unverändert.
+- **0 Punkte** sind in beiden Kategorien erlaubt.
+- Beide Slider **starten bei 0** (bei einer bereits gespeicherten Bewertung: beim
+  gespeicherten Wert).
+- Neben jedem Slider gibt es **„−" / „+"-Tasten**, die genau einen Schritt (1 oder 0,5)
+  weiterschalten.
+- Speichert jemand mit **0 Nasen- und 0 Gaumenpunkten**, erscheint eine Rückfrage. Eine 0 in
+  nur einer Kategorie wird ohne Rückfrage gespeichert.
+
+### Anzeige halber Punkte
+- Dezimal-**Komma**, die Nachkommastelle nur wenn nötig: „9", „9,5" — nie „9,0".
+- Gilt überall, wo Punkte stehen: Slider-Wert, Rangliste (Summen, Einzelwertungen,
+  Gesamtpunkte), Ø-Werte, Profil-Bilanz, Sammlungs-Karte („7,5 / 10").
+- Ø-Werte bleiben wie bisher mit einer Nachkommastelle („Ø 13,4").
+
+## User Stories
+- Als **Admin** möchte ich pro Tasting festlegen, ob in ganzen oder halben Punkten bewertet
+  wird, damit die Runde je nach Abend feiner unterscheiden kann.
+- Als **Teilnehmer** möchte ich auch 0 Punkte vergeben können, damit ein wirklich
+  misslungener Dram als solcher zählt.
+- Als **Teilnehmer** möchte ich, dass die Slider bei 0 starten, damit mich keine vorgegebene
+  Mitte beeinflusst.
+- Als **Teilnehmer** möchte ich halbe Punkte mit „−"/„+" präzise einstellen können, auch mit
+  einem Glas in der anderen Hand.
+- Als **Teilnehmer** möchte ich gewarnt werden, wenn ich versehentlich 0/0 speichere.
+- Als **Mitglied** möchte ich in meiner privaten Sammlung halbe Punkte vergeben können.
+- Als **Teilnehmer mit Screenreader** möchte ich hören, welcher Slider welcher ist und welchen
+  Wert er hat.
+
+## Out of Scope
+- **Andere Skalen** (z. B. 0–100, Nasenpunkte bis 10) — nur Minimum und Schrittweite ändern sich.
+- **Umstellen der Schrittweite nach dem Start** — bewusst gesperrt.
+- **Gastgeber oder Whisky-Steward stellen die Schrittweite ein** — nur der Admin.
+- **Umrechnen alter Bewertungen** — bestehende Tastings bleiben 1er-Tastings.
+- **Getrennte Nasen-/Gaumenpunkte in der privaten Sammlung** — dort bleibt es bei einer Gesamtnote.
+- **Slider in der privaten Sammlung** — die Auswahlliste bleibt (wegen „keine Bewertung").
+- **Neue Statistiken** — PROJ-25. **Eigene Live-Rangliste** — PROJ-24. **Sieger-Tipp** — PROJ-22.
+
+## Acceptance Criteria
+
+**Format:** Angenommen [Vorbedingung] / Wenn [Aktion] / Dann [Ergebnis]
+
+### Einstellung am Tasting (Admin)
+- [ ] Angenommen der Admin legt ein neues Tasting an, wenn er das Formular öffnet, dann gibt es
+  eine Einstellung „Bewertung in" mit den Optionen „ganzen Punkten" und „halben Punkten",
+  vorausgewählt „ganzen Punkten".
+- [ ] Angenommen ein Tasting ist in Vorbereitung, wenn der Admin die Schrittweite ändert und
+  speichert, dann gilt die neue Schrittweite für dieses Tasting.
+- [ ] Angenommen ein Tasting läuft oder ist abgeschlossen, wenn der Admin das Formular öffnet,
+  dann ist die Schrittweite sichtbar, aber nicht änderbar.
+- [ ] Angenommen jemand versucht die Schrittweite eines gestarteten Tastings auf anderem Weg
+  zu ändern, wenn die Änderung beim Server ankommt, dann wird sie abgelehnt.
+- [ ] Angenommen ein Tasting nutzt halbe Punkte, wenn ein Mitglied das Tasting-Dashboard
+  öffnet, dann steht dort „Bewertung in halben Punkten".
+- [ ] Angenommen ein Tasting wurde vor PROJ-19 angelegt, wenn es geöffnet wird, dann gilt es als
+  Tasting in ganzen Punkten, und alle Bewertungen sind unverändert.
+
+### Bewertungsansicht
+- [ ] Angenommen ein Teilnehmer öffnet einen Whisky, den er noch nicht bewertet hat, wenn die
+  Slider erscheinen, dann stehen beide auf **0**.
+- [ ] Angenommen ein Teilnehmer hat einen Whisky bereits bewertet, wenn er ihn wieder öffnet,
+  dann stehen die Slider auf den gespeicherten Werten.
+- [ ] Angenommen ein Tasting in ganzen Punkten, wenn der Teilnehmer die Slider bewegt, dann
+  sind nur 0–5 bzw. 0–10 in ganzen Schritten wählbar.
+- [ ] Angenommen ein Tasting in halben Punkten, wenn der Teilnehmer die Slider bewegt, dann
+  sind 0–5 bzw. 0–10 in 0,5er-Schritten wählbar, und der Wert wird als „2,5" angezeigt.
+- [ ] Angenommen ein Slider steht auf 2,5 (halbe Punkte), wenn der Teilnehmer „+" tippt, dann
+  steht er auf 3; tippt er „−", steht er auf 2.
+- [ ] Angenommen ein Slider steht auf 0, wenn der Teilnehmer „−" sieht, dann ist die Taste
+  deaktiviert; ebenso „+" beim Maximum.
+- [ ] Angenommen beide Slider stehen auf 0, wenn der Teilnehmer speichert, dann erscheint die
+  Rückfrage „Wirklich 0 Nasen- und 0 Gaumenpunkte vergeben?" mit „Ja, speichern" und „Zurück".
+- [ ] Angenommen die Rückfrage ist offen, wenn der Teilnehmer „Zurück" wählt, dann wird nichts
+  gespeichert, und die Slider bleiben bedienbar.
+- [ ] Angenommen nur eine Kategorie steht auf 0, wenn der Teilnehmer speichert, dann wird ohne
+  Rückfrage gespeichert.
+- [ ] Angenommen ein Tasting in ganzen Punkten, wenn jemand auf anderem Weg einen halben Wert
+  (z. B. 2,5) speichern will, dann lehnt der Server das ab.
+- [ ] Angenommen ein Screenreader liest die Bewertungsansicht, wenn er einen Slider erreicht,
+  dann sagt er z. B. „Nasenpunkte, Schieberegler, 2,5" (behebt PROJ-18 BUG-1).
+- [ ] Angenommen ein Screenreader erreicht die Tasten, dann heißen sie „Nasenpunkte verringern"
+  / „Nasenpunkte erhöhen" bzw. „Gaumenpunkte verringern" / „Gaumenpunkte erhöhen".
+- [ ] Angenommen das Tasting wird auf einem 360 px breiten Handy bedient, wenn die
+  Bewertungsansicht angezeigt wird, dann sind Slider und −/+-Tasten ohne horizontales Scrollen
+  bedienbar und die Tasten mindestens 44 × 44 px groß.
+
+### Ergebnisse & Bilanz
+- [ ] Angenommen ein abgeschlossenes Tasting mit halben Punkten, wenn ein Mitglied die
+  Rangliste öffnet, dann zeigen Gesamtpunkte, „Nase X · Gaumen Y" und Einzelwertungen halbe
+  Punkte mit Komma (z. B. „Nase 9,5 · Gaumen 17").
+- [ ] Angenommen ein Wert ist ganzzahlig, wenn er angezeigt wird, dann ohne Nachkommastelle
+  („17", nicht „17,0").
+- [ ] Angenommen zwei Whiskies haben exakt dieselbe Gesamtpunktzahl (auch mit halben Punkten),
+  wenn die Rangliste berechnet wird, dann gelten dieselben Gleichstandsregeln wie bisher.
+- [ ] Angenommen ein Teilnehmer hat 0 Punkte vergeben, wenn die Rangliste berechnet wird, dann
+  zählt die 0 als abgegebene Bewertung („k von m Bewertungen") und senkt den Durchschnitt.
+- [ ] Angenommen ein Mitglied hat an Tastings mit ganzen und halben Punkten teilgenommen, wenn
+  es seine Profil-Bilanz öffnet, dann ist „Ø vergebene Punkte" über alle Bewertungen korrekt
+  berechnet (eine Nachkommastelle).
+
+### Private Sammlung
+- [ ] Angenommen ein Mitglied legt einen Sammlungs-Eintrag an, wenn es die Note wählt, dann
+  enthält die Auswahl „Keine Bewertung", 0, 0,5, 1 … 10.
+- [ ] Angenommen ein Eintrag hat die Note 7,5, wenn die Karte angezeigt wird, dann steht dort
+  „7,5 / 10"; bei „Keine Bewertung" steht keine Note.
+- [ ] Angenommen ein Eintrag hat die Note 0, wenn die Karte angezeigt wird, dann steht dort
+  „0 / 10" (nicht „keine Bewertung").
+- [ ] Angenommen bestehende Sammlungs-Einträge mit ganzen Noten, wenn sie nach PROJ-19 geöffnet
+  werden, dann sind die Noten unverändert.
+- [ ] Angenommen ein anderes Mitglied sieht die geteilte Sammlung (PROJ-14/15), wenn eine Karte
+  eine halbe Note hat, dann wird sie dort ebenso angezeigt.
+
+## Edge Cases
+- **0/0 versehentlich:** Rückfrage nur, wenn beide Kategorien 0 sind (siehe AC).
+- **Bewertung gespeichert, dann auf 0/0 geändert:** dieselbe Rückfrage beim erneuten Speichern.
+- **Schrittweite ändern vor dem Start:** es gibt vor dem Start keine Bewertungen — kein
+  Umrechnungsproblem. Nach dem Start gesperrt.
+- **Gleichzeitiges Speichern** durch den Admin (Schrittweite) und den Gastgeber/Steward
+  (Start): Wird das Tasting zuerst gestartet, wird die spätere Änderung der Schrittweite
+  abgelehnt; die Meldung erklärt, dass das Tasting bereits läuft.
+- **Halber Wert in einem 1er-Tasting** über manipulierte Anfrage: Server lehnt ab (AC).
+- **Werte außerhalb des Bereichs** (z. B. −0,5, 5,5, 10,5) oder andere Nachkommastellen
+  (2,3): Server lehnt ab.
+- **Ø-Rundung:** Durchschnitte über halbe Punkte werden auf eine Nachkommastelle gerundet;
+  ganzzahlige Summen bleiben ohne Komma.
+- **Abgeschlossene Tastings vor PROJ-19:** unverändert, gelten als 1er-Tastings.
+- **E-Mails und andere Texte** mit Punktangaben gibt es nicht — keine Anpassung nötig.
+
+## Technical Requirements (optional)
+- Die Regeln (Bereich, Schrittweite, Sperre nach Start) werden **serverseitig** erzwungen,
+  nicht nur im Formular.
+- Bestehende Bewertungen und Sammlungs-Einträge bleiben verlustfrei erhalten.
+- Bedienelemente mindestens 44 × 44 px (Design-System: Bedienung mit einer Hand).
+
+## Open Questions
+- [ ] Wie die Gleichstandsregel und die Ranglisten-Sichten mit Dezimalwerten umgehen, legt
+  `/architecture` fest (fachlich: gleiche Regeln wie bisher).
+
+## Decision Log
+
+### Product Decisions
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Voreinstellung 1er-Schritte | Gewohnte Bewertung der Runde; alte Tastings bleiben automatisch 1er-Tastings; 0,5 ist eine bewusste Wahl | 2026-10-05 |
+| Nur der Admin stellt die Schrittweite ein, im Event-Formular | Gehört zu den Rahmenbedingungen des Abends wie „Max. Whiskies pro Person"; keine neue Einstellung für Gastgeber/Steward | 2026-10-05 |
+| Änderbar nur bis zum Start | Vor dem Start gibt es keine Bewertungen — so kann es nie Bewertungen in der „falschen" Schrittweite geben | 2026-10-05 |
+| Slider starten bei 0 (statt 3/5) | Wunsch des Nutzers: keine vorgegebene Mitte, die die Bewertung beeinflusst | 2026-10-05 |
+| Rückfrage nur bei 0/0, keine Sperre | Fängt das versehentliche Speichern ohne Bewegung ab; eine einzelne 0 ist vermutlich Absicht | 2026-10-05 |
+| −/+-Tasten neben jedem Slider, in beiden Schrittweiten | 21 Positionen auf ~300 px sind mit dem Daumen schwer zu treffen; gleiche Ansicht unabhängig von der Schrittweite | 2026-10-05 |
+| Private Sammlung: Auswahlliste statt Slider, 0–10 in 0,5 + „Keine Bewertung" | Ein Slider kennt keinen Zustand „nichts gewählt"; „keine Bewertung" ≠ „0 Punkte" | 2026-10-05 |
+| Halbe Punkte mit Komma, Nachkommastelle nur wenn nötig | Deutsche Schreibweise; „17,0" wäre Rauschen | 2026-10-05 |
+| PROJ-18 BUG-1 (Slider-Name für Screenreader) wird hier mit behoben | Die Slider werden ohnehin umgebaut; der vorbereitete Test wird scharf geschaltet | 2026-10-05 |
+
+### Technical Decisions
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| _To be added by /architecture_ | | |
+
+---
+<!-- Sections below are added by subsequent skills -->
+
+## Tech Design (Solution Architect)
+_To be added by /architecture_
+
+## QA Test Results
+_To be added by /qa_
+
+## Deployment
+_To be added by /deploy_
