@@ -7,12 +7,13 @@ import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { PositionBar } from '@/components/rating/position-bar'
+import { ScoreField } from '@/components/rating/score-field'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
 import { useEventRealtime } from '@/hooks/use-event-realtime'
 import { saveRatingAction } from '@/lib/actions/ratings'
+import type { RatingStep } from '@/lib/points'
 import { ratingFormSchema } from '@/lib/schemas/rating'
 import {
   NOSE_DEFAULT,
@@ -30,6 +31,8 @@ interface RatingViewProps {
   total: number
   whiskies: WhiskyPosition[]
   myRatings: MyRating[]
+  /** PROJ-19: 1 = ganze, 0,5 = halbe Punkte. */
+  ratingStep: RatingStep
   editable: boolean
 }
 
@@ -39,6 +42,7 @@ export function RatingView({
   total,
   whiskies,
   myRatings,
+  ratingStep,
   editable,
 }: RatingViewProps) {
   const router = useRouter()
@@ -64,6 +68,7 @@ export function RatingView({
   const [dirty, setDirty] = useState(false)
   const [notesError, setNotesError] = useState<string | null>(null)
   const [pendingSwitch, setPendingSwitch] = useState<number | null>(null)
+  const [confirmZero, setConfirmZero] = useState(false)
 
   const dirtyRef = useRef(false)
   dirtyRef.current = dirty
@@ -107,6 +112,16 @@ export function RatingView({
       setNotesError(check.error.issues[0]?.message ?? 'Ungültige Eingabe.')
       return
     }
+    if (!focusWhiskyId) return
+    // PROJ-19: 0/0 ist erlaubt, aber meist ein Versehen (Slider nicht bewegt).
+    if (nose === 0 && taste === 0) {
+      setConfirmZero(true)
+      return
+    }
+    save()
+  }
+
+  function save() {
     if (!focusWhiskyId) return
     startSaving(async () => {
       const res = await saveRatingAction(eventId, focusWhiskyId, { nose, taste, notes })
@@ -191,51 +206,29 @@ export function RatingView({
             </div>
           ) : null}
 
-          <div className="space-y-2">
-            <div className="flex items-baseline justify-between">
-              <label className="text-sm font-medium">Nasenpunkte</label>
-              <span className="font-display text-3xl tabular-nums">{nose}</span>
-            </div>
-            <Slider
-              value={[nose]}
-              min={1}
-              max={5}
-              step={1}
-              disabled={!editable}
-              aria-label="Nasenpunkte"
-              onValueChange={([v]) => {
-                setNose(v)
-                markDirty()
-              }}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>1</span>
-              <span>5</span>
-            </div>
-          </div>
+          <ScoreField
+            label="Nasenpunkte"
+            value={nose}
+            max={5}
+            step={ratingStep}
+            disabled={!editable}
+            onChange={(v) => {
+              setNose(v)
+              markDirty()
+            }}
+          />
 
-          <div className="space-y-2">
-            <div className="flex items-baseline justify-between">
-              <label className="text-sm font-medium">Gaumenpunkte</label>
-              <span className="font-display text-3xl tabular-nums">{taste}</span>
-            </div>
-            <Slider
-              value={[taste]}
-              min={1}
-              max={10}
-              step={1}
-              disabled={!editable}
-              aria-label="Gaumenpunkte"
-              onValueChange={([v]) => {
-                setTaste(v)
-                markDirty()
-              }}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>1</span>
-              <span>10</span>
-            </div>
-          </div>
+          <ScoreField
+            label="Gaumenpunkte"
+            value={taste}
+            max={10}
+            step={ratingStep}
+            disabled={!editable}
+            onChange={(v) => {
+              setTaste(v)
+              markDirty()
+            }}
+          />
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium" htmlFor="rating-notes">
@@ -265,6 +258,19 @@ export function RatingView({
           ) : null}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmZero}
+        onOpenChange={setConfirmZero}
+        title="0 Punkte vergeben?"
+        description="Wirklich 0 Nasen- und 0 Gaumenpunkte vergeben?"
+        confirmLabel="Ja, speichern"
+        cancelLabel="Zurück"
+        onConfirm={() => {
+          setConfirmZero(false)
+          save()
+        }}
+      />
 
       <ConfirmDialog
         open={pendingSwitch !== null}

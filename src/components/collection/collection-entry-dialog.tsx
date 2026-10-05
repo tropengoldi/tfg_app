@@ -43,6 +43,7 @@ import {
   type CollectionOrigin,
 } from '@/lib/actions/collection'
 import { formatEventDate, toISODate } from '@/lib/dates'
+import { formatPoints } from '@/lib/points'
 import type { CollectionEntry } from '@/lib/queries/collection'
 import {
   collectionEntryFormSchema,
@@ -99,7 +100,7 @@ export function CollectionEntryDialog({
         ageLabel: entry.ageLabel ?? '',
         tastedOn: entry.tastedOn ?? '',
         valueNote: entry.valueNote ?? '',
-        rating: entry.rating ? String(entry.rating) : '',
+        rating: entry.rating !== null ? String(entry.rating) : '',
         notes: entry.notes ?? '',
         owned: entry.owned,
       }
@@ -268,9 +269,9 @@ export function CollectionEntryDialog({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">Keine Bewertung</SelectItem>
-                        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                        {Array.from({ length: 21 }, (_, i) => i / 2).map((n) => (
                           <SelectItem key={n} value={String(n)}>
-                            {n} / 10
+                            {formatPoints(n)} / 10
                           </SelectItem>
                         ))}
                       </SelectContent>

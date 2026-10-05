@@ -102,7 +102,7 @@ export async function getPersonalBalance(userId: string): Promise<PersonalBalanc
   const bestPlacement = pickBestPlacement(rankingRows, eventDateById)
   const totals = (ratings.data ?? [])
     .filter((r) => r.event_id && closed.has(r.event_id))
-    .map((r) => r.total_points ?? 0)
+    .map((r) => Number(r.total_points ?? 0))
   const avgPointsGiven = formatAvgGiven(totals)
 
   return {

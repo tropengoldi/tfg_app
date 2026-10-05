@@ -186,7 +186,7 @@ async function computeMaskedBalance(
     balance.bestPlacement = pickBestPlacement(rankingRows, eventDateById)
   }
   if (flags.show_avg_points) {
-    const totals = (breakdown.data ?? []).map((r) => r.total_points ?? 0)
+    const totals = (breakdown.data ?? []).map((r) => Number(r.total_points ?? 0))
     balance.avgPointsGiven = formatAvgGiven(totals)
   }
   return balance

@@ -71,6 +71,7 @@ export default async function BewertenPage({
           total={total}
           whiskies={whiskies}
           myRatings={myRatings}
+          ratingStep={event.rating_step}
           editable
         />
       ) : null}
@@ -96,6 +97,7 @@ export default async function BewertenPage({
               total={total}
               whiskies={whiskies}
               myRatings={myRatings}
+          ratingStep={event.rating_step}
               editable={false}
             />
           ) : (

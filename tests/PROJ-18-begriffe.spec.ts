@@ -117,10 +117,10 @@ test('Bewertungsansicht: Slider heißen „Nasenpunkte" und „Gaumenpunkte" (si
   await expect(page.locator('[aria-label="Geschmackspunkte"]')).toHaveCount(0)
 })
 
-// PROJ-18 BUG-1 (vorbestehend seit PROJ-7): das role="slider"-Element selbst hat
-// keinen zugänglichen Namen — das aria-label sitzt am Container (generic),
-// Screenreader sagen nur „Schieberegler". Nach dem Fix .fixme entfernen.
-test.fixme('Screenreader: die Slider selbst heißen „Nasenpunkte" / „Gaumenpunkte" (BUG-1)', async ({
+// PROJ-18 BUG-1 (vorbestehend seit PROJ-7, behoben in PROJ-19): das role="slider"-Element hatte
+// keinen zugänglichen Namen — das aria-label saß am Container (generic).
+// Jetzt reicht die Slider-Komponente es an den Thumb weiter.
+test('Screenreader: die Slider selbst heißen „Nasenpunkte" / „Gaumenpunkte" (BUG-1, behoben in PROJ-19)', async ({
   page,
 }) => {
   const evId = await createEventDirect({

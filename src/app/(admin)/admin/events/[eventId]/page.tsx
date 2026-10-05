@@ -50,6 +50,7 @@ export default async function EventBearbeitenPage({
     helperId: loaded.event.helper_id ?? '',
     maxWhiskies: loaded.event.max_whiskies_per_participant?.toString() ?? '',
     theme: loaded.event.theme ?? '',
+    ratingStep: Number(loaded.event.rating_step) === 0.5 ? '0.5' : '1',
   }
 
   return (

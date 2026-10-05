@@ -342,6 +342,33 @@ Keine.
 - `db:push` durch den Nutzer am 2026-10-05; danach `db:types` (5 neue Zeilen: `rating_step`, `p_rating_step`). `npm run test:rls`: **149/149** grün (alle bisherigen 133 + 16 neue).
 - Befund beim Test: Der BEFORE-Trigger `ratings_step` läuft vor den CHECK-Constraints — ein Wert wie 2,3 im 0,5er-Tasting wird deshalb mit TS021 („nur ganze Punkte“) statt 23514 abgelehnt. Abgelehnt wird korrekt; die Meldung ist für diesen Fall unpräzise, aber über die Oberfläche nicht erreichbar. Test erwartet „TS021 oder 23514“.
 
+### Implementation Notes (Frontend, 2026-10-05)
+- **Neu:** `src/lib/points.ts` (`formatPoints`, `stepValue`, `toRatingStep`, + Unit-Tests),
+  `src/components/rating/score-field.tsx` (Slider 0–max + −/+ als shadcn-Buttons 44 × 44 px,
+  `aria-valuetext` mit Komma).
+- **Bewertungsansicht:** Startwerte 0/0 (`NOSE_DEFAULT`/`TASTE_DEFAULT`), Schrittweite aus
+  `tasting_events.rating_step` (Query → Seite → `RatingView`), Rückfrage bei 0/0 über den
+  bestehenden `ConfirmDialog` („Ja, speichern" / „Zurück").
+- **BUG-1 behoben:** `ui/slider.tsx` reicht `aria-label` / `aria-valuetext` an den Thumb
+  (`role="slider"`) weiter statt an den Root — minimale Erweiterung der shadcn-Komponente.
+  Der `fixme`-Test in `tests/PROJ-18-begriffe.spec.ts` ist scharf geschaltet und grün.
+- **Event-Formular:** `RadioGroup` „Bewertung in: ganzen / halben Punkten", Default „ganzen".
+- **Dashboard:** Zeile „Bewertung: in halben Punkten" in der Eckdaten-Karte (nur bei 0,5).
+- **Anzeige:** Rangliste (Gesamt, Summenzeile, Einzelwertungen) und Sammlungs-Karte über
+  `formatPoints`; DB-`numeric`-Werte werden in den Queries mit `Number()` normalisiert.
+- **Sammlung:** Auswahl „Keine Bewertung", 0, 0,5 … 10 (`/ 10`).
+- **Gefundene Fallen (behoben):** Sammlungs-Karte und Bearbeiten-Dialog prüften `entry.rating ?`
+  — eine Note **0** wäre als „keine Bewertung" erschienen. Jetzt `!== null`.
+- **Abweichung von AC „nach dem Start sichtbar, aber nicht änderbar (Formular)":** Das
+  Bearbeiten-Formular ist für gestartete Tastings schon seit PROJ-4 gar nicht erreichbar
+  (Weiterleitung zur Liste). Die Schrittweite ist dann auf dem Dashboard sichtbar; die
+  Sperre greift serverseitig (TS005).
+- **Bekannte Grenze:** Die Historien-Liste zeigt den Sieger nur bei `winner_points > 0`
+  (bestehende Logik aus PROJ-9). Haben **alle** Teilnehmer **alle** Whiskies mit 0/0
+  bewertet, erscheint dort „kein Sieger" — praktisch ausgeschlossen, nicht angepasst.
+- Tests: Unit 145/145, Lint + Typecheck grün. E2E (Chromium) `PROJ-19-punkteskala.spec.ts`
+  (11 Tests) + Regression PROJ-7/15/18: **42/42 grün**.
+
 ## QA Test Results
 _To be added by /qa_
 

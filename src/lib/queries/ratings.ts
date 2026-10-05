@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { EventStatus } from '@/lib/supabase/aliases'
+import { toRatingStep, type RatingStep } from '@/lib/points'
 import type { MyRating, WhiskyPosition } from '@/lib/rating-view'
 
 export interface RatingViewData {
@@ -9,6 +10,7 @@ export interface RatingViewData {
     location: string
     status: EventStatus
     current_position: number
+    rating_step: RatingStep
   }
   total: number
   whiskies: WhiskyPosition[]
@@ -38,7 +40,7 @@ export async function getRatingViewData(
 
   const { data: event } = await supabase
     .from('tasting_events')
-    .select('id, event_date, location, status, current_position')
+    .select('id, event_date, location, status, current_position, rating_step')
     .eq('id', eventId)
     .maybeSingle()
   if (!event) return null
@@ -67,13 +69,14 @@ export async function getRatingViewData(
       location: event.location,
       status: event.status,
       current_position: event.current_position,
+      rating_step: toRatingStep(event.rating_step),
     },
     total: whiskies.length,
     whiskies,
     myRatings: (ratings ?? []).map((r) => ({
       whisky_id: r.whisky_id,
-      nose_points: r.nose_points,
-      taste_points: r.taste_points,
+      nose_points: Number(r.nose_points),
+      taste_points: Number(r.taste_points),
       notes: r.notes,
     })),
   }

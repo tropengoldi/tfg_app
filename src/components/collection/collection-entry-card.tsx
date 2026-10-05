@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatEventDate } from '@/lib/dates'
+import { formatPoints } from '@/lib/points'
 import type { CollectionEntry } from '@/lib/queries/collection'
 
 export interface CollectionEntryCardProps {
@@ -47,9 +48,9 @@ export function CollectionEntryCard({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {entry.rating ? (
+            {entry.rating !== null ? (
               <span className="font-display text-2xl tabular-nums leading-none">
-                {entry.rating}
+                {formatPoints(entry.rating)}
                 <span className="text-sm text-muted-foreground">/10</span>
               </span>
             ) : (

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { formatPoints } from '@/lib/points'
 import type { RankingRow as Row } from '@/lib/queries/results'
 import {
   formatAverage,
@@ -85,7 +86,7 @@ export function RankingRow({
 
             <div className="shrink-0 text-right">
               <p className="font-display text-3xl tabular-nums leading-none">
-                {row.totalPoints}
+                {formatPoints(row.totalPoints)}
               </p>
               <p className="text-xs text-muted-foreground">Punkte</p>
             </div>
@@ -93,7 +94,7 @@ export function RankingRow({
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>
-              Nase {row.noseTotal} · Gaumen {row.tasteTotal}
+              Nase {formatPoints(row.noseTotal)} · Gaumen {formatPoints(row.tasteTotal)}
             </span>
             {avg ? <span>{avg}</span> : null}
             <span>
@@ -144,8 +145,8 @@ export function RankingRow({
                     >
                       <span className="min-w-0 truncate">{b.raterName}</span>
                       <span className="shrink-0 tabular-nums text-muted-foreground">
-                        Nase {b.nose} · Gaumen {b.taste} ·{' '}
-                        <span className="font-medium text-foreground">{b.total}</span>
+                        Nase {formatPoints(b.nose)} · Gaumen {formatPoints(b.taste)} ·{' '}
+                        <span className="font-medium text-foreground">{formatPoints(b.total)}</span>
                       </span>
                     </li>
                   ))}

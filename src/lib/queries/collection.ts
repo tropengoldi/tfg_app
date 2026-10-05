@@ -47,7 +47,7 @@ export async function getCollectionEntries(profileId: string): Promise<Collectio
     ageLabel: r.age_label,
     tastedOn: r.tasted_on,
     valueNote: r.value_note,
-    rating: r.rating,
+    rating: r.rating === null ? null : Number(r.rating),
     notes: r.notes,
     owned: r.owned,
     sourceEventId: r.source_event_id,

@@ -25,6 +25,7 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
   const states = glassStates(whiskyCount, event.current_position, event.status)
   const label = progressLabel(whiskyCount, event.current_position, event.status)
   const closed = event.status === 'closed'
+  const halfPoints = event.rating_step === 0.5
 
   return (
     <div className="space-y-4">
@@ -79,7 +80,7 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
         </CardContent>
       </Card>
 
-      {event.theme || event.food_info || event.host_notes ? (
+      {event.theme || event.food_info || event.host_notes || halfPoints ? (
         <Card>
           <CardHeader>
             <CardTitle className="font-display text-lg">Eckdaten</CardTitle>
@@ -90,6 +91,7 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
             {event.host_notes ? (
               <Row label="Anmerkungen" value={event.host_notes} />
             ) : null}
+            {halfPoints ? <Row label="Bewertung" value="in halben Punkten" /> : null}
           </CardContent>
         </Card>
       ) : null}

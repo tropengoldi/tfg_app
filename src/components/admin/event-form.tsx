@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -219,6 +220,41 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
               </FormControl>
               <FormDescription>
                 Leer lassen = keine Begrenzung. Der Gastgeber darf einen mehr.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="ratingStep"
+          render={({ field }) => (
+            <FormItem className="space-y-2">
+              <FormLabel>Bewertung in</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  value={field.value ?? '1'}
+                  onValueChange={field.onChange}
+                  className="flex flex-col gap-2 sm:flex-row sm:gap-6"
+                >
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="1" />
+                    </FormControl>
+                    <FormLabel className="font-normal">ganzen Punkten</FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="0.5" />
+                    </FormControl>
+                    <FormLabel className="font-normal">halben Punkten</FormLabel>
+                  </FormItem>
+                </RadioGroup>
+              </FormControl>
+              <FormDescription>
+                Nasenpunkte 0–5, Gaumenpunkte 0–10 — in 1er- oder 0,5er-Schritten. Nur
+                solange das Tasting in Vorbereitung ist änderbar.
               </FormDescription>
               <FormMessage />
             </FormItem>

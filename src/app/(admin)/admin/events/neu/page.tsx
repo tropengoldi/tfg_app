@@ -25,6 +25,7 @@ export default async function NeuesEventPage() {
     helperId: '',
     maxWhiskies: '',
     theme: '',
+    ratingStep: '1',
   }
 
   return (

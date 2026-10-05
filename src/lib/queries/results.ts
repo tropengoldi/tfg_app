@@ -201,9 +201,9 @@ export async function getEventResults(
     const list = byWhisky.get(b.whisky_id) ?? []
     list.push({
       raterName: b.rater_name ?? 'Unbekannt',
-      nose: b.nose_points ?? 0,
-      taste: b.taste_points ?? 0,
-      total: b.total_points ?? 0,
+      nose: Number(b.nose_points ?? 0),
+      taste: Number(b.taste_points ?? 0),
+      total: Number(b.total_points ?? 0),
     })
     byWhisky.set(b.whisky_id, list)
   }
@@ -230,9 +230,9 @@ export async function getEventResults(
       broughtBy: r.brought_by ? names.get(r.brought_by) ?? 'Unbekannt' : 'Unbekannt',
       broughtById: r.brought_by,
       videoUrl: r.video_url,
-      noseTotal: r.nose_total ?? 0,
-      tasteTotal: r.taste_total ?? 0,
-      totalPoints: r.total_points ?? 0,
+      noseTotal: Number(r.nose_total ?? 0),
+      tasteTotal: Number(r.taste_total ?? 0),
+      totalPoints: Number(r.total_points ?? 0),
       ratingCount: r.rating_count ?? 0,
       breakdown: byWhisky.get(r.whisky_id) ?? [],
       ownNote: ownNotes.get(r.whisky_id) ?? null,

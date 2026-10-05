@@ -20,6 +20,8 @@ export interface ActiveDashboard {
     food_info: string | null
     host_notes: string | null
     helper_id: string | null
+    /** PROJ-19: 1 = ganze, 0,5 = halbe Punkte. */
+    rating_step: number
   }
   participants: DashboardParticipant[]
   whiskyCount: number
@@ -58,7 +60,7 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
   const { data: active } = await supabase
     .from('tasting_events')
     .select(
-      'id, event_date, location, status, current_position, theme, food_info, host_notes, host_id, helper_id',
+      'id, event_date, location, status, current_position, theme, food_info, host_notes, host_id, helper_id, rating_step',
     )
     .or(`status.eq.active,and(status.eq.closed,closed_at.gte.${recentCutoff})`)
     .order('status', { ascending: true })
@@ -100,6 +102,7 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
         food_info: active.food_info,
         host_notes: active.host_notes,
         helper_id: active.helper_id,
+        rating_step: Number(active.rating_step),
       },
       participants: ids
         .map((id) => ({

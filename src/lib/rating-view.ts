@@ -5,8 +5,9 @@
  * (spiegelt `can_rate_whisky` aus PROJ-1: Event aktiv + Whisky ausgeschenkt).
  */
 
-export const NOSE_DEFAULT = 3
-export const TASTE_DEFAULT = 5
+// PROJ-19: Slider starten bei 0 — keine vorgegebene Mitte, die beeinflusst.
+export const NOSE_DEFAULT = 0
+export const TASTE_DEFAULT = 0
 
 export interface WhiskyPosition {
   position: number
