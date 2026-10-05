@@ -1,6 +1,6 @@
 # PROJ-19: Flexible Punkteskala (0 Punkte, 0,5er-Schritte)
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -166,8 +166,9 @@ Neu:
 - Bedienelemente mindestens 44 × 44 px (Design-System: Bedienung mit einer Hand).
 
 ## Open Questions
-- [ ] Wie die Gleichstandsregel und die Ranglisten-Sichten mit Dezimalwerten umgehen, legt
-  `/architecture` fest (fachlich: gleiche Regeln wie bisher).
+- [x] Wie die Gleichstandsregel und die Ranglisten-Sichten mit Dezimalwerten umgehen, legt
+  `/architecture` fest (fachlich: gleiche Regeln wie bisher). → Sichten werden mit
+  Dezimal-Summen neu angelegt, Gleichstandsregel unverändert (Tech Design C/E).
 
 ## Decision Log
 
@@ -187,13 +188,131 @@ Neu:
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| Punkte als exakte Dezimalzahl mit einer Nachkommastelle speichern (statt Ganzzahl) | Halbe Punkte müssen exakt bleiben — keine Rundungsfehler wie bei Gleitkomma; „2,5" bleibt „2,5". Bestehende Ganzzahlen werden beim Umstellen verlustfrei übernommen | 2026-10-05 |
+| Verworfen: halbe Punkte als „doppelte Ganzzahl" speichern (2,5 → 5) | Spart die Typänderung, aber jede Anzeige, Summe und jeder spätere Bericht müsste halbieren — dauerhafte Fehlerquelle | 2026-10-05 |
+| Schrittweite als eigenes Feld am Tasting mit genau zwei erlaubten Werten (1 oder 0,5), Voreinstellung 1 | Der Wert ist direkt die Prüfregel („muss ein Vielfaches der Schrittweite sein"); bestehende Tastings bekommen automatisch 1 | 2026-10-05 |
+| Bereich + „Vielfaches von 0,5" als Tabellen-Regel; „passt zur Schrittweite des Tastings" in der bestehenden Bewertungs-Prüfung beim Speichern | Bewertungen werden direkt (unter RLS) geschrieben, nicht über eine Funktion — die Prüfung muss deshalb in der Datenbank beim Speichern greifen, sonst ließe sie sich umgehen | 2026-10-05 |
+| Neuer Fehlercode TS021 für „Wert passt nicht zur Schrittweite" | TS-Klasse statt PT (PT-Codes werden von PostgREST als HTTP-Status interpretiert); TS018–020 sind vergeben | 2026-10-05 |
+| Sperre nach dem Start nutzt die bestehende Regel „Eckdaten nur im Entwurf" (TS005) | `update_event` lehnt nicht-Entwurfs-Events bereits ab — keine neue Regel nötig | 2026-10-05 |
+| Event-Anlegen/-Bearbeiten bekommen einen zusätzlichen Parameter „Schrittweite" (Voreinstellung 1) | Admin-Schreibzugriff läuft ausschließlich über diese Funktionen; Signaturänderung erfordert Neuanlage + erneute Rechtevergabe, Rümpfe aus der PROJ-18-Fassung | 2026-10-05 |
+| Die drei Ranglisten-Sichten werden in derselben Migration abgebaut und mit Dezimal-Summen neu angelegt | Eine Spalte, von der Sichten abhängen, lässt sich nicht im Typ ändern; die Sichten casten heute auf Ganzzahl und würden halbe Punkte abschneiden | 2026-10-05 |
+| Gemeinsamer Anzeige-Helfer „Punkte formatieren" (Komma, Nachkommastelle nur wenn nötig) | Eine Regel an einer Stelle statt verstreuter Formatierungen in Rangliste, Bilanz, Sammlung, Slider | 2026-10-05 |
+| Bestehende shadcn-Slider-Komponente minimal erweitern, damit der Name am bedienbaren Element landet | Behebt PROJ-18 BUG-1 an der Wurzel; kein Nachbau der Komponente | 2026-10-05 |
+| −/+ als shadcn-Buttons, 0/0-Rückfrage als shadcn-AlertDialog | Beide Bausteine sind installiert; keine neuen Pakete | 2026-10-05 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+PROJ-19 berührt **Datenbank** (Typen, Regeln, Ranglisten-Sichten, Event-Funktionen) und
+**Oberfläche** (Event-Formular, Bewertungsansicht, Ergebnis-/Bilanz-/Sammlungsanzeige).
+Keine neue Seite, keine neue Route, keine neuen Pakete.
+
+### A) Bausteine
+
+```
+Admin – Event-Formular (PROJ-4)
++-- NEU: Auswahl „Bewertung in: ganzen Punkten | halben Punkten" (RadioGroup)
+    +-- im Entwurf änderbar, danach nur Anzeige
+
+Tasting-Dashboard (PROJ-8)
++-- NEU: Hinweis „Bewertung in halben Punkten" (nur wenn 0,5)
+
+Bewertungsansicht (PROJ-7)
++-- Nasenpunkte
+|   +-- [−]  Slider 0–5 (Schritt 1 oder 0,5, Start 0)  [+]   Wert „2,5"
++-- Gaumenpunkte
+|   +-- [−]  Slider 0–10 (Schritt 1 oder 0,5, Start 0) [+]   Wert „7"
++-- Notizen (unverändert)
++-- Speichern
+    +-- NEU: Rückfrage-Dialog bei 0/0 („Ja, speichern" / „Zurück")
+
+Ergebnisse (PROJ-9), Bilanz (PROJ-10/14), Sammlung (PROJ-15)
++-- alle Punktwerte über den gemeinsamen Helfer „Punkte formatieren"
+
+Private Sammlung – Eintrag-Dialog (PROJ-15)
++-- Auswahl „Keine Bewertung, 0, 0,5 … 10"
+```
+
+### B) Datenmodell (Änderungen)
+
+**Tasting**
+- NEU: **Schrittweite** — 1 oder 0,5; Voreinstellung 1. Alle bestehenden Tastings → 1.
+
+**Bewertung** (eine pro Person und Whisky)
+- Nasenpunkte: bisher ganze Zahl 1–5 → **Dezimalzahl 0–5**, Vielfaches von 0,5
+- Gaumenpunkte: bisher ganze Zahl 1–10 → **Dezimalzahl 0–10**, Vielfaches von 0,5
+- Gesamtpunkte: weiterhin automatisch berechnet (Nase + Gaumen), jetzt Dezimal
+- NEU als Regel beim Speichern: Der Wert muss zur Schrittweite **seines** Tastings passen
+  (in einem 1er-Tasting keine halben Punkte) → sonst Fehler TS021
+
+**Sammlungs-Eintrag**
+- Note: bisher ganze Zahl 1–10 → **Dezimalzahl 0–10**, Vielfaches von 0,5, weiterhin optional
+
+Bestehende Werte werden beim Umstellen unverändert übernommen (3 bleibt 3).
+
+### C) Datenbank-Migration (eine Datei, in fester Reihenfolge)
+1. Die drei Ranglisten-Sichten abbauen (sie hängen an den Punkt-Spalten).
+2. Die berechnete Gesamtsumme vorübergehend entfernen, Punkt-Spalten auf Dezimal umstellen,
+   neue Bereichsregeln setzen, Gesamtsumme wieder anlegen.
+3. Schrittweite am Tasting ergänzen.
+4. Prüfung „passt zur Schrittweite" in die bestehende Bewertungs-Prüfung beim Speichern
+   aufnehmen (dort, wo heute schon „Tasting abgeschlossen → keine Änderung" geprüft wird).
+5. Event-Anlegen / -Bearbeiten mit neuem Parameter „Schrittweite" neu anlegen (aus der
+   PROJ-18-Fassung, Rechte neu vergeben). Admin-Event-Liste liefert die Schrittweite mit.
+6. Ranglisten-Sichten mit Dezimal-Summen und unveränderter Gleichstandsregel neu anlegen
+   (Rechte und „nur aktive Mitglieder"-Filter wie bisher; Einzelwertungen weiterhin
+   **ohne** Notizen).
+7. Sammlungs-Note auf Dezimal umstellen.
+
+Danach: TypeScript-Typen neu erzeugen.
+
+### D) Prüfregeln — wo welche Regel greift
+
+| Regel | Formular (sofortiges Feedback) | Datenbank (verbindlich) |
+|---|---|---|
+| Nase 0–5, Gaumen 0–10 | ✔ | ✔ Tabellen-Regel |
+| Vielfaches von 0,5 | ✔ | ✔ Tabellen-Regel |
+| Passt zur Schrittweite des Tastings | ✔ (Slider erlaubt nichts anderes) | ✔ beim Speichern (TS021) |
+| Schrittweite nur im Entwurf änderbar | ✔ (Feld gesperrt) | ✔ bestehende Entwurfs-Regel (TS005) |
+| Sammlungs-Note 0–10 in 0,5 oder leer | ✔ | ✔ Tabellen-Regel |
+
+### E) Anzeige
+- Ein gemeinsamer Helfer formatiert jeden Punktwert: Komma, „,5" nur wenn nötig.
+- Ø-Werte bleiben bei einer Nachkommastelle (bestehende Funktionen, jetzt mit Dezimal-Eingaben).
+- Gleichstand („punktgleich") wird wie bisher auf exakt gleiche Summen geprüft — Dezimalwerte
+  mit einer Nachkommastelle sind exakt vergleichbar.
+
+### F) Barrierefreiheit (PROJ-18 BUG-1)
+Die vorhandene Slider-Komponente wird so erweitert, dass ihr Name am bedienbaren Element
+selbst ankommt. Die −/+-Tasten tragen eigene Namen („Nasenpunkte erhöhen" …). Der
+vorbereitete `fixme`-Test in `tests/PROJ-18-begriffe.spec.ts` wird scharf geschaltet.
+
+### G) Tests
+- **DB-Integration:** Bereiche (0 und Maximum erlaubt, −0,5 / 5,5 / 2,3 abgelehnt),
+  halbe Punkte im 1er-Tasting abgelehnt (TS021), im 0,5er-Tasting erlaubt, Schrittweite nach
+  Start nicht änderbar (TS005), Ranglisten-Summen mit halben Punkten, Sammlungs-Noten.
+  Bestehende Tests mit „0 wird abgelehnt" werden auf die neue Untergrenze angepasst.
+- **Unit:** Punkte-Formatierung, −/+-Grenzen, Formular-Schemas (Bewertung, Event, Sammlung).
+- **E2E:** Event-Formular-Einstellung, Slider-Start 0, −/+, 0/0-Rückfrage, Anzeige „9,5",
+  Sammlung „7,5 / 10", Screenreader-Namen, 360 px.
+
+### H) Ausrollen
+1. Migration einspielen (`db:push`, durch den Nutzer) — **vor** dem App-Deploy.
+2. App deployen.
+Zwischen 1 und 2 funktioniert die alte App weiter: Sie sendet nur ganze Werte ≥ 1, die
+weiterhin gültig sind; neue Tastings bekommen automatisch Schrittweite 1. Ein laufendes
+Tasting ist von der Umstellung nicht betroffen (Werte bleiben gleich) — trotzdem nicht
+während eines Tasting-Abends einspielen.
+
+### I) Abhängigkeiten (Pakete)
+Keine.
+
+### Arbeitsaufteilung
+- `/frontend` — Formular-Einstellung, Bewertungsansicht (Slider, −/+, Rückfrage), Anzeige-Helfer, Sammlung, Slider-Namen.
+- `/backend` — Migration (Schritte 1–7), Typen, Server-Aktionen um „Schrittweite" erweitern, Integrationstests.
 
 ## QA Test Results
 _To be added by /qa_
