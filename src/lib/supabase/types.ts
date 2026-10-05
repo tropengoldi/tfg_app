@@ -417,6 +417,7 @@ export type Database = {
           id: string
           location: string
           max_whiskies_per_participant: number | null
+          rating_step: number
           started_at: string | null
           status: Database["public"]["Enums"]["event_status"]
           theme: string | null
@@ -435,6 +436,7 @@ export type Database = {
           id?: string
           location: string
           max_whiskies_per_participant?: number | null
+          rating_step?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["event_status"]
           theme?: string | null
@@ -453,6 +455,7 @@ export type Database = {
           id?: string
           location?: string
           max_whiskies_per_participant?: number | null
+          rating_step?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["event_status"]
           theme?: string | null
@@ -908,6 +911,7 @@ export type Database = {
           p_host_id: string
           p_location: string
           p_max_whiskies?: number
+          p_rating_step?: number
           p_theme?: string
         }
         Returns: string
@@ -974,6 +978,7 @@ export type Database = {
           p_host_id: string
           p_location: string
           p_max_whiskies?: number
+          p_rating_step?: number
           p_theme?: string
         }
         Returns: undefined

@@ -339,7 +339,8 @@ Keine.
   `errors.ts` TS021.
 - Tests: Unit 138/138 (u. a. neue Bereichs-/Halbpunkt-Fälle, Schrittweite im Event-Schema).
   Neuer Integrationstest `rating-scale.integration.test.ts` (16 Fälle) — läuft nach `db:push`.
-- Nach `db:push`: `npm run db:types` (neue Spalten/Parameter in den TS-Typen).
+- `db:push` durch den Nutzer am 2026-10-05; danach `db:types` (5 neue Zeilen: `rating_step`, `p_rating_step`). `npm run test:rls`: **149/149** grün (alle bisherigen 133 + 16 neue).
+- Befund beim Test: Der BEFORE-Trigger `ratings_step` läuft vor den CHECK-Constraints — ein Wert wie 2,3 im 0,5er-Tasting wird deshalb mit TS021 („nur ganze Punkte“) statt 23514 abgelehnt. Abgelehnt wird korrekt; die Meldung ist für diesen Fall unpräzise, aber über die Oberfläche nicht erreichbar. Test erwartet „TS021 oder 23514“.
 
 ## QA Test Results
 _To be added by /qa_

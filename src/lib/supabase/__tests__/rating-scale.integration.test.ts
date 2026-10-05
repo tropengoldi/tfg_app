@@ -259,9 +259,14 @@ describe.skipIf(!RUN)('Bewertungen im 0,5er-Tasting', () => {
     expect(Number(data!.total_points)).toBe(12)
   })
 
-  it('andere Nachkommastellen werden abgelehnt (23514)', async () => {
-    expect((await rate(halfEvent, halfWhisky, 2.3, 5)).error?.code).toBe('23514')
-    expect((await rate(halfEvent, halfWhisky, 2, 5.25)).error?.code).toBe('23514')
+  // Der BEFORE-Trigger `ratings_step` läuft vor den CHECK-Constraints und greift
+  // hier zuerst (TS021). Abgelehnt wird so oder so — die Oberfläche kann solche
+  // Werte gar nicht erzeugen.
+  it('andere Nachkommastellen werden abgelehnt (TS021 oder 23514)', async () => {
+    for (const [nose, taste] of [[2.3, 5], [2, 5.25]]) {
+      const { error } = await rate(halfEvent, halfWhisky, nose, taste)
+      expect(['TS021', '23514']).toContain(error?.code)
+    }
   })
 
   it('5,5 / 10,5 liegen außerhalb (23514)', async () => {
