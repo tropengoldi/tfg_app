@@ -125,3 +125,19 @@ describe('whiskySearchUrl', () => {
     expect(whiskySearchUrl('Caol Ila & Co')).toContain('Whisky.de%20Caol%20Ila%20%26%20Co')
   })
 })
+
+describe('halbe Punkte (PROJ-19)', () => {
+  it('Ø über halbe Punkte, eine Nachkommastelle', () => {
+    expect(formatAverage(23.5, 2)).toBe('Ø 11,8')
+    expect(formatAverage(0, 3)).toBe('Ø 0,0')
+  })
+
+  it('Gleichstand wird auch bei halben Punkten exakt erkannt', () => {
+    const tied = tieRanks([
+      { rank: 1, totalPoints: 23.5 },
+      { rank: 2, totalPoints: 23.5 },
+      { rank: 3, totalPoints: 23 },
+    ])
+    expect([...tied].sort()).toEqual([1, 2])
+  })
+})

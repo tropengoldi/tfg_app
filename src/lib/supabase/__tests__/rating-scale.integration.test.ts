@@ -343,3 +343,24 @@ describe.skipIf(!RUN)('Sammlungs-Note', () => {
     }
   })
 })
+
+describe.skipIf(!RUN)('0 Punkte zählen als Bewertung', () => {
+  it('eine 0/0-Bewertung erscheint in der Rangliste als abgegebene Bewertung mit 0 Punkten', async () => {
+    // Eigenes Tasting: start() schließt jedes andere aktive (nur eins gleichzeitig).
+    const ev = await draftEvent(`SC-zero-${stamp}`)
+    await start(ev)
+    const w = await firstWhisky(ev)
+    const { error } = await rate(ev, w, 0, 0)
+    expect(error).toBeNull()
+    const { error: cErr } = await host.client.rpc('close_event', { p_event: ev })
+    expect(cErr).toBeNull()
+
+    const { data } = await pa.client
+      .from('whisky_rankings')
+      .select('total_points, rating_count')
+      .eq('whisky_id', w)
+      .single()
+    expect(data!.rating_count).toBe(1)
+    expect(Number(data!.total_points)).toBe(0)
+  })
+})

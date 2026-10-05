@@ -211,14 +211,16 @@ test('360 px: Slider und −/+ ohne horizontales Scrollen, Tasten ≥ 44 px', as
 test('Dashboard zeigt „Bewertung in halben Punkten" nur bei 0,5er-Tastings', async ({ page }) => {
   await runningEvent('dash', 0.5)
   await addParticipant((await activeId())!, other.id)
+  // login() landet bereits auf „/" — kein zusätzliches goto('/'): das kollidiert
+  // unter WebKit mit der noch laufenden Navigation („interrupted by another navigation").
   await login(page, other.email)
-  await page.goto('/', { waitUntil: 'networkidle' })
-  await expect(page.getByText('in halben Punkten')).toBeVisible()
+  await expect(page.getByText('in halben Punkten')).toBeVisible({ timeout: 15_000 })
 
   await closeAllActiveEvents()
   await runningEvent('dash1', 1)
   await addParticipant((await activeId())!, other.id)
-  await page.goto('/', { waitUntil: 'networkidle' })
+  await page.reload({ waitUntil: 'networkidle' })
+  await expect(page.getByText('Wer ist dabei')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('in halben Punkten')).toHaveCount(0)
 })
 

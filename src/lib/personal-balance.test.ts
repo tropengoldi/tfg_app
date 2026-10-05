@@ -78,3 +78,12 @@ describe('ordinalPlace', () => {
     expect(ordinalPlace(7)).toBe('7. Platz')
   })
 })
+
+describe('formatAvgGiven — halbe Punkte & 0 (PROJ-19)', () => {
+  it('mischt ganze und halbe Punkte korrekt', () => {
+    expect(formatAvgGiven([12.5, 13, 0])).toEqual({ avg: 'Ø 8,5', count: 3 })
+  })
+  it('0-Bewertungen zählen mit', () => {
+    expect(formatAvgGiven([0, 0])).toEqual({ avg: 'Ø 0,0', count: 2 })
+  })
+})

@@ -1,6 +1,6 @@
 # PROJ-19: Flexible Punkteskala (0 Punkte, 0,5er-Schritte)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -370,7 +370,114 @@ Keine.
   (11 Tests) + Regression PROJ-7/15/18: **42/42 grün**.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-05
+**App URL:** http://localhost:3000 (Production-Build) gegen die Live-DB mit eingespielter
+Migration `20261006120000_flexible_rating_scale.sql` (vorher geprüft: kein echtes Tasting aktiv)
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### Einstellung am Tasting (Admin)
+- [x] Formular „Bewertung in: ganzen / halben Punkten", Voreinstellung ganze — E2E
+- [x] Im Entwurf änderbar und gespeichert (und beim erneuten Öffnen vorausgewählt) — E2E + Integration
+- [~] Nach dem Start „sichtbar, aber nicht änderbar" im Formular — **Abweichung (bewusst):** das
+  Bearbeiten-Formular ist für gestartete Tastings seit PROJ-4 gar nicht erreichbar; Schrittweite
+  ist auf dem Dashboard sichtbar. Fachlich erfüllt (nicht änderbar), siehe Implementation Notes.
+- [x] Änderung nach dem Start serverseitig abgelehnt (TS005) — Integration
+- [x] Teilnehmer kann die Schrittweite nicht direkt setzen — Integration
+- [x] Dashboard zeigt „Bewertung: in halben Punkten" nur bei 0,5 — E2E (Chromium + Mobile Safari)
+- [x] Alte Tastings gelten als 1er-Tastings, Bewertungen unverändert — Migration (Default 1,
+  verlustfreie Typumstellung) + Regression PROJ-7/9/10 grün
+
+#### Bewertungsansicht
+- [x] Unbewerteter Whisky: beide Slider auf 0 — E2E
+- [x] Bewerteter Whisky: gespeicherte Werte — E2E (PROJ-7-Regression)
+- [x] Ganze Punkte: nur 1er-Schritte, „+" endet beim Maximum — E2E
+- [x] Halbe Punkte: 0,5er-Schritte, Anzeige „2,5" — E2E
+- [x] „+" / „−" um genau einen Schritt — E2E + Unit (`stepValue`)
+- [x] „−" bei 0 und „+" beim Maximum deaktiviert — E2E
+- [x] 0/0 → Rückfrage mit „Ja, speichern" / „Zurück" — E2E
+- [x] „Zurück" speichert nichts — E2E (DB geprüft)
+- [x] Nur eine Kategorie 0 → ohne Rückfrage — E2E
+- [x] Halber Wert im 1er-Tasting → Server lehnt ab (TS021) — Integration
+- [x] Screenreader: „Nasenpunkte, Schieberegler, 2,5" (`aria-valuetext`) — E2E, **PROJ-18 BUG-1 behoben**
+- [x] Tasten heißen „Nasenpunkte verringern/erhöhen" usw. — E2E
+- [x] 360 px: kein horizontales Scrollen, Tasten ≥ 44 × 44 px — E2E
+
+#### Ergebnisse & Bilanz
+- [x] Rangliste mit halben Punkten und Komma („Nase 9,5 · Gaumen 17", „26,5", Einzelwertungen) — E2E
+- [x] Ganze Werte ohne Nachkommastelle — E2E + Unit (`formatPoints`)
+- [x] Gleichstand auch mit halben Punkten exakt erkannt — Unit (`tieRanks`)
+- [x] 0 zählt als abgegebene Bewertung (`rating_count`) — Integration
+- [x] Ø in der Bilanz über ganze + halbe + 0 korrekt — Unit (`formatAvgGiven`)
+
+#### Private Sammlung
+- [x] Auswahl „Keine Bewertung", 0, 0,5 … 10 — E2E
+- [x] „7,5/10" auf der Karte; keine Note → „—" — E2E
+- [x] Note 0 → „0/10" (nicht „keine Bewertung") — E2E (vorher Falle `entry.rating ?`, im Frontend behoben)
+- [x] Bestehende ganze Noten unverändert — verlustfreie Typumstellung, PROJ-15-Regression grün
+- [x] Geteilte Sammlung zeigt halbe Noten gleich — gleiche Karte + gleiche Abfrage (`public-collection-view` → `CollectionEntryCard`, `queries/collection.ts`)
+
+### Edge Cases Status
+- [x] 0/0 versehentlich / nach Änderung erneut auf 0/0 → Rückfrage (gleicher Pfad)
+- [x] Schrittweite vor dem Start ändern: keine Bewertungen vorhanden → kein Umrechnungsproblem
+- [x] Gleichzeitiges Starten und Ändern der Schrittweite: `update_event` sperrt die Zeile
+  (`for update`) und lehnt nach dem Start mit TS005 ab
+- [x] Manipulierte Werte: −1, 5,5, 10,5 → 23514; 2,3 / 5,25 → abgelehnt (siehe BUG-1)
+- [x] Ø-Rundung auf eine Stelle — Unit
+- [x] Alte Tastings unverändert
+
+### Security Audit Results
+- [x] Schrittweite nur über `create_event` / `update_event` (Admin-Prüfung zuerst);
+  Direkt-Update auf `tasting_events` für `authenticated` weiterhin entzogen — getestet
+- [x] Halbe Punkte im 1er-Tasting: verbindlich per Trigger, nicht nur im Formular — getestet
+- [x] Umgehung über fremde `event_id` (0,5er-Event-ID + Whisky eines 1er-Events) unmöglich:
+  zusammengesetzter FK `(whisky_id, event_id) → whiskies(id, event_id)`; zudem nur ein aktives Tasting
+- [x] Trigger-Funktion `SECURITY DEFINER` mit `search_path = ''`, `execute` für alle Rollen entzogen
+- [x] Neu angelegte Ranglisten-Sichten: Filter (`closed` + `is_active_member()`), Rechte
+  (anon entzogen) und „Einzelwertungen ohne Notizen" unverändert — Integration (alle 133 Altfälle grün)
+- [x] Keine neue Route, keine neuen Umgebungsvariablen, keine neuen Pakete
+
+### Automatisierte Tests
+- Unit: 15 Dateien, **149/149** (neu: `points.test.ts`, Halbpunkt-/0-Fälle in `rating`,
+  `collection`, `admin-events`, `results`, `personal-balance`)
+- DB-Integration: **150/150** (neu: `rating-scale.integration.test.ts`, 17 Fälle)
+- E2E `PROJ-19-punkteskala.spec.ts` (11) + `PROJ-18-begriffe.spec.ts` (inkl. BUG-1-Test):
+  Chromium + Mobile Safari grün. Ein WebKit-Flake im Dashboard-Test („navigation interrupted"
+  durch zusätzliches `goto('/')` nach dem Login) im Test behoben — danach 8/8 Wiederholungen grün.
+- Regression E2E (Chromium) PROJ-4/6/7/8/9/10/11/14/15/16/18: alle grün bis auf **3
+  vorbestehende** Admin-Tests (PROJ-4, PROJ-6, PROJ-14), die sich als Seed-Admin mit
+  `SEED_PASSWORD` anmelden — bekanntes Backlog-Problem, nicht PROJ-19.
+
+### Bugs Found
+
+#### BUG-1: Unpräzise Meldung für unzulässige Nachkommastellen im 0,5er-Tasting
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. 0,5er-Tasting läuft
+  2. Bewertung mit 2,3 Nasenpunkten direkt an die API senden (über die Oberfläche unmöglich)
+  3. Expected: Ablehnung mit „Nur ganze oder halbe Punkte"
+  4. Actual: Ablehnung mit „In diesem Tasting werden nur ganze Punkte vergeben." (TS021) — der
+     BEFORE-Trigger greift vor dem CHECK-Constraint
+- **Priority:** Nice to have — nur über manipulierte Anfragen erreichbar; abgelehnt wird korrekt
+
+#### BUG-2: Historie zeigt „kein Sieger", wenn ausschließlich 0-Punkte vergeben wurden
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Tasting, in dem **alle** Teilnehmer **alle** Whiskies mit 0/0 bewerten, abschließen
+  2. Tasting-Historie öffnen
+  3. Expected: Sieger-Whisky (Rang 1) wird genannt
+  4. Actual: „— kein Sieger" (PROJ-9-Logik `winner_points > 0` stammt aus der Zeit mit Minimum 1)
+- **Priority:** Nice to have — praktisch ausgeschlossen; die Ergebnisseite selbst zeigt die Rangliste korrekt
+
+### Summary
+- **Acceptance Criteria:** 29/30 bestanden, 1 bewusste Abweichung (Formular nach Start nicht
+  erreichbar statt read-only — fachlich erfüllt)
+- **Bugs Found:** 2 total (0 critical, 0 high, 0 medium, 2 low)
+- **Security:** Pass
+- **Production Ready:** YES
+- **Recommendation:** Deploy. Migration ist bereits eingespielt. Nicht während eines laufenden Tastings deployen.
 
 ## Deployment
 _To be added by /deploy_
