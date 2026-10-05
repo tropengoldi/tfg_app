@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { getSessionContext } from '@/lib/auth'
 import { messageForDbError } from '@/lib/errors'
-import { whiskyFormSchema } from '@/lib/schemas/whiskies'
+import { toNumber, whiskyFormSchema } from '@/lib/schemas/whiskies'
 import { createClient } from '@/lib/supabase/server'
 
 export type ActionResult = { error: string } | { ok: true }
@@ -17,6 +17,10 @@ interface WhiskyFields {
   name: string
   videoUrl: string | undefined
   ownerNotes: string | undefined
+  // PROJ-25: null = keine Angabe
+  abv: number | null
+  ageYears: number | null
+  price: number | null
 }
 
 type Normalized = { ok: true; data: WhiskyFields } | { ok: false; error: string }
@@ -33,6 +37,9 @@ function normalize(input: unknown): Normalized {
       name: d.name,
       videoUrl: d.videoUrl === '' ? undefined : d.videoUrl,
       ownerNotes: d.ownerNotes === '' ? undefined : d.ownerNotes,
+      abv: toNumber(d.abv),
+      ageYears: toNumber(d.ageYears),
+      price: toNumber(d.price),
     },
   }
 }
@@ -54,6 +61,9 @@ export async function addWhiskyAction(
     p_name: n.data.name,
     p_video_url: n.data.videoUrl,
     p_owner_notes: n.data.ownerNotes,
+    p_abv: n.data.abv ?? undefined,
+    p_age_years: n.data.ageYears ?? undefined,
+    p_price_eur: n.data.price ?? undefined,
   })
   if (error) return { error: messageForDbError(error) }
 
@@ -84,6 +94,9 @@ export async function updateWhiskyAction(
       name: n.data.name,
       video_url: n.data.videoUrl ?? null,
       owner_notes: n.data.ownerNotes ?? null,
+      abv: n.data.abv,
+      age_years: n.data.ageYears,
+      price_eur: n.data.price,
     })
     .eq('whisky_id', whiskyId)
     .select('whisky_id')

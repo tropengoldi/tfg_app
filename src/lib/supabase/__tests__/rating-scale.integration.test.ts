@@ -259,13 +259,13 @@ describe.skipIf(!RUN)('Bewertungen im 0,5er-Tasting', () => {
     expect(Number(data!.total_points)).toBe(12)
   })
 
-  // Der BEFORE-Trigger `ratings_step` läuft vor den CHECK-Constraints und greift
-  // hier zuerst (TS021). Abgelehnt wird so oder so — die Oberfläche kann solche
-  // Werte gar nicht erzeugen.
-  it('andere Nachkommastellen werden abgelehnt (TS021 oder 23514)', async () => {
+  // PROJ-25 (behebt PROJ-19 BUG-1): der Trigger meldet „kein halber Schritt"
+  // jetzt eigens mit TS022 statt mit der 1er-Meldung TS021.
+  it('andere Nachkommastellen werden abgelehnt (TS022 „Nur ganze oder halbe Punkte")', async () => {
     for (const [nose, taste] of [[2.3, 5], [2, 5.25]]) {
       const { error } = await rate(halfEvent, halfWhisky, nose, taste)
-      expect(['TS021', '23514']).toContain(error?.code)
+      expect(error?.code).toBe('TS022')
+      expect(error?.message).toContain('Nur ganze oder halbe Punkte')
     }
   })
 

@@ -1,6 +1,6 @@
 # PROJ-25: Erweiterte Ergebnis-Statistiken
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -349,6 +349,25 @@ die neuen Spalten.
 ### Arbeitsaufteilung
 - `/backend` (klein, zuerst): Migration, Typen, Integrationstests.
 - `/frontend`: Formular-Felder, Rangliste-Ergänzungen, Rechen-Modul, Karten, Diagramme, BUG-2-Anzeige.
+
+### Implementation Notes (Backend, 2026-10-05)
+- Migration `supabase/migrations/20261007120000_results_stats.sql`:
+  - `whisky_rankings` per `create or replace` um `abv`, `age_years`, `price_eur` **am Ende**
+    erweitert (Filter `closed` + `is_active_member()`, Rechte, Gleichstandsregel unverändert).
+  - `past_tastings` um `winner_rating_count` erweitert (PROJ-19 BUG-2).
+  - `tg_ratings_step`: zuerst „kein Vielfaches von 0,5" → **TS022** „Nur ganze oder halbe
+    Punkte.", danach wie bisher TS021 (PROJ-19 BUG-1).
+  - Keine Änderung an RLS / `whisky_details`-Zugriffsregeln.
+- App-Server: `schemas/whiskies.ts` um `abv` / `ageYears` / `price` (Strings, Komma oder Punkt;
+  Alkohol 0–100 mit 1 Nachkommastelle, Alter ganze Jahre 0–100, Preis ≥ 0 mit ≤ 2
+  Nachkommastellen) + Helfer `toNumber`; `actions/whiskies.ts` reicht die Werte an `add_whisky`
+  (`p_abv`, `p_age_years`, `p_price_eur`) und an die spaltengenaue Änderung durch;
+  `errors.ts` TS022.
+- Tests: Unit 154/154 (neu: 5 Fälle Alkohol/Alter/Preis). Neuer Integrationstest
+  `results-stats.integration.test.ts` (6 Fälle: Erfassen, Ändern, verborgen während des
+  Tastings über Sicht **und** Tabelle, sichtbar nach Abschluss, Historie-Sieger bei 0-Punkten,
+  ohne Bewertung); `rating-scale` erwartet jetzt strikt TS022. Laufen nach `db:push`.
+- Nach `db:push`: `npm run db:types` (bis dahin meldet `tsc` die neuen Spalten im Test als unbekannt).
 
 ## QA Test Results
 _To be added by /qa_

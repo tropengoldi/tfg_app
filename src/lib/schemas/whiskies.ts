@@ -25,7 +25,40 @@ export const whiskyFormSchema = z.object({
     .trim()
     .max(2000, 'Höchstens 2000 Zeichen')
     .default(''),
+  // PROJ-25: optionale Kennzahlen, als String im Formular ('' = keine Angabe).
+  // Komma und Punkt sind erlaubt („46,3" / „46.3").
+  abv: z
+    .string()
+    .trim()
+    .default('')
+    .refine(
+      (v) => v === '' || (/^\d{1,3}([.,]\d)?$/.test(v) && toNumber(v)! <= 100),
+      'Alkohol zwischen 0 und 100 %, höchstens eine Nachkommastelle',
+    ),
+  ageYears: z
+    .string()
+    .trim()
+    .default('')
+    .refine(
+      (v) => v === '' || (/^\d{1,3}$/.test(v) && Number(v) <= 100),
+      'Alter in ganzen Jahren zwischen 0 und 100',
+    ),
+  price: z
+    .string()
+    .trim()
+    .default('')
+    .refine(
+      (v) => v === '' || (/^\d{1,6}([.,]\d{1,2})?$/.test(v)),
+      'Preis in Euro, höchstens zwei Nachkommastellen',
+    ),
 })
+
+/** „46,3" / „46.3" → 46.3; '' → null. */
+export function toNumber(value: string): number | null {
+  const v = value.trim()
+  if (v === '') return null
+  return Number(v.replace(',', '.'))
+}
 
 export type WhiskyFormInput = z.input<typeof whiskyFormSchema>
 export type WhiskyFormValues = z.output<typeof whiskyFormSchema>
