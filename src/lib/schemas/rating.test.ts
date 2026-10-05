@@ -10,18 +10,30 @@ describe('ratingFormSchema', () => {
     expect(ratingFormSchema.safeParse({ nose: 1, taste: 10, notes: 'ok' }).success).toBe(true)
   })
 
-  it('Nase außerhalb 1–5 wird abgelehnt', () => {
-    expect(ratingFormSchema.safeParse({ ...base, nose: 0 }).success).toBe(false)
-    expect(ratingFormSchema.safeParse({ ...base, nose: 6 }).success).toBe(false)
+  it('0 Punkte sind erlaubt (PROJ-19)', () => {
+    expect(ratingFormSchema.safeParse({ ...base, nose: 0 }).success).toBe(true)
+    expect(ratingFormSchema.safeParse({ ...base, taste: 0 }).success).toBe(true)
+    expect(ratingFormSchema.safeParse({ ...base, nose: 0, taste: 0 }).success).toBe(true)
   })
 
-  it('Geschmack außerhalb 1–10 wird abgelehnt', () => {
-    expect(ratingFormSchema.safeParse({ ...base, taste: 0 }).success).toBe(false)
-    expect(ratingFormSchema.safeParse({ ...base, taste: 11 }).success).toBe(false)
+  it('halbe Punkte sind erlaubt (PROJ-19)', () => {
+    expect(ratingFormSchema.safeParse({ ...base, nose: 2.5, taste: 9.5 }).success).toBe(true)
+    expect(ratingFormSchema.safeParse({ ...base, nose: 4.5, taste: 0.5 }).success).toBe(true)
   })
 
-  it('nur ganze Zahlen', () => {
-    expect(ratingFormSchema.safeParse({ ...base, nose: 3.5 }).success).toBe(false)
+  it('Nasenpunkte außerhalb 0–5 werden abgelehnt', () => {
+    expect(ratingFormSchema.safeParse({ ...base, nose: -0.5 }).success).toBe(false)
+    expect(ratingFormSchema.safeParse({ ...base, nose: 5.5 }).success).toBe(false)
+  })
+
+  it('Gaumenpunkte außerhalb 0–10 werden abgelehnt', () => {
+    expect(ratingFormSchema.safeParse({ ...base, taste: -1 }).success).toBe(false)
+    expect(ratingFormSchema.safeParse({ ...base, taste: 10.5 }).success).toBe(false)
+  })
+
+  it('nur ganze oder halbe Punkte', () => {
+    expect(ratingFormSchema.safeParse({ ...base, nose: 2.3 }).success).toBe(false)
+    expect(ratingFormSchema.safeParse({ ...base, taste: 7.25 }).success).toBe(false)
   })
 
   it('Notiz über 2000 Zeichen wird abgelehnt', () => {
@@ -42,12 +54,12 @@ describe('ratingFormSchema — Begriffe (PROJ-18)', () => {
   }
 
   it('Meldungen sprechen von Nasenpunkten und Gaumenpunkten', () => {
-    expect(messages({ ...base, nose: 6 })).toContain('Nasenpunkte liegen zwischen 1 und 5')
-    expect(messages({ ...base, taste: 11 })).toContain('Gaumenpunkte liegen zwischen 1 und 10')
+    expect(messages({ ...base, nose: 6 })).toContain('Nasenpunkte liegen zwischen 0 und 5')
+    expect(messages({ ...base, taste: 11 })).toContain('Gaumenpunkte liegen zwischen 0 und 10')
   })
 
   it('keine Meldung nennt noch „Geschmack"', () => {
-    for (const m of [...messages({ ...base, nose: 0 }), ...messages({ ...base, taste: 0 })]) {
+    for (const m of [...messages({ ...base, nose: -1 }), ...messages({ ...base, taste: -1 })]) {
       expect(m).not.toMatch(/Geschmack/)
     }
   })

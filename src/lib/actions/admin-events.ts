@@ -31,6 +31,7 @@ interface EventPayload {
   p_helper_id: string | undefined
   p_theme: string | undefined
   p_max_whiskies: number | undefined
+  p_rating_step: number
   participantIds: string[]
 }
 
@@ -56,6 +57,7 @@ function normalize(input: unknown): Normalized {
       p_helper_id: d.helperId === '' ? undefined : d.helperId,
       p_theme: theme,
       p_max_whiskies: maxWhiskies,
+      p_rating_step: Number(d.ratingStep),
       participantIds: d.participantIds,
     },
   }
@@ -76,6 +78,7 @@ export async function createEventAction(input: unknown): Promise<ActionResult> {
     p_helper_id: n.data.p_helper_id,
     p_theme: n.data.p_theme,
     p_max_whiskies: n.data.p_max_whiskies,
+    p_rating_step: n.data.p_rating_step,
   })
   if (error) return { error: messageForDbError(error) }
 
@@ -115,6 +118,7 @@ export async function updateEventAction(
     p_helper_id: n.data.p_helper_id,
     p_theme: n.data.p_theme,
     p_max_whiskies: n.data.p_max_whiskies,
+    p_rating_step: n.data.p_rating_step,
   })
   if (error) return { error: messageForDbError(error) }
 

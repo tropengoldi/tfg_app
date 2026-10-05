@@ -30,6 +30,8 @@ export const eventFormSchema = z
         'Zwischen 1 und 10',
       ),
     theme: z.string().trim().max(200, 'Höchstens 200 Zeichen').default(''),
+    // PROJ-19: Schrittweite der Bewertung. '1' = ganze, '0.5' = halbe Punkte.
+    ratingStep: z.enum(['1', '0.5']).default('1'),
   })
   .refine((d) => d.eventDate >= todayISO(), {
     message: 'Das Datum darf nicht in der Vergangenheit liegen',

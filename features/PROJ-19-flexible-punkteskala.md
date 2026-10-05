@@ -1,6 +1,6 @@
 # PROJ-19: Flexible Punkteskala (0 Punkte, 0,5er-Schritte)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -313,6 +313,33 @@ Keine.
 ### Arbeitsaufteilung
 - `/frontend` — Formular-Einstellung, Bewertungsansicht (Slider, −/+, Rückfrage), Anzeige-Helfer, Sammlung, Slider-Namen.
 - `/backend` — Migration (Schritte 1–7), Typen, Server-Aktionen um „Schrittweite" erweitern, Integrationstests.
+
+### Implementation Notes (Backend, 2026-10-05)
+- Migration `supabase/migrations/20261006120000_flexible_rating_scale.sql` (eine Transaktion,
+  Schritte 1–7 wie im Tech Design):
+  - `ratings.nose_points` / `taste_points` → `numeric(3,1)`, CHECK 0–5 / 0–10 und
+    „Vielfaches von 0,5"; `total_points` neu als `numeric(4,1)` GENERATED.
+  - `tasting_events.rating_step numeric(2,1) not null default 1`, CHECK `in (1, 0.5)`.
+  - Neuer Trigger `ratings_step` (SECURITY DEFINER, `search_path = ''`): Wert muss Vielfaches
+    der Schrittweite des Tastings sein, sonst **TS021** „In diesem Tasting werden nur ganze
+    Punkte vergeben."
+  - `create_event` / `update_event` mit `p_rating_step numeric default 1` (Prüfung 1 | 0,5 →
+    TS021, **nach** der Admin-Prüfung); Rümpfe aus der PROJ-18-Fassung; Sperre nach Start =
+    bestehende TS005-Regel. Rechte neu vergeben.
+  - `whisky_rankings` / `past_tastings` / `whisky_score_breakdown` neu, nur `::int` →
+    `::numeric` bei den Punktsummen; Filter, Gleichstandsregel, „ohne notes" unverändert.
+  - `collection_entries.rating` → `numeric(3,1)`, CHECK 0–10 und Vielfaches von 0,5.
+  - Alte CHECK-Constraints werden **ohne** `if exists` gedroppt — hieße einer anders, bricht
+    die Transaktion laut ab, statt eine alte „ab 1"-Regel stehen zu lassen.
+- **Abweichung vom Design:** `admin_list_events` liefert die Schrittweite **nicht** mit — das
+  Bearbeiten-Formular lädt das Event mit allen Spalten (`select('*')`), die Liste braucht sie nicht.
+- App-Server: `schemas/rating.ts` (0–5 / 0–10, `multipleOf(0.5)`), `schemas/collection.ts`
+  („Keine" oder 0–10 in 0,5; Wert als „7.5"), `schemas/admin-events.ts` (`ratingStep` `'1' | '0.5'`,
+  Default `'1'`), `actions/admin-events.ts` reicht `p_rating_step` an beide RPCs durch,
+  `errors.ts` TS021.
+- Tests: Unit 138/138 (u. a. neue Bereichs-/Halbpunkt-Fälle, Schrittweite im Event-Schema).
+  Neuer Integrationstest `rating-scale.integration.test.ts` (16 Fälle) — läuft nach `db:push`.
+- Nach `db:push`: `npm run db:types` (neue Spalten/Parameter in den TS-Typen).
 
 ## QA Test Results
 _To be added by /qa_

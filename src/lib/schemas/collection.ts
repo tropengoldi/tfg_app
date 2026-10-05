@@ -23,12 +23,13 @@ export const collectionEntryFormSchema = z.object({
     .default('')
     .refine((v) => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v), 'Ungültiges Datum'),
   valueNote: z.string().trim().max(200, 'Höchstens 200 Zeichen').default(''),
-  // Als String im Formular (Select); '' = keine Bewertung, sonst 1–10.
+  // Als String im Formular (Select); '' = keine Bewertung, sonst 0–10 in
+  // 0,5er-Schritten ("7.5") — PROJ-19.
   rating: z
     .string()
     .trim()
     .default('')
-    .refine((v) => v === '' || /^(10|[1-9])$/.test(v), 'Zwischen 1 und 10'),
+    .refine((v) => v === '' || /^(10|[0-9](\.5)?)$/.test(v), 'Zwischen 0 und 10 in halben Punkten'),
   notes: z.string().trim().max(2000, 'Höchstens 2000 Zeichen').default(''),
   owned: z.boolean().default(false),
 })

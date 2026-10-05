@@ -45,3 +45,22 @@ describe('eventFormSchema — Whisky-Steward (PROJ-11, Begriffe PROJ-18)', () =>
     for (const m of msgs) expect(m).not.toMatch(/Helfer/)
   })
 })
+
+describe('eventFormSchema — Schrittweite (PROJ-19)', () => {
+  it('Voreinstellung sind ganze Punkte', () => {
+    const r = eventFormSchema.safeParse(base)
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.ratingStep).toBe('1')
+  })
+
+  it('halbe Punkte sind wählbar', () => {
+    const r = eventFormSchema.safeParse({ ...base, ratingStep: '0.5' })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.ratingStep).toBe('0.5')
+  })
+
+  it('andere Schrittweiten werden abgelehnt', () => {
+    expect(eventFormSchema.safeParse({ ...base, ratingStep: '0.25' }).success).toBe(false)
+    expect(eventFormSchema.safeParse({ ...base, ratingStep: '2' }).success).toBe(false)
+  })
+})

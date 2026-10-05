@@ -46,14 +46,14 @@ describe('collectionEntryFormSchema', () => {
     ).toBe(false)
   })
 
-  it('Bewertung akzeptiert 1–10', () => {
-    for (const v of ['1', '5', '10']) {
+  it('Bewertung akzeptiert 0–10 in halben Punkten (PROJ-19)', () => {
+    for (const v of ['0', '0.5', '1', '5', '7.5', '9.5', '10']) {
       expect(collectionEntryFormSchema.safeParse({ ...base, rating: v }).success).toBe(true)
     }
   })
 
-  it('Bewertung außerhalb 1–10 wird abgelehnt', () => {
-    for (const v of ['0', '11', 'abc']) {
+  it('Bewertung außerhalb 0–10 oder kein halber Schritt wird abgelehnt', () => {
+    for (const v of ['-1', '10.5', '11', '7.3', '7,5', 'abc']) {
       expect(collectionEntryFormSchema.safeParse({ ...base, rating: v }).success).toBe(false)
     }
   })

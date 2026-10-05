@@ -32,6 +32,7 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   TS015: 'An diesem Tasting hängen bereits Whiskies.',
   TS016: 'Für diesen Abend sind bereits 10 Whiskys eingetragen — mehr sind nicht vorgesehen.',
   TS017: 'Der Whisky-Steward kann nicht gleichzeitig Gastgeber oder Teilnehmer dieses Abends sein.',
+  TS021: 'In diesem Tasting werden nur ganze Punkte vergeben.',
 
   // --- Standard-PostgreSQL-Codes -----------------------------------------
   '23505': 'Dieser Eintrag existiert bereits.',

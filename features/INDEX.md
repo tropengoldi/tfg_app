@@ -33,7 +33,7 @@
 | PROJ-16 | Nachrichten an Teilnehmer | Deployed | [PROJ-16-nachrichten-an-teilnehmer.md](PROJ-16-nachrichten-an-teilnehmer.md) | 2026-09-28 |
 | PROJ-17 | Web Push Benachrichtigungen für Nachrichten | Roadmap | – | 2026-09-29 |
 | PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | Deployed | [PROJ-18-begriffe-gaumenpunkte-whisky-steward.md](PROJ-18-begriffe-gaumenpunkte-whisky-steward.md) | 2026-10-05 |
-| PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Architected | [PROJ-19-flexible-punkteskala.md](PROJ-19-flexible-punkteskala.md) | 2026-10-05 |
+| PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | In Progress | [PROJ-19-flexible-punkteskala.md](PROJ-19-flexible-punkteskala.md) | 2026-10-05 |
 | PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Roadmap | – | 2026-10-05 |
 | PROJ-21 | Whisky-Steward bringt Whiskies mit | Roadmap | – | 2026-10-05 |
 | PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Roadmap | – | 2026-10-05 |
