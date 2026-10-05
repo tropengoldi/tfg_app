@@ -39,7 +39,7 @@
 | PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Roadmap | – | 2026-10-05 |
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
 | PROJ-24 | Eigene Live-Rangliste | Roadmap | – | 2026-10-05 |
-| PROJ-25 | Erweiterte Ergebnis-Statistiken | Approved | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
+| PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Roadmap | – | 2026-10-05 |
 
 <!-- Add features above this line -->
@@ -93,6 +93,12 @@ Sammlung immer 0,5er, Slider ab 0 mit −/+, Rückfrage bei 0/0) am 2026-10-05 a
 Punkte als `numeric(3,1)`, `tasting_events.rating_step`, Trigger TS021,
 Ranglisten-Sichten neu; 29/30 AC + 1 bewusste Abweichung, 2 Low-Bugs offen →
 PROJ-25; PROJ-18 BUG-1 (Slider-Screenreader-Name) dabei behoben).
+PROJ-25 (Erweiterte Ergebnis-Statistiken: Ausschank-Nr. + „Dein Platz" in der
+Rangliste, Statistik-Karten, Balken- und Punktdiagramm; dazu Alkohol/Alter/Preis
+im Eintrage-Formular, nach dem Abschluss für alle sichtbar) am 2026-10-05 als
+`v1.9.0` live (mit DB-Migration `20261007120000_results_stats.sql` — Spalten an
+`whisky_rankings` / `past_tastings` angehängt, TS022; neues Paket `recharts`;
+41/41 AC, 1 Low-Bug offen; PROJ-19 BUG-1/BUG-2 mitbehoben).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
@@ -132,6 +138,10 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       einen Wegwerf-Admin) umstellen, damit die Suite unabhängig von den
       Seed-Konten läuft. Danach kann das Test-Konto endgültig weg und das
       Admin-Passwort bleibt geändert.
+- [ ] **PROJ-25 BUG-1 (Low): Diagramme ohne Textalternative** — Balken- und Punktdiagramm
+      auf der Ergebnisseite tragen ihr `aria-label` auf einem `div` ohne Rolle; Screenreader
+      ignorieren es. Fix: `role="img"` + kurze Textzusammenfassung je Diagramm
+      (`metric-bar-chart.tsx`, `metric-scatter-chart.tsx`).
 - [ ] **E2E-Specs in CI sharden / `--workers=1`** (BUG-2) plus der projektweite
       transiente Hydration-Doppelrender
 

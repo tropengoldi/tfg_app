@@ -1,6 +1,6 @@
 # PROJ-25: Erweiterte Ergebnis-Statistiken
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -506,4 +506,16 @@ Migration `20261007120000_results_stats.sql` (vorher geprüft: kein echtes Tasti
 - **Recommendation:** Deploy. Migration ist bereits eingespielt. Nicht während eines laufenden Tastings deployen.
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-05 als `v1.9.0` (Push `8a6136c` auf `main` → Vercel-Auto-Deploy)
+- **DB-Migration:** `20261007120000_results_stats.sql` vorab per `db:push` durch den Nutzer
+  eingespielt (Reihenfolge DB → App eingehalten); `db:types` neu erzeugt
+- **Neues Paket:** `recharts` ^2.15 (über `npx shadcn add chart`)
+- **Pre-Deploy:** kein Tasting aktiv, Lint + Production-Build grün, keine neuen Umgebungsvariablen
+- **Post-Deploy-Verifikation:** `tests/PROJ-25-statistiken.spec.ts` + `tests/PROJ-19-punkteskala.spec.ts`
+  gegen die Produktions-URL — **46/46 grün** (Chromium + Mobile Safari)
+- **Behoben mit diesem Release:** PROJ-19 BUG-1 (TS022) und BUG-2 (Historie-Sieger bei 0-Punkten)
+- **Offen (Low):** BUG-1 — Diagramme ohne Textalternative für Screenreader (im Post-Deploy-Backlog)
+- **Rollback:** Vercel → vorherige Version „Promote to Production". Die alte App ignoriert die
+  neuen Sicht-Spalten; die Migration muss nicht zurückgedreht werden.
