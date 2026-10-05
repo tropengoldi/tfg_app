@@ -6,7 +6,7 @@
 
 Eine mobile-first Web-App, die den Ablauf eines privaten Whisky-Tastings vom Zettel auf
 das Smartphone holt. Jeder bringt Whiskies mit, der Gastgeber schenkt sie blind in einer nur
-ihm bekannten Reihenfolge aus, alle bewerten Nase und Geschmack — und am Ende des Abends
+ihm bekannten Reihenfolge aus, alle vergeben Nasen- und Gaumenpunkte — und am Ende des Abends
 steht die Rangliste sofort, statt mühsam ausgezählt zu werden. Jedes Tasting wird dauerhaft
 archiviert, sodass die Runde über Jahre nachvollziehen kann, welche Flasche wann gewonnen hat.
 
@@ -50,7 +50,7 @@ Details und Abhängigkeiten: siehe [features/INDEX.md](../features/INDEX.md).
    diese Angaben.
 3. **Gastgeber** legt die Ausschankreihenfolge fest und startet das Event.
 4. **Alle** bewerten den aktuellen Whisky blind — sie sehen nur „Whisky 3 von 8".
-   Nase 1–5, Geschmack 1–10, optional eigene Notizen.
+   Nasenpunkte 1–5, Gaumenpunkte 1–10, optional eigene Notizen.
 5. **Gastgeber** schaltet auf den nächsten Whisky weiter; alle Handys springen automatisch mit.
 6. **Gastgeber** schließt das Event ab. Erst jetzt werden die Whisky-Namen aufgelöst,
    die Rangliste erscheint samt Verkostungsvideos, und keine Bewertung kann mehr geändert
@@ -114,7 +114,7 @@ Vercel. `.mcp.json` ist gitignored, weil sie einen Supabase Personal Access Toke
   in einem neuen Tab öffnet. Kein eingebetteter Player, keine API-Abfrage, kein automatisches
   Suchen von Videos beim Anlegen eines Whiskys
 - **Keine Fotos oder Datei-Uploads** in dieser Version (Supabase Storage bleibt ungenutzt)
-- **Keine Aromen-Räder, Flavour-Profile oder Tasting-Notes-Vorlagen** — nur Nase, Geschmack
+- **Keine Aromen-Räder, Flavour-Profile oder Tasting-Notes-Vorlagen** — nur Nasenpunkte, Gaumenpunkte
   und ein Freitextfeld
 - **Keine Einladung von Gästen außerhalb der Runde** — geschlossener Nutzerkreis
 - **Keine parallelen Tastings** an unterschiedlichen Orten zur selben Zeit

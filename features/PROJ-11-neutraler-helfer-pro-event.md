@@ -1,5 +1,8 @@
 # PROJ-11: Neutraler Helfer pro Event
 
+> **Hinweis (PROJ-18, 2026-10-05):** Die Rolle heißt seit PROJ-18 „Whisky-Steward". Diese
+> Spec verwendet den damaligen Namen „Helfer".
+
 ## Status: Deployed
 **Created:** 2026-08-31
 **Last Updated:** 2026-08-31

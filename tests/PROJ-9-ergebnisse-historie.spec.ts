@@ -252,8 +252,8 @@ test('Einzelbewertungen: aufklappen zeigt die Punkte je Person', async ({ page }
 
   const first = ranking(page).first()
   await first.getByRole('button', { name: /Einzelbewertungen/ }).click()
-  await expect(first).toContainText('Nase 5 · Geschmack 9')
-  await expect(first).toContainText('Nase 4 · Geschmack 8')
+  await expect(first).toContainText('Nase 5 · Gaumen 9')
+  await expect(first).toContainText('Nase 4 · Gaumen 8')
 })
 
 test('Notizen: die eigene ist sichtbar, die fremde nie', async ({ page }) => {

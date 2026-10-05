@@ -95,7 +95,7 @@ horizontal gescrollt; das ist der Ausnahmefall, nicht der Normalfall.
 
 ### Bewertungs-Slider
 `shadcn/ui slider` mit vergrößertem Thumb (mindestens 28 px) und einem Zahlen-Badge, das den
-aktuellen Wert in der Display-Schrift zeigt. Nase 1–5, Geschmack 1–10, Schrittweite 1.
+aktuellen Wert in der Display-Schrift zeigt. Nasenpunkte 1–5, Gaumenpunkte 1–10, Schrittweite 1.
 Beide Slider bekommen sichtbare Skalenmarkierungen an den Enden und einen `aria-valuetext`
 in Worten („4 von 5 Nasenpunkten").
 
@@ -134,6 +134,9 @@ und wird von denselben Regeln geschützt.
 
 Durchgehend **Deutsch**, geduzt. Sachlich und knapp, nicht kumpelhaft.
 Fachbegriffe der Runde beibehalten: Dram, Nase, Abgang, Destillerie, Fassstärke.
+Bewertungskategorien heißen **Nasenpunkte** und **Gaumenpunkte** (in kompakten Zeilen
+„Nase" / „Gaumen"); die neutrale Rolle aus PROJ-11 heißt **Whisky-Steward** — immer in
+voller Form, nie „Helfer" oder nur „Steward" (PROJ-18).
 
 Fehlermeldungen sagen, was zu tun ist:
 „Die Runde wurde bereits weitergeschaltet." statt „Konflikt (409)".

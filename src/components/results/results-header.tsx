@@ -50,7 +50,7 @@ export function ResultsHeader({
         {head.helper_name ? (
           <p className="flex items-center gap-1.5 text-muted-foreground">
             <UserRound className="h-3.5 w-3.5 shrink-0" />
-            Helfer:{' '}
+            Whisky-Steward:{' '}
             {head.helper_id ? (
               <Link href={`/profil/${head.helper_id}`} className="hover:underline">
                 {head.helper_name}

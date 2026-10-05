@@ -36,11 +36,11 @@ export const eventFormSchema = z
     path: ['eventDate'],
   })
   .refine((d) => d.helperId === '' || d.helperId !== d.hostId, {
-    message: 'Der Helfer kann nicht der Gastgeber sein',
+    message: 'Der Whisky-Steward kann nicht der Gastgeber sein',
     path: ['helperId'],
   })
   .refine((d) => d.helperId === '' || !d.participantIds.includes(d.helperId), {
-    message: 'Der Helfer kann nicht gleichzeitig Teilnehmer sein',
+    message: 'Der Whisky-Steward kann nicht gleichzeitig Teilnehmer sein',
     path: ['helperId'],
   })
 

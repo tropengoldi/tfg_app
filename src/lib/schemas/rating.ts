@@ -9,13 +9,13 @@ export const ratingFormSchema = z.object({
   nose: z
     .number()
     .int('Nur ganze Zahlen')
-    .min(1, 'Nase liegt zwischen 1 und 5')
-    .max(5, 'Nase liegt zwischen 1 und 5'),
+    .min(1, 'Nasenpunkte liegen zwischen 1 und 5')
+    .max(5, 'Nasenpunkte liegen zwischen 1 und 5'),
   taste: z
     .number()
     .int('Nur ganze Zahlen')
-    .min(1, 'Geschmack liegt zwischen 1 und 10')
-    .max(10, 'Geschmack liegt zwischen 1 und 10'),
+    .min(1, 'Gaumenpunkte liegen zwischen 1 und 10')
+    .max(10, 'Gaumenpunkte liegen zwischen 1 und 10'),
   notes: z.string().trim().max(2000, 'Höchstens 2000 Zeichen').default(''),
 })
 

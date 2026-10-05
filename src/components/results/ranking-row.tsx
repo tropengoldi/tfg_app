@@ -93,7 +93,7 @@ export function RankingRow({
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>
-              Nase {row.noseTotal} · Geschmack {row.tasteTotal}
+              Nase {row.noseTotal} · Gaumen {row.tasteTotal}
             </span>
             {avg ? <span>{avg}</span> : null}
             <span>
@@ -144,7 +144,7 @@ export function RankingRow({
                     >
                       <span className="min-w-0 truncate">{b.raterName}</span>
                       <span className="shrink-0 tabular-nums text-muted-foreground">
-                        Nase {b.nose} · Geschmack {b.taste} ·{' '}
+                        Nase {b.nose} · Gaumen {b.taste} ·{' '}
                         <span className="font-medium text-foreground">{b.total}</span>
                       </span>
                     </li>

@@ -170,18 +170,18 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
           name="helperId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Helfer (optional)</FormLabel>
+              <FormLabel>Whisky-Steward (optional)</FormLabel>
               <Select
                 value={field.value || 'none'}
                 onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Kein Helfer" />
+                    <SelectValue placeholder="Kein Whisky-Steward" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="none">Kein Helfer</SelectItem>
+                  <SelectItem value="none">Kein Whisky-Steward</SelectItem>
                   {helperOptions.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.display_name}
@@ -190,8 +190,8 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
                 </SelectContent>
               </Select>
               <FormDescription>
-                Der Helfer schenkt aus und steuert den Abend, verkostet aber
-                selbst nicht mit. Ist ein Helfer benannt, verkostet der Gastgeber
+                Der Whisky-Steward schenkt aus und steuert den Abend, verkostet
+                aber selbst nicht mit. Ist ein Whisky-Steward benannt, verkostet der Gastgeber
                 blind wie alle anderen. Nur solange das Tasting in Vorbereitung
                 ist änderbar.
               </FormDescription>

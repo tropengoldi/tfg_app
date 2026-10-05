@@ -1,6 +1,6 @@
 # PROJ-18: Begriffe: Gaumenpunkte & Whisky-Steward
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -272,6 +272,20 @@ Keine.
 ### Arbeitsaufteilung
 - `/frontend` — alle App-Texte, Fehlercode-Tabelle, Doku, E2E-Anpassungen.
 - `/backend` — die Text-Migration + `test:rls`-Lauf.
+
+### Implementation Notes (Frontend, 2026-10-05)
+- Texte umgestellt in: `rating-view.tsx` (Slider-Beschriftungen + Screenreader-Namen),
+  `ranking-row.tsx` (Summenzeile + Einzelwertungen, Kurzform „Nase · Gaumen"),
+  `results-header.tsx`, `event-form.tsx` (Feld, „Kein Whisky-Steward", Erklärtext),
+  `event-row.tsx`, `errors.ts` (TS017), `schemas/admin-events.ts` (2 Validierungsmeldungen).
+- **Zusätzlich zur Bestandsaufnahme gefunden:** Validierungsmeldungen in
+  `schemas/rating.ts` („Nase liegt zwischen …") → „Nasenpunkte/Gaumenpunkte liegen
+  zwischen …".
+- Doku: `docs/PRD.md` (Vision, Kernablauf, Non-Goals), `docs/design-system.md`
+  (Slider-Passage + Begriffsregel), Hinweis oben in der PROJ-11-Spec.
+- E2E: PROJ-9 (Einzelwertungen) und PROJ-11 (Formular, Liste, Ergebnis-Kopf) auf neue
+  Texte umgestellt — 19/19 grün (Chromium). Lint, 127/127 Unit-Tests, Production-Build grün.
+- Offen für `/backend`: Migration für die 15 DB-Meldungstexte (Tech Design C).
 
 ## QA Test Results
 _To be added by /qa_

@@ -193,7 +193,7 @@ export function RatingView({
 
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <label className="text-sm font-medium">Nase</label>
+              <label className="text-sm font-medium">Nasenpunkte</label>
               <span className="font-display text-3xl tabular-nums">{nose}</span>
             </div>
             <Slider
@@ -216,7 +216,7 @@ export function RatingView({
 
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <label className="text-sm font-medium">Geschmack</label>
+              <label className="text-sm font-medium">Gaumenpunkte</label>
               <span className="font-display text-3xl tabular-nums">{taste}</span>
             </div>
             <Slider
@@ -225,7 +225,7 @@ export function RatingView({
               max={10}
               step={1}
               disabled={!editable}
-              aria-label="Geschmackspunkte"
+              aria-label="Gaumenpunkte"
               onValueChange={([v]) => {
                 setTaste(v)
                 markDirty()

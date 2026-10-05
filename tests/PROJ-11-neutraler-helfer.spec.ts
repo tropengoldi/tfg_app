@@ -86,10 +86,10 @@ test('Event-Formular: „Helfer"-Feld vorhanden, Gastgeber ist dort nicht wählb
   await login(page, admin.email)
   await gotoForm(page, '/admin/events/neu')
 
-  // Feld ist da, Default „Kein Helfer".
-  const helferField = page.getByLabel('Helfer (optional)')
+  // Feld ist da, Default „Kein Whisky-Steward" (PROJ-18).
+  const helferField = page.getByLabel('Whisky-Steward (optional)')
   await expect(helferField).toBeVisible()
-  await expect(helferField).toHaveText(/Kein Helfer/)
+  await expect(helferField).toHaveText(/Kein Whisky-Steward/)
 
   // Gastgeber wählen …
   await page.getByLabel('Gastgeber').click()
@@ -97,19 +97,19 @@ test('Event-Formular: „Helfer"-Feld vorhanden, Gastgeber ist dort nicht wählb
 
   // … dann taucht dieselbe Person im Helfer-Feld nicht auf.
   await helferField.click()
-  await expect(page.getByRole('option', { name: 'Kein Helfer' })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Kein Whisky-Steward' })).toBeVisible()
   await expect(page.getByRole('option', { name: `QA h${STAMP}` })).toHaveCount(0)
   // Der Helfer-Kandidat (nicht Gastgeber, kein Teilnehmer) ist wählbar.
   await expect(page.getByRole('option', { name: `QA x${STAMP}` })).toBeVisible()
 })
 
-test('Admin-Liste zeigt „Helfer: {Name}" (AC4)', async ({ page }) => {
+test('Admin-Liste zeigt „Whisky-Steward: {Name}" (AC4)', async ({ page }) => {
   const evId = await eventWithHelper('list', 0)
   await login(page, admin.email)
   await page.goto('/admin/events', { waitUntil: 'networkidle' })
 
   const row = page.locator('li', { hasText: LOC('list') })
-  await expect(row).toContainText(`Helfer: QA x${STAMP}`)
+  await expect(row).toContainText(`Whisky-Steward: QA x${STAMP}`)
   expect(evId).toBeTruthy()
 })
 
@@ -174,7 +174,7 @@ test('Gastgeber-mit-Helfer: kein „Steuern", aber Eckdaten pflegbar (AC14/AC16,
   await closeAllActiveEvents()
 })
 
-test('Ergebnis-Kopf zeigt „Helfer: {Name}", nicht in „Wer war dabei" (AC21)', async ({ page }) => {
+test('Ergebnis-Kopf zeigt „Whisky-Steward: {Name}", nicht in „Wer war dabei" (AC21)', async ({ page }) => {
   const evId = await createEventDirect({
     hostId: host.id,
     createdBy: admin.id,
@@ -200,7 +200,7 @@ test('Ergebnis-Kopf zeigt „Helfer: {Name}", nicht in „Wer war dabei" (AC21)'
   await login(page, guest.email)
   await page.goto(`/tastings/${evId}/ergebnisse`, { waitUntil: 'networkidle' })
 
-  await expect(page.getByText(`Helfer: QA x${STAMP}`)).toBeVisible()
+  await expect(page.getByText(`Whisky-Steward: QA x${STAMP}`)).toBeVisible()
   await expect(page.getByText(`Gastgeber: QA h${STAMP}`)).toBeVisible()
 
   // Der Helfer steht nicht in „Wer war dabei".
