@@ -39,7 +39,7 @@
 | PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Roadmap | – | 2026-10-05 |
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
 | PROJ-24 | Eigene Live-Rangliste | Roadmap | – | 2026-10-05 |
-| PROJ-25 | Erweiterte Ergebnis-Statistiken | Planned | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
+| PROJ-25 | Erweiterte Ergebnis-Statistiken | Architected | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Roadmap | – | 2026-10-05 |
 
 <!-- Add features above this line -->

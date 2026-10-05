@@ -1,6 +1,6 @@
 # PROJ-25: Erweiterte Ergebnis-Statistiken
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -8,18 +8,23 @@
 - **Requires: PROJ-9 (Ergebnisse & Historie)** — Ergebnisseite, Rangliste, Historien-Liste.
 - **Requires: PROJ-19 (Flexible Punkteskala)** — Punkte können halbe Werte und 0 sein;
   Anzeige über den gemeinsamen Punkte-Helfer.
-- **Nutzt PROJ-5 (Whisky-Erfassung)** — Alkoholgehalt, Alter und Preis werden dort (optional)
-  erfasst; das Eintrage-Formular bekommt einen Hinweis zur Preis-Sichtbarkeit.
+- **Erweitert PROJ-5 (Whisky-Erfassung)** — das Eintrage-Formular bekommt die optionalen Felder
+  Alkohol, Alter und Preis (heute nur Name, Video-Link, Notiz), inkl. Hinweis zur Preis-Sichtbarkeit.
 - **Behebt PROJ-19 BUG-1 und BUG-2** (siehe unten).
 
 ## Kontext
 
 Nach dem Abschluss zeigt die Ergebnisseite heute die Rangliste mit Name, Destillerie,
 Region, „mitgebracht von", Punkten und Video. **Nicht** sichtbar sind: die
-Ausschank-Nummer, die eigene Sicht des Betrachters, sowie Alkoholgehalt, Alter und Preis —
-diese Angaben werden beim Eintragen erfasst, bleiben aber auch nach der Auflösung geheim.
+Ausschank-Nummer, die eigene Sicht des Betrachters, sowie Alkoholgehalt, Alter und Preis.
 
-PROJ-25 ergänzt die Ergebnisseite um:
+**Befund (2026-10-05, /architecture):** Alkoholgehalt, Alter und Preis werden heute **gar nicht
+erfasst** — das Eintrage-Formular (PROJ-5) hat nur Name, Video-Link und Notiz, obwohl die
+Datenbank die Felder kennt. In der Live-DB sind sie bei allen 8 Whiskies leer. PROJ-25
+nimmt deshalb die drei Felder ins Formular auf (Entscheidung des Nutzers: Variante a).
+
+PROJ-25 ergänzt:
+0. im **Eintrage-Formular** die optionalen Felder Alkohol (%), Alter (Jahre) und Preis (€),
 1. **Ausschank-Nummer** und **eigene Platzierung** in der Rangliste,
 2. einen Abschnitt **„Statistiken"** unter der Rangliste mit Hervorhebungs-Karten,
 3. zwei **Diagramme**: Balken mit Kennzahl-Umschalter und ein Punktdiagramm mit wählbaren Achsen,
@@ -68,6 +73,7 @@ Runde hinweg (PRD-Non-Goal).
 - **Export / Teilen der Diagramme** (Bild, PDF).
 - **Preis privat halten pro Whisky** — wer ihn nicht teilen will, trägt keinen ein.
 - **Nachträgliches Ändern** von Alkohol/Alter/Preis nach dem Abschluss.
+- **Destillerie / Region im Eintrage-Formular** — bewusst nicht Teil von PROJ-25 (eigener Wunsch bei Bedarf).
 
 ## Acceptance Criteria
 
@@ -88,6 +94,22 @@ Runde hinweg (PRD-Non-Goal).
 - [ ] Angenommen die Rangliste wird auf einem 360 px breiten Handy angezeigt, wenn ein Tasting
   10 Whiskies hat, dann bleiben Ausschank-Nummer und eigene Platzierung ohne horizontales
   Scrollen lesbar.
+
+### Erfassung im Eintrage-Formular (PROJ-5)
+- [ ] Angenommen ein Teilnehmer trägt einen Whisky ein oder bearbeitet ihn (Tasting in
+  Vorbereitung), wenn er das Formular öffnet, dann gibt es die optionalen Felder „Alkohol (%)",
+  „Alter (Jahre)" und „Preis (€)".
+- [ ] Angenommen der Teilnehmer gibt „46,3" bzw. „46.3" bei Alkohol ein, wenn er speichert,
+  dann wird 46,3 % gespeichert (Komma und Punkt erlaubt, eine Nachkommastelle).
+- [ ] Angenommen ein Wert liegt außerhalb (Alkohol nicht zwischen 0 und 100, Alter keine ganze
+  Zahl zwischen 0 und 100, Preis negativ oder mehr als zwei Nachkommastellen), wenn er
+  speichert, dann erscheint eine Validierungsmeldung am Feld, und nichts wird gespeichert.
+- [ ] Angenommen die Felder bleiben leer, wenn er speichert, dann wird ohne diese Angaben
+  gespeichert (alle drei optional).
+- [ ] Angenommen ein bestehender Whisky wird bearbeitet, wenn das Formular öffnet, dann sind
+  vorhandene Werte vorausgefüllt (mit Komma).
+- [ ] Angenommen das Formular wird auf 360 px angezeigt, dann sind die drei Felder ohne
+  horizontales Scrollen bedienbar (Zahlentastatur auf dem Handy).
 
 ### Freigabe von Alkohol, Alter, Preis
 - [ ] Angenommen ein Tasting ist abgeschlossen, wenn ein Mitglied die Ergebnisseite öffnet,
@@ -187,7 +209,7 @@ Runde hinweg (PRD-Non-Goal).
 - Diagramme in Dark- und Light-Mode lesbar; Farben aus dem Design-System.
 
 ## Open Questions
-- [ ] Diagramm-Bibliothek und genaue Darstellung → `/architecture`.
+- [x] Diagramm-Bibliothek und genaue Darstellung → `/architecture`: shadcn-Chart (Recharts), siehe Tech Design.
 
 ## Decision Log
 
@@ -205,18 +227,128 @@ Runde hinweg (PRD-Non-Goal).
 | Übereinstimmung als „Ø X Plätze daneben" + „Favorit landete auf Platz Y" | Ohne Statistik-Vorwissen verständlich (keine Korrelationskoeffizienten) | 2026-10-05 |
 | Fehlendes Alter → 3 Jahre (markiert); fehlender Alkohol/Preis → „keine Angabe" | Alter-Regel vom Nutzer vorgegeben (gesetzliches Mindestalter für Scotch); ein angenommener Alkohol/Preis würde das Bild verfälschen | 2026-10-05 |
 | Punktdiagramm startet mit Alter × Gesamtpunkte | Die naheliegendste Frage der Runde | 2026-10-05 |
+| Alkohol/Alter/Preis werden als Teil von PROJ-25 im Eintrage-Formular erfasst (Variante a) | Ohne Erfassung wären Diagramme und Preis-Leistung leer; DB-Seite existiert bereits, Aufwand klein. Destillerie/Region bewusst nicht ergänzt | 2026-10-05 |
 | PROJ-19 BUG-1 und BUG-2 werden hier mit behoben | BUG-2 betrifft dieselbe Ergebnis-Anzeige; BUG-1 ist klein und thematisch verwandt | 2026-10-05 |
 
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| Diagramme mit der shadcn-Chart-Komponente (baut auf Recharts auf) | „shadcn first"-Regel des Projekts; Farben/Themes (Dark/Light) kommen aus dem Design-System; Recharts kann Balken- und Punktdiagramme und Tooltips beim Antippen und ist React-19-tauglich | 2026-10-05 |
+| Verworfen: eigene SVG-Diagramme | Weniger Abhängigkeit, aber Achsen, Tooltips, Touch und Barrierefreiheit müssten selbst gebaut werden | 2026-10-05 |
+| Alkohol/Alter/Preis kommen über die bestehende Ranglisten-Sicht (drei Spalten angehängt), **keine** Änderung an den Zugriffsregeln der geheimen Whisky-Tabelle | Die Sicht liefert ohnehin nur abgeschlossene Tastings an aktive Mitglieder — „sichtbar erst nach dem Abschluss" ist damit automatisch erfüllt, ohne die Blindheits-Regeln anzufassen | 2026-10-05 |
+| Alle Statistiken werden auf dem Server aus bereits geladenen Daten berechnet (eigenes, testbares Rechen-Modul), keine neuen Datenbank-Funktionen | 7–10 Whiskies, ein paar Dutzend Einzelwertungen — trivial klein; reine Funktionen sind einfach zu testen und später (PROJ-24) wiederverwendbar | 2026-10-05 |
+| Eigene Platzierung aus den eigenen Bewertungszeilen des Betrachters | Die eigene Zeile ist nach RLS ohnehin lesbar; keine neue Freigabe nötig | 2026-10-05 |
+| Historie-Sieger über „Anzahl Bewertungen des Siegers > 0" statt „Punkte > 0" (PROJ-19 BUG-2) | 0 Punkte sind seit PROJ-19 eine gültige Bewertung | 2026-10-05 |
+| Eigener Fehlercode TS022 „Nur ganze oder halbe Punkte." (PROJ-19 BUG-1) | Trennt „kein halber Schritt" (TS022) sauber von „halbe Punkte in einem 1er-Tasting" (TS021) | 2026-10-05 |
+| Eintrage-Formular: Alkohol/Alter/Preis über die bestehenden Wege (Anlegen-Funktion, spaltengenaue Änderung) | Datenbank akzeptiert die Felder bereits (Parameter und Spalten-Rechte vorhanden) — nur Formular und Prüfregeln fehlen | 2026-10-05 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Überwiegend **Oberfläche + Rechenlogik**. Die Datenbank bekommt nur eine kleine Migration
+(Spalten an zwei bestehende Sichten anhängen, Meldung für BUG-1). Keine neue Tabelle, keine
+neue Zugriffsregel, keine neue Route. **Ein neues Paket:** Recharts (über die shadcn-Chart-Komponente).
+
+### A) Bausteine
+
+```
+Meine Whiskys – Eintrage-Dialog (PROJ-5)
++-- bestehend: Name, Video-Link, Notiz
++-- NEU: Alkohol (%)   Alter (Jahre)   Preis (€)   (Zahlentastatur, alle optional)
+    +-- Hinweis am Preis: „Wird nach dem Abschluss für alle sichtbar"
+
+Ergebnisseite (PROJ-9)
++-- Ergebnis-Kopf (unverändert)
++-- Rangliste
+|   +-- Zeile: NEU „#3" (Ausschank-Nummer) + NEU „Dein Platz: 2" (nur wer bewertet hat)
+|   +-- aufgeklappt: NEU Alkohol · Alter · Preis (sofern vorhanden)
++-- NEU Abschnitt „Statistiken" (nur wenn es Bewertungen gibt)
+    +-- Karten (je nur, wenn die Bedingung erfüllt ist)
+    |   +-- Preis-Leistungs-Sieger
+    |   +-- Konsens-Whisky / Umstrittenster Whisky
+    |   +-- Nase gegen Gaumen
+    |   +-- Deine Übereinstimmung
+    +-- Balkendiagramm
+    |   +-- Umschalter (Tabs): Platzierung · Nase · Gaumen · Alkohol · Alter · Preis
+    |   +-- ein waagerechter Balken je Whisky „#3 Talisker 10"; „keine Angabe" / „angenommen"
+    +-- Punktdiagramm
+        +-- zwei Auswahlfelder: X-Achse, Y-Achse (Start: Alter × Gesamtpunkte)
+        +-- Punkte antippbar (Tooltip: #, Name, beide Werte)
+        +-- Fußzeile „N Whiskies ohne Angabe nicht dargestellt"
+
+Historien-Liste (PROJ-9)
++-- Sieger-Anzeige mit korrigierter Regel (BUG-2)
+```
+
+### B) Daten — was neu erfasst oder sichtbar wird
+
+**Erfassung (Eintrage-Formular):** Alkohol (0–100 %, eine Nachkommastelle), Alter (ganze
+Jahre 0–100), Preis (€, ≥ 0, zwei Nachkommastellen) — alle optional. Die Datenbank kennt die
+Felder seit PROJ-1; es fehlten nur Formular und Prüfregeln.
+
+**Freigabe nach dem Abschluss:** Die bestehende Ranglisten-Sicht liefert zusätzlich
+Alkohol, Alter und Preis je Whisky. Diese Sicht zeigt **nur abgeschlossene** Tastings und
+**nur aktiven Mitgliedern** — vor dem Abschluss bleibt alles wie heute verborgen.
+
+**Historie:** Die Historien-Sicht liefert zusätzlich die Anzahl der Bewertungen des
+Siegers (für BUG-2).
+
+**Eigene Platzierung / Übereinstimmung:** aus den eigenen Bewertungszeilen des Betrachters,
+die er heute schon lesen darf.
+
+### C) Rechenlogik (eigenes Modul, rein, unit-getestet)
+Ein Modul „Ergebnis-Statistiken" bekommt Rangliste, Einzelwertungen und die eigenen
+Bewertungen und liefert:
+- eigene Platzierung je Whisky (Gleichstand: Gesamt → Gaumen → Nase → Ausschank)
+- Preis-Leistung (Punkte pro 10 €; Preis 0 oder leer → nicht berücksichtigt; ≥ 2 Preise)
+- Streuung je Whisky (ab 3 Bewertungen) → Konsens / umstritten (nicht doppelt)
+- Nasen- und Gaumen-Platz je Whisky → größter Abstand (0 → keine Karte)
+- Übereinstimmung: Ø Platzabstand über selbst bewertete Whiskies (ab 2), Platz des eigenen Favoriten
+- Diagramm-Daten je Kennzahl inkl. „fehlt" / „angenommen" (Alter 3)
+- Gleichstände bei Karten: besser platziert, dann niedrigere Ausschank-Nummer
+
+Berechnet wird auf dem Server beim Laden der Ergebnisseite; an die Diagramme gehen nur die
+fertigen Zahlen.
+
+### D) Diagramme
+shadcn-Chart-Komponente (Recharts) als Client-Bausteine:
+- **Balken:** waagerecht, Beschriftung gekürzt, voller Name im Tooltip; bei „Platzierung" ist
+  Platz 1 der längste Balken. Fehlende Werte als Text „keine Angabe".
+- **Punkte:** zwei Achsen-Auswahlen (shadcn Select), Antippen zeigt Tooltip; ausgelassene
+  Whiskies in einer Fußzeile; < 2 darstellbare → „Zu wenige Angaben".
+- Farben über die Design-System-Variablen → Dark/Light automatisch.
+- Höhe so bemessen, dass 10 Balken bei 360 px ohne Scrollen passen.
+
+### E) Mitbehobene PROJ-19-Bugs
+- **BUG-2:** Historie nennt den Sieger, sobald er mindestens eine Bewertung hat (statt „Punkte > 0").
+- **BUG-1:** Die Bewertungs-Prüfung beim Speichern unterscheidet „kein ganzer/halber Schritt"
+  (neu TS022 „Nur ganze oder halbe Punkte.") von „halbe Punkte im 1er-Tasting" (TS021).
+
+### F) Migration (eine Datei)
+1. Ranglisten-Sicht: Alkohol, Alter, Preis **ans Ende angehängt** (bestehende Spalten,
+   Filter und Rechte unverändert).
+2. Historien-Sicht: Anzahl Bewertungen des Siegers angehängt.
+3. Bewertungs-Prüfung: TS022 für Werte, die kein Vielfaches von 0,5 sind.
+Danach Typen neu erzeugen. Ausrollen wie gewohnt: `db:push` → App. Die alte App ignoriert
+die neuen Spalten.
+
+### G) Tests
+- **Unit:** Rechen-Modul (alle Karten, Gleichstände, Leerzustände, Alter-Annahme),
+  Formular-Schema (Komma/Punkt, Grenzen).
+- **DB-Integration:** neue Spalten nur bei abgeschlossenen Tastings sichtbar (laufendes
+  Tasting: Teilnehmer sieht weder über Sicht noch Tabelle Alkohol/Alter/Preis); BUG-1 (TS022);
+  Historie mit 0-Punkten.
+- **E2E:** Formular-Felder, „#3" + „Dein Platz", Karten, Umschalter, Achsenwahl, 360 px, Dark Mode.
+
+### H) Abhängigkeiten (Pakete)
+- `recharts` — über `npx shadcn@latest add chart` (bringt die shadcn-Chart-Hülle mit)
+
+### Arbeitsaufteilung
+- `/backend` (klein, zuerst): Migration, Typen, Integrationstests.
+- `/frontend`: Formular-Felder, Rangliste-Ergänzungen, Rechen-Modul, Karten, Diagramme, BUG-2-Anzeige.
 
 ## QA Test Results
 _To be added by /qa_
