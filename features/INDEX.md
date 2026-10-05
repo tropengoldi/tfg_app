@@ -33,7 +33,7 @@
 | PROJ-16 | Nachrichten an Teilnehmer | Deployed | [PROJ-16-nachrichten-an-teilnehmer.md](PROJ-16-nachrichten-an-teilnehmer.md) | 2026-09-28 |
 | PROJ-17 | Web Push Benachrichtigungen für Nachrichten | Roadmap | – | 2026-09-29 |
 | PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | Deployed | [PROJ-18-begriffe-gaumenpunkte-whisky-steward.md](PROJ-18-begriffe-gaumenpunkte-whisky-steward.md) | 2026-10-05 |
-| PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Approved | [PROJ-19-flexible-punkteskala.md](PROJ-19-flexible-punkteskala.md) | 2026-10-05 |
+| PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Deployed | [PROJ-19-flexible-punkteskala.md](PROJ-19-flexible-punkteskala.md) | 2026-10-05 |
 | PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Roadmap | – | 2026-10-05 |
 | PROJ-21 | Whisky-Steward bringt Whiskies mit | Roadmap | – | 2026-10-05 |
 | PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Roadmap | – | 2026-10-05 |
@@ -87,6 +87,12 @@ PROJ-18 (Begriffe: Nasenpunkte/Gaumenpunkte, Rolle „Whisky-Steward") am
 `20261005120000_whisky_steward_messages.sql` — nur Meldungstexte; 18/19
 Prüfpunkte, 1 vorbestehender Low-Bug (Slider ohne zugänglichen Namen, BUG-1)
 wird mit PROJ-19 behoben).
+PROJ-19 (Flexible Punkteskala: 0 Punkte, 0,5er-Schritte je Tasting, private
+Sammlung immer 0,5er, Slider ab 0 mit −/+, Rückfrage bei 0/0) am 2026-10-05 als
+`v1.8.0` live (mit DB-Migration `20261006120000_flexible_rating_scale.sql` —
+Punkte als `numeric(3,1)`, `tasting_events.rating_step`, Trigger TS021,
+Ranglisten-Sichten neu; 29/30 AC + 1 bewusste Abweichung, 2 Low-Bugs offen →
+PROJ-25; PROJ-18 BUG-1 (Slider-Screenreader-Name) dabei behoben).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
@@ -208,7 +214,7 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-22** | **Sieger-Tipp & „Kenner der Woche"** | Während eines laufenden Tastings tippt jeder Teilnehmer blind („Whisky 3"), welcher Whisky gewinnt. Nach dem Abschluss werden alle mit richtigem Tipp als **„Kenner der Woche"** ausgewiesen — **im jeweiligen Tasting** (Ergebnisseite) und als **Zähler in der eigenen Profil-Bilanz** (PROJ-10/14). **Keine** Kenner-Rangliste über alle Tastings hinweg (PRD-Non-Goal bleibt). Tipps anderer bleiben bis zum Abschluss unsichtbar. | P2 | PROJ-19 |
 | **PROJ-23** | **Vergleichs-Merker** | Privater Merker während des Tastings: Pro Whisky kann man per Mehrfachauswahl festhalten, mit welchen anderen Whiskies man ihn noch einmal direkt vergleichen möchte (z. B. „Whisky 2 ↔ 5"). Nur für einen selbst sichtbar. | P2 | – |
 | **PROJ-24** | **Eigene Live-Rangliste** | Während des Tastings sieht jeder Teilnehmer seine **persönliche** Rangliste, berechnet nur aus den eigenen bisherigen Wertungen (blinde Nummern, keine Namen, keine fremden Punkte). | P2 | PROJ-19 |
-| **PROJ-25** | **Erweiterte Ergebnis-Statistiken** | Nach dem Abschluss: (1) Rangliste zeigt die **Ausschank-Nummer** jedes Whiskys; (2) Rangliste zeigt je Whisky die **eigene Platzierung** des Betrachters; (3) **Vergleichsdiagramm** der Tasting-Whiskies über Gesamtplatzierung, Nasenpunkte, Gaumenpunkte, Alkoholgehalt und Alter (ohne Altersangabe: 3 Jahre angenommen, im Diagramm als „angenommen" markiert). Zusatzvorschläge für die Spec: **Preis-Leistungs-Sieger** (Punkte je Euro, nur wenn Preise erfasst sind — `price_eur` existiert bereits), **Konsens- vs. umstrittenster Whisky** (Streuung der Bewertungen), **Nase-/Gaumen-Diskrepanz** (größte Abweichung zwischen Nasen- und Gaumenrang), **persönliche Übereinstimmung** mit der Gesamtrangliste. Alles pro Tasting, keine Auswertung über die Runde hinweg. | P1 | PROJ-19 |
+| **PROJ-25** | **Erweiterte Ergebnis-Statistiken** | Nach dem Abschluss: (1) Rangliste zeigt die **Ausschank-Nummer** jedes Whiskys; (2) Rangliste zeigt je Whisky die **eigene Platzierung** des Betrachters; (3) **Vergleichsdiagramm** der Tasting-Whiskies über Gesamtplatzierung, Nasenpunkte, Gaumenpunkte, Alkoholgehalt und Alter (ohne Altersangabe: 3 Jahre angenommen, im Diagramm als „angenommen" markiert). Zusatzvorschläge für die Spec: **Preis-Leistungs-Sieger** (Punkte je Euro, nur wenn Preise erfasst sind — `price_eur` existiert bereits), **Konsens- vs. umstrittenster Whisky** (Streuung der Bewertungen), **Nase-/Gaumen-Diskrepanz** (größte Abweichung zwischen Nasen- und Gaumenrang), **persönliche Übereinstimmung** mit der Gesamtrangliste. Alles pro Tasting, keine Auswertung über die Runde hinweg. **Mit erledigen:** PROJ-19 BUG-2 (Historie zeigt „kein Sieger", wenn nur 0-Punkte vergeben wurden — Logik `winner_points > 0`) und BUG-1 (TS021-Meldung bei manipulierten Nachkommastellen). | P1 | PROJ-19 |
 | **PROJ-26** | **Testkonten für normale Nutzer unsichtbar** | Der Admin markiert Konten als **Testkonto**. Normale Mitglieder sehen markierte Konten nirgends (Teilnehmerauswahl, Nachrichten-Empfänger, Teilnehmerlisten, Profile, „mitgebracht von"); **Tastings mit Testkonten-Beteiligung** werden für normale Nutzer komplett ausgeblendet (Dashboard, Historie, Ergebnisse, Bilanz). Testkonten sehen sich gegenseitig, damit Testläufe funktionieren; der Admin sieht alle, Testkonten mit Kennzeichen. Durchsetzung auf **Datenbankebene (RLS/Views)**, nicht nur im Frontend. Gilt auf Staging und Produktion. Für die Spec offen: Wegwerf-Konten der E2E-Suite automatisch markieren; Zusammenspiel mit dem Backlog-Punkt „E2E-Suite hängt an den Seed-Konten". | P2 | PROJ-3, PROJ-14 |
 
 ### Anmerkungen zur Aufteilung

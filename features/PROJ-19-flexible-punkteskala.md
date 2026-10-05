@@ -1,6 +1,6 @@
 # PROJ-19: Flexible Punkteskala (0 Punkte, 0,5er-Schritte)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -480,4 +480,16 @@ Migration `20261006120000_flexible_rating_scale.sql` (vorher geprüft: kein echt
 - **Recommendation:** Deploy. Migration ist bereits eingespielt. Nicht während eines laufenden Tastings deployen.
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-05 als `v1.8.0` (Push `6392f1f` auf `main` → Vercel-Auto-Deploy)
+- **DB-Migration:** `20261006120000_flexible_rating_scale.sql` vorab per `db:push` durch den
+  Nutzer eingespielt (Reihenfolge DB → App eingehalten); `db:types` neu erzeugt
+- **Pre-Deploy:** kein Tasting aktiv, Lint + Production-Build grün, keine neuen Umgebungsvariablen
+- **Post-Deploy-Verifikation:** `tests/PROJ-19-punkteskala.spec.ts` + `tests/PROJ-18-begriffe.spec.ts`
+  gegen die Produktions-URL — **28/28 grün** (Chromium + Mobile Safari)
+- **Offen (Low, bewusst nicht behoben):** BUG-1 (unpräzise TS021-Meldung bei manipulierten
+  Werten), BUG-2 (Historie „kein Sieger" bei ausschließlich 0-Punkten) → mit PROJ-25 erledigen
+- **Rollback:** Vercel → Deployments → vorherige Version „Promote to Production". Die alte App
+  läuft gegen das neue Schema weiter (sie sendet nur ganze Werte ≥ 1); die Migration muss
+  dafür nicht zurückgedreht werden.
