@@ -266,7 +266,7 @@ Keine.
   Entwurf/abgeschlossen/Steward/Außenstehende/ungültige Nummer → TS023, Ersetzen, Gastgeber
   darf, kein Direktschreiben, Blindheit Tabelle + Sicht für Teilnehmer/Gastgeber/Steward/Admin,
   Aufdecken mit `is_correct`, Tasting ohne Bewertung, Profil-Schalter) — läuft nach `db:push`.
-- Nach `db:push`: `npm run db:types`.
+- `db:push` durch den Nutzer am 2026-10-05, danach `db:types`; `auth.ts` Session-Spalten um `show_kenner_count` ergänzt (sonst Typfehler). `npm run test:rls`: **167/167** grün (inkl. 11 neue).
 
 ## QA Test Results
 _To be added by /qa_

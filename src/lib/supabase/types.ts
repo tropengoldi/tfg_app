@@ -254,6 +254,7 @@ export type Database = {
           show_collection: boolean
           show_favorite_dram: boolean
           show_favorite_region: boolean
+          show_kenner_count: boolean
           show_tasting_count: boolean
           show_whisky_count: boolean
           updated_at: string
@@ -274,6 +275,7 @@ export type Database = {
           show_collection?: boolean
           show_favorite_dram?: boolean
           show_favorite_region?: boolean
+          show_kenner_count?: boolean
           show_tasting_count?: boolean
           show_whisky_count?: boolean
           updated_at?: string
@@ -294,6 +296,7 @@ export type Database = {
           show_collection?: boolean
           show_favorite_dram?: boolean
           show_favorite_region?: boolean
+          show_kenner_count?: boolean
           show_tasting_count?: boolean
           show_whisky_count?: boolean
           updated_at?: string
@@ -643,6 +646,70 @@ export type Database = {
           },
         ]
       }
+      winner_tips: {
+        Row: {
+          event_id: string
+          profile_id: string
+          updated_at: string
+          whisky_id: string
+        }
+        Insert: {
+          event_id: string
+          profile_id: string
+          updated_at?: string
+          whisky_id: string
+        }
+        Update: {
+          event_id?: string
+          profile_id?: string
+          updated_at?: string
+          whisky_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winner_tips_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "winner_tips_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winner_tips_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winner_tips_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winner_tips_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whiskies"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "winner_tips_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id", "event_id"]
+          },
+        ]
+      }
     }
     Views: {
       past_tastings: {
@@ -701,6 +768,7 @@ export type Database = {
           id: string | null
           show_avg_points: boolean | null
           show_best_placement: boolean | null
+          show_kenner_count: boolean | null
           show_tasting_count: boolean | null
           show_whisky_count: boolean | null
         }
@@ -712,6 +780,7 @@ export type Database = {
           id?: string | null
           show_avg_points?: boolean | null
           show_best_placement?: boolean | null
+          show_kenner_count?: boolean | null
           show_tasting_count?: boolean | null
           show_whisky_count?: boolean | null
         }
@@ -723,6 +792,7 @@ export type Database = {
           id?: string | null
           show_avg_points?: boolean | null
           show_best_placement?: boolean | null
+          show_kenner_count?: boolean | null
           show_tasting_count?: boolean | null
           show_whisky_count?: boolean | null
         }
@@ -854,6 +924,62 @@ export type Database = {
           },
         ]
       }
+      winner_tips_revealed: {
+        Row: {
+          display_name: string | null
+          event_id: string | null
+          is_correct: boolean | null
+          position: number | null
+          profile_id: string | null
+          rank: number | null
+          whisky_id: string | null
+          whisky_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winner_tips_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "winner_tips_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winner_tips_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winner_tips_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winner_tips_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whiskies"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "winner_tips_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id", "event_id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_whisky: {
@@ -970,6 +1096,10 @@ export type Database = {
       }
       set_whisky_order: {
         Args: { p_event: string; p_ordered: string[] }
+        Returns: undefined
+      }
+      set_winner_tip: {
+        Args: { p_event: string; p_position: number }
         Returns: undefined
       }
       start_event: { Args: { p_event: string }; Returns: undefined }
