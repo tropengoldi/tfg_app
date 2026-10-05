@@ -636,12 +636,14 @@ describe.skipIf(!RUN)('RLS-Matrix', () => {
     })
     expect(error).toBeTruthy()
     expect(error!.code).toBe('TS004')
+    expect(error!.message).toContain('Nur Gastgeber, Whisky-Steward oder Admin dürfen die Runde weiterschalten') // PROJ-18
   })
 
   it('Nicht-Gastgeber darf das Event nicht abschließen (TS004)', async () => {
     const { error } = await userA.client.rpc('close_event', { p_event: activeEvent.id })
     expect(error).toBeTruthy()
     expect(error!.code).toBe('TS004')
+    expect(error!.message).toContain('Nur Gastgeber, Whisky-Steward oder Admin dürfen das Event abschließen') // PROJ-18
   })
 
   it('Bereits ausgeschenkte Whiskies lassen sich nicht umsortieren (TS006)', async () => {

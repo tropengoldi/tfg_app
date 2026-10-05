@@ -1,6 +1,6 @@
 # PROJ-18: Begriffe: Gaumenpunkte & Whisky-Steward
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -302,7 +302,87 @@ Keine.
   noch nicht abgeschlossen ist" bleibt unberührt).
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-05
+**App URL:** http://localhost:3000 (Production-Build) gegen die Live-DB mit eingespielter
+Migration `20261005120000_whisky_steward_messages.sql`
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### Bewertungskategorien
+- [x] Slider sichtbar mit „Nasenpunkte" / „Gaumenpunkte" beschriftet — E2E `PROJ-18` (Chromium + Mobile Safari)
+- [ ] **BUG-1 (teilweise):** Screenreader-Name — der Container trägt jetzt „Nasenpunkte" /
+  „Gaumenpunkte" (kein „Geschmackspunkte" mehr), aber das eigentliche Slider-Element hat
+  keinen zugänglichen Namen (vorbestehend seit PROJ-7, siehe unten)
+- [x] Rangliste Summenzeile „Nase X · Gaumen Y" — E2E `PROJ-18`
+- [x] Aufgeklappte Einzelwertungen „Nase X · Gaumen Y · Gesamt" — E2E `PROJ-9`
+- [x] 360 px mit sehr langem Whisky-Namen: Summenzeile einzeilig, kein horizontaler Scroll — E2E `PROJ-18`
+
+#### Rolle Whisky-Steward
+- [x] Event-Formular: „Whisky-Steward (optional)", „Kein Whisky-Steward", Erklärtext — E2E `PROJ-11` + Code-Review
+- [x] Validierung Steward = Gastgeber → „Der Whisky-Steward kann nicht der Gastgeber sein" — Unit-Test `admin-events.test.ts`
+- [x] Validierung Steward in Teilnehmerliste → „… nicht gleichzeitig Teilnehmer sein" — Unit-Test
+- [x] Admin-Event-Liste „· Whisky-Steward: Name" — E2E `PROJ-11`
+- [x] Ergebnis-Kopf „Whisky-Steward: Name" — E2E `PROJ-11`
+- [x] DB-Meldungen bei unberechtigter Steuer-Aktion (Weiterschalten, Abschließen) nennen „Whisky-Steward" — Integrationstest `rls`
+- [x] DB-Meldungen bei Event-Anlage/-Bearbeitung (Steward = Gastgeber / Teilnehmer), Teilnehmerliste, Deaktivierung nennen „Whisky-Steward" — Integrationstest `helper-role`
+
+#### Vollständigkeit
+- [x] Scan aller sichtbaren Texte in `src/`: kein „Helfer", kein „Geschmack"/„Nase" als
+  Kategorie mehr (übrig nur die erlaubten Ausnahmen „Whisky-Geschmack" im Profil-Platzhalter
+  und Code-Kommentare); alle 15 `raise exception`-Texte der Migration umgestellt
+- [x] Bestehende Daten unverändert — keine Daten-/Schemaänderung; Regression PROJ-7/9/11 grün
+- [x] Steward-Verhalten unverändert — 133/133 DB-Integrationstests (inkl. aller PROJ-11-Rechte) grün
+
+#### Dokumentation
+- [x] `docs/PRD.md` verwendet „Nasenpunkte" / „Gaumenpunkte"
+- [x] `docs/design-system.md` Slider-Passage + Begriffsregel
+- [x] Hinweis oben in der PROJ-11-Spec
+
+### Edge Cases Status
+- [x] DB-Fehlermeldungen: per Migration umgestellt, live verifiziert (Integrationstests prüfen den Wortlaut)
+- [x] Deploy-Reihenfolge: Migration ist bereits eingespielt; Zwischenzustand nur in Fehlerfällen sichtbar
+- [x] Versendete E-Mails (PROJ-16) bleiben unverändert — keine nachträgliche Änderung möglich/nötig
+- [x] Veraltete E2E-Tests (PROJ-9, PROJ-11) umgestellt, grün
+- [x] Schmale Bildschirme: Kurzform einzeilig (360 px getestet)
+- [x] Schreibweise durchgängig „Whisky-Steward"
+
+### Security Audit Results
+- [x] Migration ändert nur String-Literale in `raise exception` — maschineller Diff gegen die
+  Quellfassungen bestätigt: keine Änderung an Rechteprüfungen, `security definer`,
+  `search_path = ''` oder Signaturen; bestehende GRANT/REVOKE bleiben (`create or replace`)
+- [x] Keine neue Angriffsfläche (keine neue Route, kein neues Eingabefeld, keine neuen Daten)
+- [x] Neue Meldungen verraten nichts Zusätzliches (gleicher Informationsgehalt wie vorher)
+
+### Automatisierte Tests
+- Unit: 14 Dateien, 133/133 grün (neu: `admin-events.test.ts`, Begriffs-Fälle in `rating.test.ts`)
+- DB-Integration (`npm run test:rls`): 133/133 grün, davon 6 neue Wortlaut-Prüfungen
+- E2E `PROJ-18-begriffe.spec.ts`: 6/6 grün (Chromium + Mobile Safari), 2 × `fixme` für BUG-1
+- Regression E2E (Chromium) PROJ-3/4/6/7/9/11/16: 47 grün, 3 rot — alle drei melden sich
+  als Seed-Admin (`ADMIN_EMAIL` + `SEED_PASSWORD`) an und scheitern am bekannten,
+  vorbestehenden Seed-Passwort-Problem (siehe Post-Deploy-Backlog in INDEX). Nicht PROJ-18.
+
+### Bugs Found
+
+#### BUG-1: Slider-Elemente haben keinen zugänglichen Namen (vorbestehend)
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Laufendes Tasting, `/tastings/{id}/bewerten` öffnen
+  2. Mit Screenreader (oder Accessibility-Baum) auf den Slider navigieren
+  3. Expected: „Nasenpunkte, Schieberegler, 3"
+  4. Actual: nur „Schieberegler, 3" — das `aria-label` sitzt am Slider-Container
+     (generisches Element), nicht am Element mit `role="slider"`; die sichtbare
+     `<label>` ist nicht verknüpft
+- **Herkunft:** besteht seit PROJ-7, durch PROJ-18 nicht verschlechtert (nur der Text am Container ist neu)
+- **Priority:** Nice to have — kann im Zuge von PROJ-19 (Slider werden ohnehin für 0,5er-Schritte angefasst) mit behoben werden; der `fixme`-Test in `tests/PROJ-18-begriffe.spec.ts` ist dann zu aktivieren
+
+### Summary
+- **Acceptance Criteria:** 18/19 Prüfpunkte bestanden, 1 teilweise (BUG-1, vorbestehend)
+- **Bugs Found:** 1 total (0 critical, 0 high, 0 medium, 1 low)
+- **Security:** Pass
+- **Production Ready:** YES
+- **Recommendation:** Deploy; BUG-1 mit PROJ-19 beheben
 
 ## Deployment
 _To be added by /deploy_

@@ -147,6 +147,7 @@ describe.skipIf(!RUN)('Helfer benennen (create_event / update_event)', () => {
       p_helper_id: host.id,
     })
     expect(error?.code).toBe('TS017')
+    expect(error?.message).toContain('Der Whisky-Steward kann nicht gleichzeitig Gastgeber') // PROJ-18
   })
 
   it('update_event: Helfer in der Teilnehmerliste → TS017', async () => {
@@ -159,6 +160,7 @@ describe.skipIf(!RUN)('Helfer benennen (create_event / update_event)', () => {
       p_helper_id: guest.id, // guest ist bereits Teilnehmer dieses Events
     })
     expect(error?.code).toBe('TS017')
+    expect(error?.message).toContain('Der Whisky-Steward kann nicht gleichzeitig Teilnehmer') // PROJ-18
   })
 
   it('set_event_participants lehnt den Helfer in der Liste ab → TS017', async () => {
@@ -168,6 +170,7 @@ describe.skipIf(!RUN)('Helfer benennen (create_event / update_event)', () => {
       p_profile_ids: [host.id, guest.id, helper.id],
     })
     expect(error?.code).toBe('TS017')
+    expect(error?.message).toContain('Der Whisky-Steward dieses Abends') // PROJ-18
   })
 })
 
@@ -290,6 +293,7 @@ describe.skipIf(!RUN)('Deaktivierung & Helfer entfernen', () => {
     await buildEventWithHelper(`H-deact-${stamp}`)
     const { error } = await admin.client.rpc('deactivate_member', { p_target: helper.id })
     expect(error?.code).toBe('TS013')
+    expect(error?.message).toContain('Gastgeber oder Whisky-Steward eines Tastings') // PROJ-18
   })
 
   it('Helfer entfernen: der Gastgeber bekommt Steuerung und Detail-Einblick zurück', async () => {

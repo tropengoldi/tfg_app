@@ -34,3 +34,21 @@ describe('ratingFormSchema', () => {
     if (r.success) expect(r.data.notes).toBe('hallo')
   })
 })
+
+describe('ratingFormSchema — Begriffe (PROJ-18)', () => {
+  function messages(input: typeof base): string[] {
+    const r = ratingFormSchema.safeParse(input)
+    return r.success ? [] : r.error.issues.map((i) => i.message)
+  }
+
+  it('Meldungen sprechen von Nasenpunkten und Gaumenpunkten', () => {
+    expect(messages({ ...base, nose: 6 })).toContain('Nasenpunkte liegen zwischen 1 und 5')
+    expect(messages({ ...base, taste: 11 })).toContain('Gaumenpunkte liegen zwischen 1 und 10')
+  })
+
+  it('keine Meldung nennt noch „Geschmack"', () => {
+    for (const m of [...messages({ ...base, nose: 0 }), ...messages({ ...base, taste: 0 })]) {
+      expect(m).not.toMatch(/Geschmack/)
+    }
+  })
+})

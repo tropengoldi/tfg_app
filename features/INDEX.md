@@ -32,7 +32,7 @@
 | PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Deployed | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
 | PROJ-16 | Nachrichten an Teilnehmer | Deployed | [PROJ-16-nachrichten-an-teilnehmer.md](PROJ-16-nachrichten-an-teilnehmer.md) | 2026-09-28 |
 | PROJ-17 | Web Push Benachrichtigungen für Nachrichten | Roadmap | – | 2026-09-29 |
-| PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | In Progress | [PROJ-18-begriffe-gaumenpunkte-whisky-steward.md](PROJ-18-begriffe-gaumenpunkte-whisky-steward.md) | 2026-10-05 |
+| PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | Approved | [PROJ-18-begriffe-gaumenpunkte-whisky-steward.md](PROJ-18-begriffe-gaumenpunkte-whisky-steward.md) | 2026-10-05 |
 | PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Roadmap | – | 2026-10-05 |
 | PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Roadmap | – | 2026-10-05 |
 | PROJ-21 | Whisky-Steward bringt Whiskies mit | Roadmap | – | 2026-10-05 |
