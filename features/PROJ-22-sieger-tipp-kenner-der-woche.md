@@ -1,6 +1,6 @@
 # PROJ-22: Sieger-Tipp & „Kenner der Woche"
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -247,6 +247,26 @@ Keine.
 ### Arbeitsaufteilung
 - `/backend` zuerst: Migration, Typen, Server-Aktion „Tipp setzen", Integrationstests.
 - `/frontend`: Tipp-Feld, Dashboard-Hinweis, Ergebnis-Anzeige, Bilanz + Schalter.
+
+### Implementation Notes (Backend, 2026-10-05)
+- Migration `supabase/migrations/20261008120000_winner_tips.sql`:
+  - Tabelle `winner_tips` (PK `event_id` + `profile_id` = ein Tipp pro Person/Tasting;
+    zusammengesetzter FK `(whisky_id, event_id) → whiskies`; CASCADE bei Event-/Profil-Löschung).
+    RLS an; `select` nur eigene Zeile; `insert/update/delete` für `authenticated` entzogen.
+  - `set_winner_tip(p_event, p_position)` (SECURITY DEFINER, `search_path = ''`): aktives
+    Mitglied, Event `active` (`for share` gegen gleichzeitiges Abschließen), Teilnehmer,
+    Nummer existiert → sonst **TS023**; Upsert ersetzt den alten Tipp.
+  - Sicht `winner_tips_revealed` (Owner-Rechte, `closed` + `is_active_member()`): Person,
+    Ausschank-Nummer, Whisky-Name, Rang, `is_correct` (Rang 1 **und** mindestens eine Bewertung).
+  - `profiles.show_kenner_count` (Default `true`) + Spalten-GRANTs; `profiles_public` um die
+    Spalte **am Ende** erweitert.
+- App-Server: `schemas/tips.ts` (+ Unit-Test), `actions/tips.ts` (`setWinnerTipAction`),
+  `errors.ts` TS023.
+- Tests: Unit 175/175. Neuer Integrationstest `winner-tips.integration.test.ts` (11 Fälle:
+  Entwurf/abgeschlossen/Steward/Außenstehende/ungültige Nummer → TS023, Ersetzen, Gastgeber
+  darf, kein Direktschreiben, Blindheit Tabelle + Sicht für Teilnehmer/Gastgeber/Steward/Admin,
+  Aufdecken mit `is_correct`, Tasting ohne Bewertung, Profil-Schalter) — läuft nach `db:push`.
+- Nach `db:push`: `npm run db:types`.
 
 ## QA Test Results
 _To be added by /qa_
