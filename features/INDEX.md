@@ -31,10 +31,19 @@
 | PROJ-14 | Profil sichtbar für andere (Sichtbarkeits-Einstellungen) | Deployed | [PROJ-14-profil-sichtbar-fuer-andere.md](PROJ-14-profil-sichtbar-fuer-andere.md) | 2026-09-16 |
 | PROJ-15 | Persönliche Whisky-Datenbank (teilbar) | Deployed | [PROJ-15-persoenliche-whisky-datenbank.md](PROJ-15-persoenliche-whisky-datenbank.md) | 2026-09-16 |
 | PROJ-16 | Nachrichten an Teilnehmer | Deployed | [PROJ-16-nachrichten-an-teilnehmer.md](PROJ-16-nachrichten-an-teilnehmer.md) | 2026-09-28 |
+| PROJ-17 | Web Push Benachrichtigungen für Nachrichten | Roadmap | – | 2026-09-29 |
+| PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | Roadmap | – | 2026-10-05 |
+| PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Roadmap | – | 2026-10-05 |
+| PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Roadmap | – | 2026-10-05 |
+| PROJ-21 | Whisky-Steward bringt Whiskies mit | Roadmap | – | 2026-10-05 |
+| PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Roadmap | – | 2026-10-05 |
+| PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
+| PROJ-24 | Eigene Live-Rangliste | Roadmap | – | 2026-10-05 |
+| PROJ-25 | Erweiterte Ergebnis-Statistiken | Roadmap | – | 2026-10-05 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-17
+## Next Available ID: PROJ-26
 
 ## Stand der Roadmap
 
@@ -185,6 +194,15 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-14** | **Profil sichtbar für andere** | Andere Teilnehmer können das Profil eines Nutzers read-only einsehen (Stammdaten + persönliche Bilanz aus PROJ-10). Jeder legt in seinem eigenen Profil pro Feld fest, ob es für andere sichtbar ist. Betrifft Datenmodell/RLS (neue Sichtbarkeits-Flags) und die PROJ-10-Profilseite (neue Detailansicht für fremde Profile). | P2 | PROJ-10 |
 | **PROJ-15** | **Persönliche Whisky-Datenbank** | Eigene Sammlung/Tasting-Log im Profilbereich, unabhängig von Events (Vivino-artig): Whiskies frei eintragen, eigene Bewertung/Notizen. Sichtbarkeit für andere Teilnehmer folgt denselben Einstellungen wie PROJ-14 — keine öffentliche, gemeinsame Datenbank und kein externer Katalog (das PRD-Non-Goal bleibt bestehen, siehe dort). | P2 | PROJ-14 |
 | **PROJ-16** | **Nachrichten an Teilnehmer** | Mitglieder schreiben Nachrichten an andere Mitglieder — entweder an alle Teilnehmer eines bestimmten Tastings (Adressaten automatisch aus der Teilnehmerliste) oder frei an eine Auswahl aktiver Mitglieder. Erste Ausbaustufe per E-Mail-Versand, spätere Ausbaustufe als In-App-Push. | P2 | PROJ-4 |
+| **PROJ-17** | **Web Push Benachrichtigungen für Nachrichten** | Ausbaustufe von PROJ-16: Empfänger einer Nachricht können zusätzlich zur E-Mail eine Push-Benachrichtigung auf ihrem Smartphone erhalten (Android & iOS), sofern sie die App als PWA zum Homescreen hinzugefügt und Push aktiviert haben. Web-Push-Standard (VAPID), kein Drittanbieter-Dienst, keine native App. | P2 | PROJ-16, PROJ-12 |
+| **PROJ-18** | **Begriffe: Gaumenpunkte & Whisky-Steward** | Reine Umbenennung in allen sichtbaren Texten (UI, Fehlermeldungen, E-Mail-Texte, Doku): „Nase" → **„Nasenpunkte"**, „Geschmack" → **„Gaumenpunkte"**, „Helfer" → **„Whisky-Steward"**. DB-Bezeichner (`nose_points`, `taste_points`, `helper_id`) bleiben unverändert — keine Migration. | P1 | – |
+| **PROJ-19** | **Flexible Punkteskala** | (a) **0 Punkte** werden erlaubt (Nasenpunkte 0–5, Gaumenpunkte 0–10). (b) Der Admin legt **pro Tasting** fest, ob in **1er- oder 0,5er-Schritten** bewertet wird; nach dem Start des Events nicht mehr änderbar. (c) Die private Sammlung (PROJ-15) bewertet **immer in 0,5er-Schritten** (0–10). Betrifft DB-Spaltentypen (Ganzzahl → Dezimal), die generierte Gesamtsumme, alle Ranglisten-Views, die Slider (PROJ-7) und die Bilanz-Durchschnitte (PROJ-10). | P1 | PROJ-18 |
+| **PROJ-20** | **Whisky-Steward: Live-Einblick in Wertungen** | Ist für ein Tasting ein Steward benannt, sieht er **während** des Tastings alle Zwischenstände: abgegebene Einzelwertungen aller Teilnehmer **inkl. ihrer privaten Notizen**. Teilnehmer sehen in der Bewertungsansicht einen **Hinweis**, dass der Steward ihre Notizen lesen kann. Bricht bewusst die bisherige Zusage „fremde Notizen sind nie lesbar" (`whisky_score_breakdown` ohne `notes`) — nur für die Steward-Rolle, nur für sein Event. Die Blindheit der Verkoster bleibt unberührt. | P2 | PROJ-18 |
+| **PROJ-21** | **Whisky-Steward bringt Whiskies mit** | Der Steward darf optional Whiskies für sein Tasting einreichen, obwohl er selbst nicht mitverkostet. Die Teilnehmer bewerten sie wie alle anderen. Offen für die Spec: welches Limit gilt für ihn (wie Teilnehmer / wie Gastgeber-Bonus) und wie erscheint er in Rangliste und Bilanz („mitgebrachte Whiskies"). | P2 | PROJ-18 |
+| **PROJ-22** | **Sieger-Tipp & „Kenner der Woche"** | Während eines laufenden Tastings tippt jeder Teilnehmer blind („Whisky 3"), welcher Whisky gewinnt. Nach dem Abschluss werden alle mit richtigem Tipp als **„Kenner der Woche"** ausgewiesen — **im jeweiligen Tasting** (Ergebnisseite) und als **Zähler in der eigenen Profil-Bilanz** (PROJ-10/14). **Keine** Kenner-Rangliste über alle Tastings hinweg (PRD-Non-Goal bleibt). Tipps anderer bleiben bis zum Abschluss unsichtbar. | P2 | PROJ-19 |
+| **PROJ-23** | **Vergleichs-Merker** | Privater Merker während des Tastings: Pro Whisky kann man per Mehrfachauswahl festhalten, mit welchen anderen Whiskies man ihn noch einmal direkt vergleichen möchte (z. B. „Whisky 2 ↔ 5"). Nur für einen selbst sichtbar. | P2 | – |
+| **PROJ-24** | **Eigene Live-Rangliste** | Während des Tastings sieht jeder Teilnehmer seine **persönliche** Rangliste, berechnet nur aus den eigenen bisherigen Wertungen (blinde Nummern, keine Namen, keine fremden Punkte). | P2 | PROJ-19 |
+| **PROJ-25** | **Erweiterte Ergebnis-Statistiken** | Nach dem Abschluss: (1) Rangliste zeigt die **Ausschank-Nummer** jedes Whiskys; (2) Rangliste zeigt je Whisky die **eigene Platzierung** des Betrachters; (3) **Vergleichsdiagramm** der Tasting-Whiskies über Gesamtplatzierung, Nasenpunkte, Gaumenpunkte, Alkoholgehalt und Alter (ohne Altersangabe: 3 Jahre angenommen, im Diagramm als „angenommen" markiert). Zusatzvorschläge für die Spec: **Preis-Leistungs-Sieger** (Punkte je Euro, nur wenn Preise erfasst sind — `price_eur` existiert bereits), **Konsens- vs. umstrittenster Whisky** (Streuung der Bewertungen), **Nase-/Gaumen-Diskrepanz** (größte Abweichung zwischen Nasen- und Gaumenrang), **persönliche Übereinstimmung** mit der Gesamtrangliste. Alles pro Tasting, keine Auswertung über die Runde hinweg. | P1 | PROJ-19 |
 
 ### Anmerkungen zur Aufteilung
 
@@ -213,3 +231,12 @@ Whiskies existieren und eine Runde läuft.
   Sammlung nutzt dieselbe Sichtbarkeits-Steuerung, die PROJ-14 einführt. Erst wenn geklärt
   ist, was ein Nutzer über sich preisgibt, lässt sich sinnvoll festlegen, was er über seine
   Whisky-Sammlung preisgibt.
+- **PROJ-18..25 (Feature-Wünsche vom 2026-10-05)** — empfohlene Reihenfolge
+  **18 → 19 → 25 → 22 → 24 → 20 → 21 → 23**. PROJ-18 zuerst, weil die Umbenennung fast
+  jede Datei mit sichtbarem Text berührt; danach schreiben alle Specs gleich die neuen
+  Begriffe. PROJ-19 vor allem, was mit Punkten rechnet (Tipp, Live-Rangliste, Statistiken),
+  weil sich mit Dezimalpunkten Summen und Gleichstände ändern. Die beiden Steward-Wünsche
+  (PROJ-20/21) sind getrennt, weil sie unabhängige RLS-Pfade betreffen (Lesen fremder
+  Wertungen vs. Einreichen von Whiskies). PROJ-22: „Kenner" bewusst nur pro Tasting + als
+  Zähler in der eigenen Bilanz — eine Kenner-Rangliste über alle Tastings wäre eine
+  gruppenweite Auswertung (PRD-Non-Goal).
