@@ -1,6 +1,6 @@
 # PROJ-22: Sieger-Tipp & „Kenner der Woche"
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-05
 
@@ -147,13 +147,106 @@ Auswertungen über die Runde hinweg).
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| Eigene Tabelle „Sieger-Tipps" (ein Eintrag pro Person und Tasting) | Klare Zuständigkeit, eigene Zugriffsregeln; „ein Tipp pro Person" als eindeutige Regel in der DB statt im Code | 2026-10-05 |
+| Getippt wird auf die **Ausschank-Nummer**, gespeichert wird der zugehörige Whisky | Teilnehmer kennen nur „Whisky 3"; die Verknüpfung zum Whisky macht die Auswertung (Rang 1?) trivial und robust | 2026-10-05 |
+| Schreiben nur über eine Datenbank-Funktion „Tipp setzen" | Bündelt alle Regeln (läuft, Mitverkoster, gültige Nummer) an einer Stelle mit verständlichen Fehlercodes; kein direkter Schreibzugriff auf die Tabelle | 2026-10-05 |
+| Lesen der Tabelle direkt: nur die **eigene** Zeile | Blindheit auf DB-Ebene — auch Gastgeber, Steward und Admin sehen während des Tastings keine fremden Tipps | 2026-10-05 |
+| Auflösung nach dem Abschluss über eine eigene Sicht „aufgedeckte Tipps" (wie die Ranglisten-Sichten: nur abgeschlossene Tastings, nur aktive Mitglieder) inkl. „richtig ja/nein" | Gleiches, bewährtes Muster wie `whisky_rankings`; „richtig" wird an einer Stelle definiert (Rang 1) | 2026-10-05 |
+| Kenner-Zähler der Bilanz aus der Sicht; Sichtbarkeits-Schalter wird (wie die übrigen Bilanz-Schalter) in der App ausgewertet | Die zugrunde liegenden Daten sind nach dem Abschluss ohnehin für alle Mitglieder sichtbar (Ergebnisseite) — gleiches Prinzip wie Anzahl Tastings / beste Platzierung in PROJ-14 | 2026-10-05 |
+| Neuer Fehlercode TS023 für abgelehnte Tipps | TS-Klasse, TS018–022 vergeben | 2026-10-05 |
+| Keine Live-Aktualisierung der Tipps | Tipps anderer sind ohnehin unsichtbar; der eigene Tipp ändert sich nur durch einen selbst | 2026-10-05 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Neue kleine Datenhaltung für Tipps (Tabelle + Funktion + Sicht), ein neuer Profil-Schalter,
+und vier Stellen in der Oberfläche. Kein neues Paket, keine neue Seite, keine neue Route.
+
+### A) Bausteine
+
+```
+Bewertungsansicht (PROJ-7)
++-- NEU: „Dein Sieger-Tipp" — Auswahl Whisky 1 … N (shadcn Select, ≥ 44 px)
+|   +-- speichert sofort, Bestätigung als Toast; bei Fehler zurück auf den alten Tipp
+|   +-- nicht für Whisky-Steward; im abgeschlossenen Tasting gesperrt
++-- (bestehend) Positionen, Punktefelder, Notiz …
+
+Dashboard (PROJ-8)
++-- NEU: Hinweis „Noch kein Sieger-Tipp abgegeben" bzw. „Dein Tipp: Whisky 3"
+    (nur Mitverkoster, nur laufendes Tasting)
+
+Ergebnisseite (PROJ-9)
++-- Rangliste
+|   +-- Sieger-Zeile: NEU „Kenner der Woche: Anna, Ben" / „Diesmal kein Kenner"
++-- NEU: aufklappbar „Alle Tipps" (Collapsible)
+|   +-- „Carla → #4 Talisker 10 (Platz 3)"; richtige Tipps hervorgehoben
++-- Statistiken (PROJ-25, unverändert)
+
+Profil – Bilanz (PROJ-10 / PROJ-14)
++-- NEU: Kennzahl „Kenner der Woche: 2×"
++-- Sichtbarkeits-Einstellungen: NEU Schalter „Kenner der Woche"
+```
+
+### B) Datenmodell
+
+**Sieger-Tipp** (eine Zeile pro Person und Tasting)
+- Tasting, Person, getippter Whisky, Zeitpunkt der letzten Änderung
+- Regeln: genau ein Tipp pro Person und Tasting; der Whisky muss zu diesem Tasting gehören
+- Wird das Tasting oder die Person gelöscht, verschwindet der Tipp mit
+
+**Profil:** NEU Schalter „Kenner der Woche sichtbar" (Standard: an)
+
+### C) Zugriffsregeln
+
+| Wer | Während des Tastings | Nach dem Abschluss |
+|---|---|---|
+| Mitverkoster | eigenen Tipp setzen / ändern / lesen | eigenen Tipp + alle aufgedeckten Tipps lesen |
+| Gastgeber (verkostet mit) | wie Mitverkoster | wie Mitverkoster |
+| Whisky-Steward | **kein** Tipp, keine fremden Tipps | alle aufgedeckten Tipps lesen |
+| Admin / andere aktive Mitglieder | keine fremden Tipps | alle aufgedeckten Tipps lesen |
+| Deaktivierte / nicht angemeldet | nichts | nichts |
+
+- **Setzen** nur über die Funktion „Tipp setzen" (Tasting, Ausschank-Nummer). Sie prüft:
+  Tasting läuft, Person ist Teilnehmer (der Steward ist das nie), Nummer existiert →
+  sonst **TS023** mit verständlicher Meldung. Ein zweiter Aufruf ersetzt den Tipp.
+- **Lesen der Tabelle** direkt: ausschließlich die eigene Zeile.
+- **Aufdecken** über die Sicht „aufgedeckte Tipps": nur abgeschlossene Tastings, nur aktive
+  Mitglieder (gleiches Muster wie die Ranglisten-Sichten). Liefert je Tipp: Person,
+  Ausschank-Nummer, Whisky-Name, Rang des getippten Whiskys, **richtig ja/nein** (= Rang 1
+  und es gab mindestens eine Bewertung).
+
+### D) Auswertung
+- **Kenner eines Tastings** = alle Tipps mit „richtig" in diesem Tasting.
+- **Kenner-Zähler** einer Person = Anzahl ihrer richtigen Tipps über alle abgeschlossenen
+  Tastings (eigene Bilanz und fremdes Profil; beim fremden Profil nur, wenn der Schalter an ist).
+- Hinweise auf der Ergebnisseite: keine Tipps → nichts; Tipps, aber keiner richtig →
+  „Diesmal kein Kenner"; keine Bewertung → „Kein Sieger — keine Kenner".
+
+### E) Migration (eine Datei)
+1. Tabelle „Sieger-Tipps" mit RLS (nur eigene Zeile lesbar, kein Direktschreiben).
+2. Funktion „Tipp setzen" (TS023).
+3. Sicht „aufgedeckte Tipps".
+4. Profil-Schalter + Erweiterung der Profil-Sicht + Spalten-Rechte (wie PROJ-14).
+Danach Typen neu erzeugen. Ausrollen: `db:push` → App.
+
+### F) Tests
+- **DB-Integration:** Teilnehmer setzt/ändert Tipp; zweiter Tipp ersetzt; Steward,
+  Nicht-Teilnehmer, Entwurf, abgeschlossen → TS023; ungültige Nummer → TS023; während des
+  Tastings sieht niemand (inkl. Gastgeber/Steward/Admin) fremde Tipps; nach Abschluss liefert
+  die Sicht alle Tipps mit korrektem „richtig"; Tasting ohne Bewertung → niemand richtig.
+- **Unit:** Kenner-Auswertung / Hinweistexte.
+- **E2E:** Tipp setzen + ändern + Wiederöffnen; Dashboard-Hinweis; Kenner-Anzeige + „Alle
+  Tipps"; Bilanz-Zähler + Schalter; Steward ohne Tipp-Feld; 360 px.
+
+### G) Abhängigkeiten (Pakete)
+Keine.
+
+### Arbeitsaufteilung
+- `/backend` zuerst: Migration, Typen, Server-Aktion „Tipp setzen", Integrationstests.
+- `/frontend`: Tipp-Feld, Dashboard-Hinweis, Ergebnis-Anzeige, Bilanz + Schalter.
 
 ## QA Test Results
 _To be added by /qa_
