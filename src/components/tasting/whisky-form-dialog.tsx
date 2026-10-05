@@ -29,7 +29,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { addWhiskyAction, updateWhiskyAction } from '@/lib/actions/whiskies'
 import { whiskyFormSchema, type WhiskyFormInput } from '@/lib/schemas/whiskies'
 
-const EMPTY: WhiskyFormInput = { name: '', videoUrl: '', ownerNotes: '' }
+const EMPTY: WhiskyFormInput = {
+  name: '',
+  videoUrl: '',
+  ownerNotes: '',
+  abv: '',
+  ageYears: '',
+  price: '',
+}
 
 export interface WhiskyFormDialogProps {
   open: boolean
@@ -139,6 +146,52 @@ export function WhiskyFormDialog({
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-3 gap-2">
+              <FormField
+                control={form.control}
+                name="abv"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alkohol (%)</FormLabel>
+                    <FormControl>
+                      <Input inputMode="decimal" placeholder="46" autoComplete="off" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="ageYears"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alter (J.)</FormLabel>
+                    <FormControl>
+                      <Input inputMode="numeric" placeholder="12" autoComplete="off" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preis (€)</FormLabel>
+                    <FormControl>
+                      <Input inputMode="decimal" placeholder="49,90" autoComplete="off" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Alle drei optional. Alkohol, Alter und Preis werden nach dem Abschluss für alle
+              sichtbar.
+            </p>
 
             <FormField
               control={form.control}

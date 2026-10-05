@@ -93,6 +93,10 @@ export interface MyWhisky {
   name: string
   video_url: string | null
   owner_notes: string | null
+  /** PROJ-25: null = keine Angabe. */
+  abv: number | null
+  age_years: number | null
+  price_eur: number | null
 }
 
 export interface WhiskyEntryData {
@@ -139,7 +143,7 @@ export async function getWhiskyEntryData(
 
   const { data: details } = await supabase
     .from('whisky_details')
-    .select('whisky_id, name, video_url, owner_notes, created_at')
+    .select('whisky_id, name, video_url, owner_notes, abv, age_years, price_eur, created_at')
     .eq('event_id', eventId)
     .eq('brought_by', userId)
     .order('created_at', { ascending: true })
@@ -163,6 +167,9 @@ export async function getWhiskyEntryData(
       name: d.name,
       video_url: d.video_url,
       owner_notes: d.owner_notes,
+      abv: d.abv === null ? null : Number(d.abv),
+      age_years: d.age_years,
+      price_eur: d.price_eur === null ? null : Number(d.price_eur),
     })),
     eventWhiskyCount: count ?? 0,
   }

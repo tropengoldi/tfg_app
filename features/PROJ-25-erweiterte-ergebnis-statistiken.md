@@ -369,6 +369,32 @@ die neuen Spalten.
   ohne Bewertung); `rating-scale` erwartet jetzt strikt TS022. Laufen nach `db:push`.
 - `db:push` durch den Nutzer am 2026-10-05, danach `db:types` (4 neue Zeilen). `npm run test:rls`: **156/156** grün (inkl. 6 neue + TS022 strikt).
 
+### Implementation Notes (Frontend, 2026-10-05)
+- **Neu:** `src/lib/result-stats.ts` (+ 19 Unit-Tests) — eigene Platzierung, Preis-Leistung,
+  Streuung/Konsens/umstritten, Nase gegen Gaumen, Übereinstimmung, Kennzahl-Werte inkl.
+  Alter-Annahme, Anzeige-Helfer `formatMetric` / `detailsLine`.
+- **Neu:** `components/results/stats-section.tsx` (Karten + Rahmen),
+  `metric-bar-chart.tsx` (shadcn Tabs als Umschalter, Recharts-Balken, eigene einzeilige
+  Beschriftung — Recharts hätte „3 J. (angenommen)" sonst umgebrochen),
+  `metric-scatter-chart.tsx` (zwei shadcn Selects, Tooltip beim Antippen, Hinweise
+  „ohne Angabe" / „blasse Punkte"). `components/ui/chart.tsx` über `npx shadcn add chart`
+  (bringt `recharts` ^2.15). Farben über `--chart-1` (Dark/Light).
+- **Abfrage:** `queries/results.ts` lädt Alkohol/Alter/Preis aus `whisky_rankings` und die
+  eigenen Punkte, berechnet die Statistiken auf dem Server; Historie nutzt
+  `winner_rating_count` (BUG-2 behoben).
+- **Rangliste:** „#N" vor dem Namen, „Dein Platz: X / —" unter den Punkten (nur wer bewertet
+  hat), Zeile „46 % · 18 J. · 129 €" unter Destillerie/Region. **Abweichung vom Design:** die
+  Angaben stehen direkt in der Zeile statt erst im aufgeklappten Bereich — kurz genug und
+  ohne Tippen sichtbar.
+- **Formular:** drei Felder nebeneinander (Alkohol/Alter/Preis, `inputMode` decimal/numeric),
+  Hinweis zur Sichtbarkeit nach dem Abschluss; Liste „Meine Whiskys" zeigt die Angaben;
+  Bearbeiten füllt sie mit Komma vor.
+- **Feinschliff nach Sichtprüfung (Screenshot 360 px):** Achsenbeschriftung stärker gekürzt;
+  bei Übereinstimmung 0 der Text „Deine Reihenfolge stimmte genau mit der Runde überein."
+  statt „0,0 Plätze".
+- Tests: Unit 173/173, Lint + Typecheck grün. E2E `PROJ-25-statistiken.spec.ts` (10) +
+  Regression PROJ-5/9/15/19 (Chromium): **63/63 grün**.
+
 ## QA Test Results
 _To be added by /qa_
 

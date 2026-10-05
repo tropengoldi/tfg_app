@@ -1,4 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import {
+  computeResultStats,
+  ownPlacements,
+  type ResultStats,
+  type StatsWhisky,
+} from '@/lib/result-stats'
 import { resultsPhase } from '@/lib/results'
 
 // ===========================================================================
@@ -26,7 +32,7 @@ export async function getPastTastings(): Promise<PastTastingRow[]> {
   const { data, error } = await supabase
     .from('past_tastings')
     .select(
-      'event_id, event_date, location, host_id, host_name, winner_name, winner_points, closed_at',
+      'event_id, event_date, location, host_id, host_name, winner_name, winner_rating_count, closed_at',
     )
     .order('event_date', { ascending: false })
   if (error) throw error
@@ -46,9 +52,10 @@ export async function getPastTastings(): Promise<PastTastingRow[]> {
       location: r.location ?? '',
       host_id: r.host_id,
       host_name: r.host_name ?? 'Unbekannt',
-      // `winner_name` steht in der View auch dann, wenn niemand bewertet hat
-      // (Rang 1 mit 0 Punkten). Ohne Punkte kein Sieger.
-      winner_name: r.winner_points && r.winner_points > 0 ? r.winner_name : null,
+      // `winner_name` steht in der View auch dann, wenn niemand bewertet hat.
+      // Seit PROJ-19 sind 0 Punkte gültig → Sieger, sobald er ≥ 1 Bewertung hat
+      // (PROJ-25, behebt PROJ-19 BUG-2).
+      winner_name: (r.winner_rating_count ?? 0) > 0 ? r.winner_name : null,
     }))
 }
 
@@ -93,6 +100,12 @@ export interface RankingRow {
    * (unabhängig von `ownNote`, die nur bei vorhandenem Notiztext gesetzt
    * ist) — steuert den „Zur Sammlung hinzufügen"-Button. */
   hasOwnRating: boolean
+  /** PROJ-25: eigene Platzierung (nur aus eigenen Punkten); `null` = nicht bewertet. */
+  ownPlace: number | null
+  /** PROJ-25: nach dem Abschluss sichtbar; `null` = keine Angabe. */
+  abv: number | null
+  ageYears: number | null
+  price: number | null
 }
 
 export interface EventResults {
@@ -111,6 +124,11 @@ export interface EventResults {
   participants: ResultsParticipant[]
   ranking: RankingRow[]
   hasAnyRatings: boolean
+  /** PROJ-25: hat der Betrachter in diesem Tasting überhaupt bewertet? */
+  viewerHasRated: boolean
+  /** PROJ-25: Kennzahlen je Whisky (Diagramme) und Karten. */
+  statsWhiskies: StatsWhisky[]
+  stats: ResultStats
 }
 
 export type ResultsData = EventResults | { phase: 'pending' } | null
@@ -146,7 +164,7 @@ export async function getEventResults(
     supabase
       .from('whisky_rankings')
       .select(
-        'whisky_id, position, rank, name, distillery, region, brought_by, video_url, nose_total, taste_total, total_points, rating_count',
+        'whisky_id, position, rank, name, distillery, region, brought_by, video_url, nose_total, taste_total, total_points, rating_count, abv, age_years, price_eur',
       )
       .eq('event_id', eventId)
       .order('rank', { ascending: true }),
@@ -156,7 +174,7 @@ export async function getEventResults(
       .eq('event_id', eventId),
     supabase
       .from('ratings')
-      .select('whisky_id, notes')
+      .select('whisky_id, notes, nose_points, taste_points')
       .eq('event_id', eventId)
       .eq('profile_id', userId),
   ])
@@ -218,8 +236,38 @@ export async function getEventResults(
     }
   }
 
-  const ranking: RankingRow[] = (rankRes.data ?? [])
-    .filter((r): r is typeof r & { whisky_id: string } => Boolean(r.whisky_id))
+  const rankRows = (rankRes.data ?? []).filter(
+    (r): r is typeof r & { whisky_id: string } => Boolean(r.whisky_id),
+  )
+  const num = (v: number | string | null | undefined) =>
+    v === null || v === undefined ? null : Number(v)
+
+  const statsWhiskies: StatsWhisky[] = rankRows.map((r) => ({
+    whiskyId: r.whisky_id,
+    position: r.position ?? 0,
+    rank: r.rank ?? 0,
+    name: r.name ?? `Whisky ${r.position ?? '?'}`,
+    noseTotal: Number(r.nose_total ?? 0),
+    tasteTotal: Number(r.taste_total ?? 0),
+    totalPoints: Number(r.total_points ?? 0),
+    ratingCount: r.rating_count ?? 0,
+    abv: num(r.abv),
+    ageYears: num(r.age_years),
+    price: num(r.price_eur),
+    ratingTotals: (byWhisky.get(r.whisky_id) ?? []).map((b) => b.total),
+  }))
+  const own = ownPlacements(
+    statsWhiskies,
+    (ownRes.data ?? [])
+      .filter((r) => r.whisky_id)
+      .map((r) => ({
+        whiskyId: r.whisky_id,
+        nose: Number(r.nose_points ?? 0),
+        taste: Number(r.taste_points ?? 0),
+      })),
+  )
+
+  const ranking: RankingRow[] = rankRows
     .map((r) => ({
       whiskyId: r.whisky_id,
       rank: r.rank ?? 0,
@@ -237,6 +285,10 @@ export async function getEventResults(
       breakdown: byWhisky.get(r.whisky_id) ?? [],
       ownNote: ownNotes.get(r.whisky_id) ?? null,
       hasOwnRating: ownRatedWhiskyIds.has(r.whisky_id),
+      ownPlace: own.get(r.whisky_id) ?? null,
+      abv: num(r.abv),
+      ageYears: num(r.age_years),
+      price: num(r.price_eur),
     }))
 
   return {
@@ -253,5 +305,8 @@ export async function getEventResults(
     participants,
     ranking,
     hasAnyRatings: ranking.some((r) => r.ratingCount > 0),
+    viewerHasRated: own.size > 0,
+    statsWhiskies,
+    stats: computeResultStats(statsWhiskies, own),
   }
 }

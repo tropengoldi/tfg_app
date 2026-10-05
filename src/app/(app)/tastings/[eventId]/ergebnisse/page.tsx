@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 
 import { RankingList } from '@/components/results/ranking-list'
 import { ResultsHeader } from '@/components/results/results-header'
+import { StatsSection } from '@/components/results/stats-section'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
@@ -62,7 +63,11 @@ export default async function ErgebnissePage({
               hasAnyRatings={data.hasAnyRatings}
               eventId={eventId}
               eventDate={data.head.event_date}
+              viewerHasRated={data.viewerHasRated}
             />
+            {data.hasAnyRatings ? (
+              <StatsSection whiskies={data.statsWhiskies} stats={data.stats} />
+            ) : null}
           </div>
         </>
       )}

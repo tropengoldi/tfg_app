@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatPoints } from '@/lib/points'
 import type { RankingRow as Row } from '@/lib/queries/results'
+import { detailsLine } from '@/lib/result-stats'
 import {
   formatAverage,
   medalClass,
@@ -29,8 +30,11 @@ export function RankingRow({
   isTie,
   eventId,
   eventDate,
+  viewerHasRated,
 }: {
   row: Row
+  /** PROJ-25: nur wer selbst bewertet hat, sieht „Dein Platz". */
+  viewerHasRated: boolean
   participantCount: number
   isWinnerRow: boolean
   isTie: boolean
@@ -43,6 +47,7 @@ export function RankingRow({
   const avg = formatAverage(row.totalPoints, row.ratingCount)
   const medal = medalClass(row.rank)
   const breakdown = sortBreakdown(row.breakdown)
+  const details = detailsLine(row)
 
   return (
     <li>
@@ -60,12 +65,18 @@ export function RankingRow({
             </span>
 
             <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-display text-xl leading-tight">{row.name}</p>
+              <p className="font-display text-xl leading-tight">
+                <span className="mr-1.5 align-middle font-sans text-sm tabular-nums text-muted-foreground">
+                  #{row.position}
+                </span>
+                {row.name}
+              </p>
               {row.distillery || row.region ? (
                 <p className="text-xs text-muted-foreground">
                   {[row.distillery, row.region].filter(Boolean).join(' · ')}
                 </p>
               ) : null}
+              {details ? <p className="text-xs text-muted-foreground">{details}</p> : null}
               <p className="text-sm text-muted-foreground">
                 mitgebracht von{' '}
                 {row.broughtById ? (
@@ -89,6 +100,11 @@ export function RankingRow({
                 {formatPoints(row.totalPoints)}
               </p>
               <p className="text-xs text-muted-foreground">Punkte</p>
+              {viewerHasRated ? (
+                <p className="mt-1 whitespace-nowrap text-xs font-medium text-foreground">
+                  Dein Platz: {row.ownPlace ?? '—'}
+                </p>
+              ) : null}
             </div>
           </div>
 

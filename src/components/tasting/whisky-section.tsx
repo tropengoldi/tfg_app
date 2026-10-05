@@ -11,8 +11,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { removeWhiskyAction } from '@/lib/actions/whiskies'
 import type { MyWhisky } from '@/lib/queries/tastings'
-import type { Quota } from '@/lib/whisky-quota'
+import { detailsLine } from '@/lib/result-stats'
 import type { WhiskyFormInput } from '@/lib/schemas/whiskies'
+import type { Quota } from '@/lib/whisky-quota'
+
+/** 46.3 → "46,3"; null → "" (Formularwert, PROJ-25). */
+function toFormNumber(v: number | null): string {
+  return v === null ? '' : String(v).replace('.', ',')
+}
 
 interface WhiskySectionProps {
   eventId: string
@@ -58,6 +64,9 @@ export function WhiskySection({ eventId, editable, whiskies, quota }: WhiskySect
         name: editTarget.name,
         videoUrl: editTarget.video_url ?? '',
         ownerNotes: editTarget.owner_notes ?? '',
+        abv: toFormNumber(editTarget.abv),
+        ageYears: toFormNumber(editTarget.age_years),
+        price: toFormNumber(editTarget.price_eur),
       }
     : undefined
 
@@ -93,6 +102,19 @@ export function WhiskySection({ eventId, editable, whiskies, quota }: WhiskySect
             <li key={whisky.whisky_id} className="flex items-start gap-3 p-4">
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="font-medium">{whisky.name}</p>
+                {detailsLine({
+                  abv: whisky.abv,
+                  ageYears: whisky.age_years,
+                  price: whisky.price_eur,
+                }) ? (
+                  <p className="text-sm text-muted-foreground">
+                    {detailsLine({
+                      abv: whisky.abv,
+                      ageYears: whisky.age_years,
+                      price: whisky.price_eur,
+                    })}
+                  </p>
+                ) : null}
                 {whisky.video_url ? (
                   <a
                     href={whisky.video_url}
