@@ -191,11 +191,16 @@ export function RatingView({
                 Whisky {focus} von {total}
               </p>
               <p className="text-sm text-muted-foreground">
-                {alreadySaved
-                  ? 'Gespeichert — du kannst die Werte noch ändern.'
-                  : dirty
-                    ? 'Noch nicht gespeichert.'
-                    : 'Noch nicht bewertet.'}
+                {/* Nach dem Abschluss ist nichts mehr änderbar (PROJ-24 BUG-1). */}
+                {!editable
+                  ? savedForFocus
+                    ? 'Gespeichert.'
+                    : 'Nicht bewertet.'
+                  : alreadySaved
+                    ? 'Gespeichert — du kannst die Werte noch ändern.'
+                    : dirty
+                      ? 'Noch nicht gespeichert.'
+                      : 'Noch nicht bewertet.'}
               </p>
             </div>
             {editable ? (

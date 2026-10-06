@@ -54,7 +54,9 @@ const list = (page: Page) => page.getByRole('list', { name: 'Meine Rangliste' })
 const rows = (page: Page) => list(page).getByRole('listitem')
 const tipTrigger = (page: Page) => page.getByRole('combobox', { name: 'Dein Sieger-Tipp' })
 const pokal = (page: Page, n: number) =>
-  list(page).getByRole('button', { name: new RegExp(`^(Dein Tipp: Whisky ${n}|Whisky ${n} als Sieger tippen)$`) })
+  list(page).getByRole('button', {
+    name: new RegExp(`^(Dein Tipp: Whisky ${n}|Whisky ${n} als Sieger tippen|Whisky ${n}, nicht getippt)$`),
+  })
 
 async function expand(page: Page) {
   if ((await toggle(page).getAttribute('aria-expanded')) !== 'true') await toggle(page).click()
@@ -374,6 +376,11 @@ test('Abgeschlossen: Namen erscheinen, Pokale gesperrt, Tipp bleibt markiert; Pl
   await expect(pokal(page, 1)).toHaveAttribute('aria-pressed', 'true')
   await expect(pokal(page, 1)).toBeDisabled()
   await expect(pokal(page, 3)).toBeDisabled()
+  // BUG-2: gesperrter Pokal nennt keine Aktion mehr.
+  await expect(pokal(page, 3)).toHaveAccessibleName('Whisky 3, nicht getippt')
+  // BUG-1 (aus PROJ-7): eingefrorene Karte fordert nicht mehr zum Ändern auf.
+  await expect(page.getByText('Gespeichert.', { exact: true })).toBeVisible()
+  await expect(page.getByText(/du kannst die Werte noch ändern/)).toHaveCount(0)
 
   // Ergebnisseite: „Dein Platz" stimmt mit der eigenen Rangliste überein.
   await page.goto(`/tastings/${liveId}/ergebnisse`, { waitUntil: 'networkidle' })

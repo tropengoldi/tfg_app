@@ -128,7 +128,11 @@ export function OwnRanking({
                       disabled={!tip.editable || tip.pending}
                       aria-pressed={isTip}
                       aria-label={
-                        isTip ? `Dein Tipp: Whisky ${r.position}` : `Whisky ${r.position} als Sieger tippen`
+                        isTip
+                          ? `Dein Tipp: Whisky ${r.position}`
+                          : tip.editable
+                            ? `Whisky ${r.position} als Sieger tippen`
+                            : `Whisky ${r.position}, nicht getippt`
                       }
                       className={cn(
                         'flex w-11 shrink-0 items-center justify-center hover:bg-accent disabled:cursor-not-allowed',

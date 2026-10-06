@@ -357,14 +357,18 @@ Tasting, keine Test-Events übrig)
 
 ### Bugs Found
 
-#### BUG-1 (Low, vorbestehend aus PROJ-7): falscher Hinweis auf der Bewertungskarte nach dem Abschluss
+#### BUG-1 (Low, vorbestehend aus PROJ-7): falscher Hinweis auf der Bewertungskarte nach dem Abschluss — BEHOBEN
+- **Fix (2026-10-06):** `rating-view.tsx` zeigt bei nicht bearbeitbarer Ansicht „Gespeichert.“ bzw.
+  „Nicht bewertet.“. Per E2E abgesichert (Abschluss-Test in `PROJ-24-eigene-rangliste.spec.ts`).
 - **Steps to Reproduce:** abgeschlossenes Tasting → Bewertungsansicht → Karte eines bewerteten Whiskys
 - **Expected:** ein Hinweis wie „Gespeichert.“ ohne Aufforderung zum Ändern
 - **Actual:** „Gespeichert — du kannst die Werte noch ändern.“, obwohl alles eingefroren ist
 - **Priority:** Nice to have. Nicht durch PROJ-24 entstanden, fällt hier aber stärker auf, weil die
   Seite nach dem Abschluss jetzt häufiger geöffnet wird
 
-#### BUG-2 (Low): Screenreader-Text der gesperrten Pokale nach dem Abschluss
+#### BUG-2 (Low): Screenreader-Text der gesperrten Pokale nach dem Abschluss — BEHOBEN
+- **Fix (2026-10-06):** `own-ranking.tsx` benennt gesperrte, nicht getippte Pokale
+  „Whisky N, nicht getippt“. Per E2E abgesichert (`toHaveAccessibleName`).
 - **Steps to Reproduce:** abgeschlossenes Tasting → Rangliste aufklappen → Pokal einer nicht
   getippten Zeile mit dem Screenreader ansteuern
 - **Expected:** z. B. „Whisky 3, nicht getippt“
@@ -373,10 +377,11 @@ Tasting, keine Test-Events übrig)
 
 ### Summary
 - **Acceptance Criteria:** 25/25 passed
-- **Bugs Found:** 2 total (0 critical, 0 high, 0 medium, 2 low; davon 1 vorbestehend aus PROJ-7)
+- **Bugs Found:** 2 total (0 critical, 0 high, 0 medium, 2 low; davon 1 vorbestehend aus PROJ-7) — beide behoben;
+  Nachtest PROJ-24 + PROJ-7 in Chromium und Mobile Safari 48/48 grün
 - **Security:** Pass
 - **Production Ready:** YES
-- **Recommendation:** Deploy. Die beiden Low-Bugs lassen sich bei Gelegenheit in einem Rutsch beheben
+- **Recommendation:** Deploy
 
 ## Deployment
 _To be added by /deploy_
