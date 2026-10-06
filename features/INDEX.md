@@ -36,7 +36,7 @@
 | PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Deployed | [PROJ-19-flexible-punkteskala.md](PROJ-19-flexible-punkteskala.md) | 2026-10-05 |
 | PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Roadmap | – | 2026-10-05 |
 | PROJ-21 | Whisky-Steward bringt Whiskies mit | Roadmap | – | 2026-10-05 |
-| PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Approved | [PROJ-22-sieger-tipp-kenner-der-woche.md](PROJ-22-sieger-tipp-kenner-der-woche.md) | 2026-10-05 |
+| PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Deployed | [PROJ-22-sieger-tipp-kenner-der-woche.md](PROJ-22-sieger-tipp-kenner-der-woche.md) | 2026-10-05 |
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
 | PROJ-24 | Eigene Live-Rangliste | Roadmap | – | 2026-10-05 |
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
@@ -99,6 +99,13 @@ im Eintrage-Formular, nach dem Abschluss für alle sichtbar) am 2026-10-05 als
 `v1.9.0` live (mit DB-Migration `20261007120000_results_stats.sql` — Spalten an
 `whisky_rankings` / `past_tastings` angehängt, TS022; neues Paket `recharts`;
 41/41 AC, 1 Low-Bug offen; PROJ-19 BUG-1/BUG-2 mitbehoben).
+PROJ-22 (Sieger-Tipp & „Kenner der Woche": blinder Tipp während des Tastings,
+Kenner beim Sieger + „Alle Tipps" auf der Ergebnisseite, Zähler in der Bilanz mit
+eigenem Sichtbarkeits-Schalter) am 2026-10-06 als `v1.10.0` live (mit DB-Migration
+`20261008120000_winner_tips.sql` — Tabelle `winner_tips`, RPC `set_winner_tip`
+(TS023), Sicht `winner_tips_revealed`, `profiles.show_kenner_count`; 24/24 AC,
+1 Medium-Bug während der QA gefunden und behoben — Netzwerkfehler beim Tippen/
+Bewerten landete in der Fehlergrenze, Fix gilt auch für PROJ-7).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)

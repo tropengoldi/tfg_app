@@ -1,6 +1,6 @@
 # PROJ-22: Sieger-Tipp & „Kenner der Woche"
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-06
 
@@ -403,4 +403,17 @@ kein aktives Tasting; danach keine Test-Events übrig)
 - **Recommendation:** Deploy
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-06 als `v1.10.0` (Push `bbbe881` auf `main` → Vercel-Auto-Deploy, Status success)
+- **DB-Migration:** `20261008120000_winner_tips.sql` vorab per `db:push` durch den Nutzer
+  eingespielt (2026-10-05, Reihenfolge DB → App eingehalten); `db:types` neu erzeugt
+- **Pre-Deploy:** kein Tasting aktiv, Lint + Production-Build grün, keine neuen
+  Umgebungsvariablen, kein neues Paket
+- **Post-Deploy-Verifikation:** `tests/PROJ-22-sieger-tipp.spec.ts` + `tests/PROJ-7-bewertungsansicht.spec.ts`
+  gegen die Produktions-URL — **50/50 grün** (Chromium + Mobile Safari; 8 PROJ-7-Fälle laufen
+  bewusst nur in Chromium); danach kein aktives Tasting, keine Test-Events übrig
+- **Behoben mit diesem Release:** PROJ-22 BUG-1 (Netzwerkfehler beim Tippen/Bewerten ersetzte
+  die Bewertungsansicht durch die Fehlerseite) — betrifft auch das Bewerten aus PROJ-7
+- **Rollback:** Vercel → vorherige Version „Promote to Production“. Die alte App ignoriert die
+  neue Tabelle/Sicht/Spalte; die Migration muss dafür nicht zurückgenommen werden
