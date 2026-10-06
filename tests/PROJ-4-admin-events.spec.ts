@@ -2,8 +2,8 @@ import { addDays, format } from 'date-fns'
 import { expect, test } from '@playwright/test'
 
 import {
-  ADMIN_EMAIL,
   addWhiskyAs,
+  createDisposableAdmin,
   createDisposableUser,
   createEventDirect,
   deleteEventsByLocationPrefix,
@@ -12,8 +12,24 @@ import {
   hasServiceClient,
   login,
   serviceClient,
-  TEST_EMAIL,
 } from './helpers/auth'
+
+// PROJ-26: Wegwerf-Konten statt der Seed-Konten — das echte Admin-Konto und
+// test.teilnehmer@example.com werden von der Suite nicht mehr benutzt.
+let seedAdmin: { id: string; email: string }
+let seedMember: { id: string; email: string }
+test.beforeAll(async () => {
+  if (!hasServiceClient) return
+  seedAdmin = await createDisposableAdmin(`adm${Date.now()}p${process.pid}`)
+  seedMember = await createDisposableUser(`mem${Date.now()}p${process.pid}`)
+})
+test.afterAll(async () => {
+  if (!hasServiceClient) return
+  // Vom Wegwerf-Admin angelegte Tastings halten ihn fest (created_by) → zuerst weg.
+  if (seedAdmin) await serviceClient().from('tasting_events').delete().eq('created_by', seedAdmin.id)
+  if (seedAdmin) await deleteUser(seedAdmin.id)
+  if (seedMember) await deleteUser(seedMember.id)
+})
 
 const STAMP = Date.now()
 const LOC = (tag: string) => `QA4-${STAMP}-${tag}`
@@ -73,13 +89,13 @@ async function pickFutureDate(page: import('@playwright/test').Page) {
 
 // ===========================================================================
 test('Teilnehmer: /admin/events liefert „Seite nicht gefunden"', async ({ page }) => {
-  await login(page, TEST_EMAIL)
+  await login(page, seedMember.email)
   await page.goto('/admin/events')
   await expect(page.getByText(/nicht gefunden/i)).toBeVisible()
 })
 
 test('Admin sieht die Liste mit „Tasting anlegen"', async ({ page }) => {
-  await login(page, ADMIN_EMAIL)
+  await login(page, seedAdmin.email)
   await page.goto('/admin/events')
   await expect(
     page.getByRole('link', { name: /Tasting anlegen|Erstes Tasting anlegen/ }),
@@ -90,7 +106,7 @@ test.describe('Anlegen & Bearbeiten', () => {
   test.skip(!hasServiceClient, 'Service-Client nötig')
 
   test('Pflichtfelder: leeres Formular zeigt Validierungsmeldungen', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await gotoForm(page, '/admin/events/neu')
     await page.getByRole('button', { name: 'Tasting anlegen' }).click()
     await expect(page.getByText('Datum ist erforderlich')).toBeVisible()
@@ -100,7 +116,7 @@ test.describe('Anlegen & Bearbeiten', () => {
   })
 
   test('Kalender sperrt Tage in der Vergangenheit', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await gotoForm(page, '/admin/events/neu')
     await page.getByRole('button', { name: 'Datum', exact: true }).click()
     // react-day-picker benennt die Zellen per aria-label „… August 28th, 2026".
@@ -121,7 +137,7 @@ test.describe('Anlegen & Bearbeiten', () => {
   })
 
   test('Limit außerhalb 1–10 wird abgelehnt', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await gotoForm(page, '/admin/events/neu')
     await fillField(page, 'Max. Whiskies pro Person', '11')
     await page.getByRole('button', { name: 'Tasting anlegen' }).click()
@@ -129,12 +145,12 @@ test.describe('Anlegen & Bearbeiten', () => {
   })
 
   test('anlegen (Draft) → erscheint in der Liste', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await gotoForm(page, '/admin/events/neu')
     await pickFutureDate(page)
     await fillField(page, 'Ort', LOC('create'))
     // Gastgeber wählen
-    await page.getByRole('combobox').click()
+    await page.getByRole('combobox', { name: 'Gastgeber' }).click()
     await page.getByRole('option', { name: MEMBER_NAME }).click()
 
     await page.getByRole('button', { name: 'Tasting anlegen' }).click()
@@ -146,9 +162,9 @@ test.describe('Anlegen & Bearbeiten', () => {
   })
 
   test('Teilnehmer-Picker: der Gastgeber ist gesetzt und gesperrt', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await gotoForm(page, '/admin/events/neu')
-    await page.getByRole('combobox').click()
+    await page.getByRole('combobox', { name: 'Gastgeber' }).click()
     await page.getByRole('option', { name: MEMBER_NAME }).click()
     const hostCheckbox = page
       .getByRole('listitem')
@@ -165,7 +181,7 @@ test.describe('Anlegen & Bearbeiten', () => {
       location: LOC('edit'),
       eventDate: FUTURE,
     })
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await gotoForm(page, `/admin/events/${evId}`)
     await fillField(page, 'Ort', LOC('edit-neu'))
     await page.getByRole('button', { name: 'Änderungen speichern' }).click()
@@ -185,7 +201,7 @@ test.describe('Anlegen & Bearbeiten', () => {
       eventDate: FUTURE,
       status: 'closed',
     })
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await page.goto('/admin/events')
     const row = page.getByRole('listitem').filter({ hasText: LOC('closed') })
     await expect(row.getByText('Abgeschlossen')).toBeVisible()
@@ -207,7 +223,7 @@ test.describe('Löschen', () => {
       eventDate: FUTURE,
     })
     void evId
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await page.goto('/admin/events')
     const row = page.getByRole('listitem').filter({ hasText: LOC('del-ok') })
     await row.getByRole('button', { name: /Aktionen/ }).click()
@@ -232,7 +248,7 @@ test.describe('Löschen', () => {
     })
     await addWhiskyAs(member.email, evId, 'Sperr-Dram')
 
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await page.goto('/admin/events')
     const row = page.getByRole('listitem').filter({ hasText: LOC('del-whisky') })
     await row.getByRole('button', { name: /Aktionen/ }).click()

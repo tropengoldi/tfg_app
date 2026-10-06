@@ -247,6 +247,7 @@ export type Database = {
           favorite_region: string | null
           id: string
           is_active: boolean
+          is_test: boolean
           role: Database["public"]["Enums"]["app_role"]
           show_avg_points: boolean
           show_best_placement: boolean
@@ -268,6 +269,7 @@ export type Database = {
           favorite_region?: string | null
           id: string
           is_active?: boolean
+          is_test?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           show_avg_points?: boolean
           show_best_placement?: boolean
@@ -289,6 +291,7 @@ export type Database = {
           favorite_region?: string | null
           id?: string
           is_active?: boolean
+          is_test?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           show_avg_points?: boolean
           show_best_placement?: boolean
@@ -721,6 +724,7 @@ export type Database = {
           helper_name: string | null
           host_id: string | null
           host_name: string | null
+          is_test: boolean | null
           location: string | null
           theme: string | null
           winner_name: string | null
@@ -766,6 +770,7 @@ export type Database = {
           favorite_dram: string | null
           favorite_region: string | null
           id: string | null
+          is_test: boolean | null
           show_avg_points: boolean | null
           show_best_placement: boolean | null
           show_kenner_count: boolean | null
@@ -778,6 +783,7 @@ export type Database = {
           favorite_dram?: never
           favorite_region?: never
           id?: string | null
+          is_test?: boolean | null
           show_avg_points?: boolean | null
           show_best_placement?: boolean | null
           show_kenner_count?: boolean | null
@@ -790,6 +796,7 @@ export type Database = {
           favorite_dram?: never
           favorite_region?: never
           id?: string | null
+          is_test?: boolean | null
           show_avg_points?: boolean | null
           show_best_placement?: boolean | null
           show_kenner_count?: boolean | null
@@ -805,6 +812,7 @@ export type Database = {
           brought_by: string | null
           distillery: string | null
           event_id: string | null
+          is_test: boolean | null
           name: string | null
           nose_total: number | null
           position: number | null
@@ -851,6 +859,7 @@ export type Database = {
       whisky_score_breakdown: {
         Row: {
           event_id: string | null
+          is_test: boolean | null
           nose_points: number | null
           rater_id: string | null
           rater_name: string | null
@@ -929,6 +938,7 @@ export type Database = {
           display_name: string | null
           event_id: string | null
           is_correct: boolean | null
+          is_test: boolean | null
           position: number | null
           profile_id: string | null
           rank: number | null
@@ -1007,6 +1017,7 @@ export type Database = {
           host_id: string
           host_name: string
           id: string
+          is_test: boolean
           location: string
           max_whiskies_per_participant: number
           participant_count: number
@@ -1023,8 +1034,17 @@ export type Database = {
           has_signed_in: boolean
           id: string
           is_active: boolean
+          is_test: boolean
           role: Database["public"]["Enums"]["app_role"]
         }[]
+      }
+      admin_set_test_account: {
+        Args: { p_target: string; p_value: boolean }
+        Returns: number
+      }
+      admin_test_account_impact: {
+        Args: { p_target: string; p_value: boolean }
+        Returns: number
       }
       can_rate_whisky: { Args: { p_whisky: string }; Returns: boolean }
       can_run_host_control: { Args: { p_event: string }; Returns: boolean }
@@ -1053,6 +1073,7 @@ export type Database = {
         Args: { p_event: string }
         Returns: Database["public"]["Enums"]["event_status"]
       }
+      event_visible: { Args: { p_event: string }; Returns: boolean }
       is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_event_closed: { Args: { p_event: string }; Returns: boolean }
@@ -1060,10 +1081,13 @@ export type Database = {
       is_event_host: { Args: { p_event: string }; Returns: boolean }
       is_event_participant: { Args: { p_event: string }; Returns: boolean }
       is_own_message: { Args: { p_message: string }; Returns: boolean }
+      is_test_event: { Args: { p_event: string }; Returns: boolean }
+      is_test_profile: { Args: { p_profile: string }; Returns: boolean }
       profile_shows_collection: {
         Args: { p_profile: string }
         Returns: boolean
       }
+      profile_visible: { Args: { p_profile: string }; Returns: boolean }
       rating_progress: {
         Args: { p_event: string }
         Returns: {
@@ -1103,6 +1127,10 @@ export type Database = {
         Returns: undefined
       }
       start_event: { Args: { p_event: string }; Returns: undefined }
+      test_account_impact_internal: {
+        Args: { p_target: string; p_value: boolean }
+        Returns: number
+      }
       update_event: {
         Args: {
           p_event: string
@@ -1126,6 +1154,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      viewer_sees_tests: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "teilnehmer"

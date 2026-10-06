@@ -1,21 +1,35 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import {
-  ADMIN_EMAIL,
   addParticipant,
   addWhiskyAs,
+  closeAllActiveEvents,
+  createDisposableAdmin,
   createDisposableUser,
   createEventDirect,
   deleteEventsByLocationPrefix,
   deleteUser,
   fillField,
-  closeAllActiveEvents,
   hasServiceClient,
   login,
   logout,
   serviceClient,
   startEventDirect,
 } from './helpers/auth'
+
+// PROJ-26: Wegwerf-Konten statt der Seed-Konten — das echte Admin-Konto und
+// test.teilnehmer@example.com werden von der Suite nicht mehr benutzt.
+let seedAdmin: { id: string; email: string }
+test.beforeAll(async () => {
+  if (!hasServiceClient) return
+  seedAdmin = await createDisposableAdmin(`adm${Date.now()}p${process.pid}`)
+})
+test.afterAll(async () => {
+  if (!hasServiceClient) return
+  // Vom Wegwerf-Admin angelegte Tastings halten ihn fest (created_by) → zuerst weg.
+  if (seedAdmin) await serviceClient().from('tasting_events').delete().eq('created_by', seedAdmin.id)
+  if (seedAdmin) await deleteUser(seedAdmin.id)
+})
 
 const STAMP = `${Date.now()}p${process.pid}`
 const LOC = (tag: string) => `QA6-${STAMP}-${tag}`
@@ -99,7 +113,7 @@ test('Nicht-Gastgeber bekommt „Seite nicht gefunden"', async ({ page }) => {
 
 test('Admin kann die Steuer-Seite öffnen', async ({ page }) => {
   const evId = await draftEvent('admin', [`Adm-${STAMP}`])
-  await login(page, ADMIN_EMAIL)
+  await login(page, seedAdmin.email)
   await openGastgeber(page, evId)
   // Der Admin sieht dieselben Steuer-Blöcke (Reihenfolge + Start), obwohl er
   // nicht Teilnehmer ist.

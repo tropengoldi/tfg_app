@@ -8,6 +8,8 @@ export interface MemberRow {
   is_active: boolean
   email: string
   has_signed_in: boolean
+  /** PROJ-26 */
+  is_test: boolean
 }
 
 /**

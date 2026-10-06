@@ -40,7 +40,7 @@
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
 | PROJ-24 | Eigene Live-Rangliste | Deployed | [PROJ-24-eigene-live-rangliste.md](PROJ-24-eigene-live-rangliste.md) | 2026-10-05 |
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
-| PROJ-26 | Testkonten für normale Nutzer unsichtbar | Architected | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
+| PROJ-26 | Testkonten für normale Nutzer unsichtbar | In Progress | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
 
 <!-- Add features above this line -->
 

@@ -1,34 +1,51 @@
 import { expect, test } from '@playwright/test'
 
 import {
-  ADMIN_EMAIL,
   bottomNav,
-  fillField,
   consumeAuthLink,
+  createDisposableAdmin,
   createDisposableUser,
   deleteUser,
   disposableEmail,
+  fillField,
   generateAuthLink,
   hasServiceClient,
   login,
-  setActive,
   SEED_PASSWORD,
-  TEST_EMAIL,
+  serviceClient,
+  setActive,
 } from './helpers/auth'
+
+// PROJ-26: Wegwerf-Konten statt der Seed-Konten — das echte Admin-Konto und
+// test.teilnehmer@example.com werden von der Suite nicht mehr benutzt.
+let seedAdmin: { id: string; email: string }
+let seedMember: { id: string; email: string }
+test.beforeAll(async () => {
+  if (!hasServiceClient) return
+  seedAdmin = await createDisposableAdmin(`adm${Date.now()}p${process.pid}`)
+  seedMember = await createDisposableUser(`mem${Date.now()}p${process.pid}`)
+})
+test.afterAll(async () => {
+  if (!hasServiceClient) return
+  // Vom Wegwerf-Admin angelegte Tastings halten ihn fest (created_by) → zuerst weg.
+  if (seedAdmin) await serviceClient().from('tasting_events').delete().eq('created_by', seedAdmin.id)
+  if (seedAdmin) await deleteUser(seedAdmin.id)
+  if (seedMember) await deleteUser(seedMember.id)
+})
 
 // ===========================================================================
 // Anmeldung
 // ===========================================================================
 test.describe('Anmeldung', () => {
   test('aktives Konto: Login führt auf die Startseite', async ({ page }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     await expect(page.getByText(/Hallo,/)).toBeVisible()
   })
 
   test('Login mit gemerktem Zielpfad landet dort', async ({ page }) => {
     await page.goto('/tastings')
     await expect(page).toHaveURL(/\/login\?redirect=%2Ftastings/)
-    await fillField(page, 'E-Mail', TEST_EMAIL)
+    await fillField(page, 'E-Mail', seedMember.email)
     await fillField(page, 'Passwort', SEED_PASSWORD, true)
     await page.getByRole('button', { name: 'Anmelden' }).click()
     await page.waitForURL((u) => new URL(u).pathname === '/tastings')
@@ -36,17 +53,17 @@ test.describe('Anmeldung', () => {
 
   test('falsche Kombination: allgemeiner Fehler, E-Mail bleibt stehen', async ({ page }) => {
     await page.goto('/login')
-    await fillField(page, 'E-Mail', TEST_EMAIL)
+    await fillField(page, 'E-Mail', seedMember.email)
     await fillField(page, 'Passwort', 'falsch-falsch', true)
     await page.getByRole('button', { name: 'Anmelden' }).click()
     // Meldung erscheint sowohl als Alert als auch als Toast → .first()
     await expect(page.getByText('E-Mail oder Passwort stimmt nicht.').first()).toBeVisible()
-    await expect(page.getByLabel('E-Mail')).toHaveValue(TEST_EMAIL)
+    await expect(page.getByLabel('E-Mail')).toHaveValue(seedMember.email)
     await expect(page).toHaveURL(/\/login/)
   })
 
   test('bereits angemeldet: /login leitet auf die Startseite', async ({ page }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     await page.goto('/login')
     await page.waitForURL((u) => new URL(u).pathname === '/')
   })
@@ -216,7 +233,7 @@ test.describe('Passwort vergessen', () => {
 // ===========================================================================
 test.describe('Abmelden', () => {
   test('Abmelden führt auf /login mit Hinweis', async ({ page }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     await page.goto('/profil')
     const abmelden = page.getByRole('button', { name: 'Abmelden' })
     await expect(abmelden).toBeVisible({ timeout: 10_000 })
@@ -226,7 +243,7 @@ test.describe('Abmelden', () => {
   })
 
   test('nach Abmelden: Zurück auf eine geschützte Seite → /login', async ({ page }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     await page.goto('/profil')
     const abmelden = page.getByRole('button', { name: 'Abmelden' })
     await expect(abmelden).toBeVisible({ timeout: 10_000 })
@@ -249,14 +266,14 @@ test.describe('Geschützte Bereiche & Rollen', () => {
   })
 
   test('Teilnehmer: /admin liefert „Seite nicht gefunden"', async ({ page }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     await page.goto('/admin')
     await expect(page.getByText(/nicht gefunden/i)).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Admin' })).toHaveCount(0)
   })
 
   test('Admin: /admin zeigt die Admin-Startseite', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await page.goto('/admin')
     await expect(page.getByRole('heading', { name: 'Admin' })).toBeVisible()
   })
@@ -267,7 +284,7 @@ test.describe('Geschützte Bereiche & Rollen', () => {
 // ===========================================================================
 test.describe('App-Shell & Navigation', () => {
   test('Bottom-Nav zeigt Start, Tastings, Profil', async ({ page }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     const nav = bottomNav(page)
     await expect(nav.getByRole('link', { name: 'Start' })).toBeVisible()
     await expect(nav.getByRole('link', { name: 'Tastings' })).toBeVisible()
@@ -275,18 +292,18 @@ test.describe('App-Shell & Navigation', () => {
   })
 
   test('„Admin" nur für Admins in der Bottom-Nav', async ({ page }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     await expect(bottomNav(page).getByRole('link', { name: 'Admin' })).toHaveCount(0)
 
     await page.goto('/auth/abmelden')
     await page.waitForURL(/\/login/)
 
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await expect(bottomNav(page).getByRole('link', { name: 'Admin' })).toBeVisible()
   })
 
   test('aktueller Eintrag ist als aktiv markiert', async ({ page }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     await bottomNav(page).getByRole('link', { name: 'Tastings' }).click()
     await page.waitForURL((u) => new URL(u).pathname === '/tastings')
     await expect(
@@ -295,7 +312,7 @@ test.describe('App-Shell & Navigation', () => {
   })
 
   test('fehlende Session beim Seitenwechsel → /login', async ({ page, context }) => {
-    await login(page, TEST_EMAIL)
+    await login(page, seedMember.email)
     await context.clearCookies()
     await page.goto('/tastings')
     await expect(page).toHaveURL(/\/login/)

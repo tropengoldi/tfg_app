@@ -1,6 +1,6 @@
 # PROJ-26: Testkonten für normale Nutzer unsichtbar
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-06
 
@@ -320,6 +320,53 @@ Keine.
 ### Arbeitsaufteilung
 `/backend` zuerst (Migration, Typen, Server-Aktionen, Integrationstests, Testsuite-Helfer), dann
 `/frontend` (Abzeichen, Häkchen, Schalter, Rückfragen, Warnung, Bilanz-Filter).
+
+### Implementation Notes (Backend, 2026-10-06)
+- **Migration** `supabase/migrations/20261009120000_test_accounts.sql` (vom Nutzer per `db:push`
+  eingespielt, danach `db:types`):
+  - `profiles.is_test` (Default false), Constraint `profiles_test_not_admin`, nur `select`-Grant
+    für die Spalte, kein `update`-Grant → ändern nur über `admin_set_test_account`.
+  - Prüfungen (SECURITY DEFINER): `viewer_sees_tests()`, `is_test_profile(id)`,
+    `is_test_event(id)` (die eine Regel: Gastgeber/Steward/Teilnehmer ist Testkonto),
+    `profile_visible(id)`, `event_visible(id)`.
+  - Policies verschärft (bestehende Bedingung UND sichtbar): `profiles_select_all`,
+    `events_select_participant_or_admin`, `participants_select_same_event`,
+    `whiskies_select_participant_or_admin`, `wd_select`. Sammlung über
+    `profile_shows_collection` (+ `profile_visible`).
+  - Sichten mit Filter und angehängter Spalte `is_test`: `profiles_public`, `whisky_rankings`,
+    `past_tastings`, `whisky_score_breakdown`, `winner_tips_revealed`.
+  - `admin_list_members` / `admin_list_events` neu angelegt (+ `is_test`).
+    `admin_test_account_impact`, `admin_set_test_account` (geben die Zahl betroffener Tastings
+    zurück, intern `test_account_impact_internal`). `set_member_admin` lehnt Testkonten ab (TS025).
+  - `resolve_message_recipients`: Testkonto (kein Admin) → nur Testkonten, sonst TS024.
+    Unsichtbare Empfänger fallen still heraus.
+  - `handle_new_user` übernimmt `is_test` aus den Metadaten der Anlage.
+  - Datenpflege: 20 Konten markiert (Seed-Testkonto + 19 `qa-…`), alle `teilnehmer` ohne
+    Fußabdruck. Nachgeprüft: 0 Admins markiert, 0 echte Konten markiert, Tasting 2026-10-03 kein
+    Test-Tasting.
+- **Abweichung vom Design:** `app_metadata` funktioniert für die Markierung bei der Anlage
+  **nicht**, weil GoTrue sie erst nach dem INSERT setzt und der Trigger sie dadurch nicht sieht
+  (per Probe nachgewiesen). Verwendet wird `user_metadata.is_test`, das beim INSERT vorliegt. Das ist
+  genauso sicher, weil die Registrierung gesperrt ist (Konten legt nur der Server an) und der
+  Trigger nur beim Anlegen läuft. Die Admin-Einladung (`inviteUserByEmail` → `data`) nutzt ohnehin
+  diesen Weg.
+- **App-Server:** `errors.ts` TS024/TS025. `schemas/admin.ts` `isTest` (optional) + `uuidSchema`.
+  `actions/admin.ts`: Einladung reicht `is_test` durch, NEU `getTestAccountImpactAction`,
+  `setTestAccountAction` (revalidiert app-weit). `queries/admin.ts` `MemberRow.is_test`.
+  `auth.ts` Session-Spalten + `is_test`.
+- **Testsuite:** `createDisposableUser` legt standardmäßig Testkonten an (`test: false` als
+  Ausnahme). `setRole(…, 'admin')` entfernt die Markierung. NEU `createDisposableAdmin`. Die 5
+  Specs mit Seed-Anmeldung (PROJ-2, 3, 4, 6, 14) nutzen jetzt pro Worker einen Wegwerf-Admin bzw.
+  ein Wegwerf-Mitglied, inklusive Aufräumen (vorher die vom Admin angelegten Tastings). „Befördern
+  und degradieren“ (PROJ-3) nutzt bewusst ein normales Mitglied.
+- **Dabei aufgedeckt und mitbehoben (veraltete Tests, liefen seit der Admin-Passwort-Änderung
+  nicht mehr):** PROJ-3 erwartete die alte TS013-Meldung ohne „oder Whisky-Steward“. PROJ-4 griff
+  unspezifisch auf „das“ Auswahlfeld zu, seit PROJ-11 gibt es zwei.
+- **Tests:** neuer Integrationstest `test-accounts.integration.test.ts` (21 Fälle, alle drei
+  Rollen). `npm run test:rls` **188/188**. Unit 189/189, Lint + Typcheck sauber.
+- **Volle E2E-Regression (Chromium, `--workers=1`):** PROJ-2/3/4/6/14 mit Wegwerf-Konten 83 grün
+  (2 vorbestehende `fixme` in PROJ-3). Alle übrigen 15 Specs **161/161** grün. Die Suite läuft damit
+  erstmals seit der Admin-Passwort-Änderung komplett, ohne Seed-Konten.
 
 ## QA Test Results
 _To be added by /qa_

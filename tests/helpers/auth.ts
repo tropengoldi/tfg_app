@@ -59,10 +59,14 @@ export function bottomNav(page: Page) {
   return page.getByRole('navigation', { name: 'Hauptnavigation' })
 }
 
-/** Legt einen Wegwerf-Auth-Nutzer + Profil an. */
+/**
+ * Legt einen Wegwerf-Auth-Nutzer + Profil an. PROJ-26: standardmäßig als
+ * **Testkonto** (für die Runde unsichtbar, auch wenn das Aufräumen scheitert).
+ * `test: false` nur für Tests, die ausdrücklich ein normales Mitglied prüfen.
+ */
 export async function createDisposableUser(
   tag: string,
-  { active = true }: { active?: boolean } = {},
+  { active = true, test = true }: { active?: boolean; test?: boolean } = {},
 ) {
   const svc = serviceClient()
   const email = `qa-${tag}-${Date.now()}-${Math.floor(Math.random() * 1e4)}@example.com`
@@ -70,7 +74,9 @@ export async function createDisposableUser(
     email,
     password: SEED_PASSWORD,
     email_confirm: true,
-    user_metadata: { display_name: `QA ${tag}` },
+    // is_test in user_metadata: liegt schon beim INSERT vor (app_metadata setzt
+    // GoTrue erst danach → der Anlage-Trigger sähe es nicht).
+    user_metadata: { display_name: `QA ${tag}`, is_test: test },
   })
   if (error || !data.user) throw error ?? new Error('createUser fehlgeschlagen')
 
@@ -95,12 +101,25 @@ export async function signInOnce(email: string, password = SEED_PASSWORD) {
   if (error) throw error
 }
 
+/** Admins können keine Testkonten sein (PROJ-26) → beim Befördern Markierung entfernen. */
 export async function setRole(userId: string, role: 'admin' | 'teilnehmer') {
   const { error } = await serviceClient()
     .from('profiles')
-    .update({ role })
+    .update(role === 'admin' ? { role, is_test: false } : { role })
     .eq('id', userId)
   if (error) throw error
+}
+
+/**
+ * Wegwerf-Admin statt des echten Admin-Kontos (PROJ-26). Bewusst KEIN
+ * Testkonto (Admins können keine sein); einmal angemeldet, damit er wie ein
+ * echter Admin „Aktiv" ist.
+ */
+export async function createDisposableAdmin(tag: string) {
+  const u = await createDisposableUser(tag, { test: false })
+  await setRole(u.id, 'admin')
+  await signInOnce(u.email)
+  return u
 }
 
 /** Löscht alle qa-Wegwerf-Nutzer, deren E-Mail mit einem Präfix beginnt. */

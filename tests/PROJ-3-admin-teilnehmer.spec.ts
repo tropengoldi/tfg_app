@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import {
-  ADMIN_EMAIL,
+  createDisposableAdmin,
   createDisposableUser,
   deleteUser,
   deleteUsersByPrefix,
@@ -11,8 +11,24 @@ import {
   serviceClient,
   setRole,
   signInOnce,
-  TEST_EMAIL,
 } from './helpers/auth'
+
+// PROJ-26: Wegwerf-Konten statt der Seed-Konten — das echte Admin-Konto und
+// test.teilnehmer@example.com werden von der Suite nicht mehr benutzt.
+let seedAdmin: { id: string; email: string }
+let seedMember: { id: string; email: string }
+test.beforeAll(async () => {
+  if (!hasServiceClient) return
+  seedAdmin = await createDisposableAdmin(`adm${Date.now()}p${process.pid}`)
+  seedMember = await createDisposableUser(`mem${Date.now()}p${process.pid}`)
+})
+test.afterAll(async () => {
+  if (!hasServiceClient) return
+  // Vom Wegwerf-Admin angelegte Tastings halten ihn fest (created_by) → zuerst weg.
+  if (seedAdmin) await serviceClient().from('tasting_events').delete().eq('created_by', seedAdmin.id)
+  if (seedAdmin) await deleteUser(seedAdmin.id)
+  if (seedMember) await deleteUser(seedMember.id)
+})
 
 const RUN_STAMP = Date.now()
 const invitePrefix = `qa3-inv-${RUN_STAMP}-`
@@ -40,23 +56,23 @@ async function openRowMenu(page: import('@playwright/test').Page, name: string) 
 
 // ===========================================================================
 test('Teilnehmer: /admin/teilnehmer liefert „Seite nicht gefunden"', async ({ page }) => {
-  await login(page, TEST_EMAIL)
+  await login(page, seedMember.email)
   await page.goto('/admin/teilnehmer')
   await expect(page.getByText(/nicht gefunden/i)).toBeVisible()
 })
 
 test('Admin sieht die Liste mit eigener Zeile, E-Mail und Status', async ({ page }) => {
-  await login(page, ADMIN_EMAIL)
+  await login(page, seedAdmin.email)
   await page.goto('/admin/teilnehmer')
-  const me = row(page, ADMIN_EMAIL)
+  const me = row(page, seedAdmin.email)
   await expect(me).toBeVisible()
-  await expect(me.getByText(ADMIN_EMAIL)).toBeVisible()
+  await expect(me.getByText(seedAdmin.email)).toBeVisible()
   await expect(me.getByText('Aktiv')).toBeVisible()
   // Admin-Badge: „QA promo" wird im Beförderungs-Test geprüft (Name ohne „Admin").
 })
 
 test('Admin kann sich in der eigenen Zeile nicht deaktivieren', async ({ page }) => {
-  await login(page, ADMIN_EMAIL)
+  await login(page, seedAdmin.email)
   await page.goto('/admin/teilnehmer')
   const me = row(page, 'Admin')
   const menuBtn = me.getByRole('button', { name: /Aktionen für Admin/ })
@@ -79,7 +95,7 @@ test.describe('Einladen', () => {
   test.fixme(
     'mit E-Mail + Name → Erfolg, Zeile erscheint als „Eingeladen"',
     async ({ page }) => {
-      await login(page, ADMIN_EMAIL)
+      await login(page, seedAdmin.email)
       await page.goto('/admin/teilnehmer')
       await page.getByRole('button', { name: 'Teilnehmer einladen' }).click()
       await fillField(page, 'E-Mail', inviteEmail('named'))
@@ -93,7 +109,7 @@ test.describe('Einladen', () => {
   )
 
   test.fixme('ohne Name → Anzeigename ist der Teil vor dem @', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await page.goto('/admin/teilnehmer')
     await page.getByRole('button', { name: 'Teilnehmer einladen' }).click()
     await fillField(page, 'E-Mail', inviteEmail('noname'))
@@ -103,16 +119,16 @@ test.describe('Einladen', () => {
   })
 
   test('schon vorhandene E-Mail → „schon in der Runde"', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await page.goto('/admin/teilnehmer')
     await page.getByRole('button', { name: 'Teilnehmer einladen' }).click()
-    await fillField(page, 'E-Mail', TEST_EMAIL)
+    await fillField(page, 'E-Mail', seedMember.email)
     await page.getByRole('button', { name: 'Einladen' }).click()
     await expect(page.getByText('Diese Person ist schon in der Runde.')).toBeVisible()
   })
 
   test('ungültige E-Mail → Validierungsmeldung, kein Absenden', async ({ page }) => {
-    await login(page, ADMIN_EMAIL)
+    await login(page, seedAdmin.email)
     await page.goto('/admin/teilnehmer')
     await page.getByRole('button', { name: 'Teilnehmer einladen' }).click()
     await fillField(page, 'E-Mail', 'keine-email')
@@ -129,7 +145,7 @@ test.describe('Aktionen an Wegwerf-Teilnehmern', () => {
     const u = await createDisposableUser('deakt', { active: true })
     await signInOnce(u.email)
     try {
-      await login(page, ADMIN_EMAIL)
+      await login(page, seedAdmin.email)
       await page.goto('/admin/teilnehmer')
       await openRowMenu(page, 'QA deakt')
       await page.getByRole('menuitem', { name: 'Deaktivieren' }).click()
@@ -175,13 +191,13 @@ test.describe('Aktionen an Wegwerf-Teilnehmern', () => {
       .select('id')
       .single()
     try {
-      await login(page, ADMIN_EMAIL)
+      await login(page, seedAdmin.email)
       await page.goto('/admin/teilnehmer')
       await openRowMenu(page, 'QA gastg')
       await page.getByRole('menuitem', { name: 'Deaktivieren' }).click()
       await page.getByRole('alertdialog').getByRole('button', { name: 'Deaktivieren' }).click()
       await expect(
-        page.getByText(/Gastgeber eines Tastings, das noch nicht abgeschlossen ist/),
+        page.getByText(/Gastgeber oder Whisky-Steward eines Tastings, das noch nicht abgeschlossen ist/),
       ).toBeVisible()
       await expect(row(page, 'QA gastg').getByText('Aktiv')).toBeVisible()
     } finally {
@@ -193,7 +209,7 @@ test.describe('Aktionen an Wegwerf-Teilnehmern', () => {
   test('„Eingeladen"-Teilnehmer: kein „Zum Admin machen"', async ({ page }) => {
     const u = await createDisposableUser('invited', { active: true }) // nie angemeldet
     try {
-      await login(page, ADMIN_EMAIL)
+      await login(page, seedAdmin.email)
       await page.goto('/admin/teilnehmer')
       await openRowMenu(page, 'QA invited')
       await expect(page.getByRole('menuitem', { name: 'Zum Admin machen' })).toHaveCount(0)
@@ -204,10 +220,11 @@ test.describe('Aktionen an Wegwerf-Teilnehmern', () => {
   })
 
   test('befördern und wieder degradieren', async ({ page }) => {
-    const u = await createDisposableUser('promo', { active: true })
+    // Testkonten können keine Admins werden (PROJ-26) → bewusst normales Mitglied.
+    const u = await createDisposableUser('promo', { active: true, test: false })
     await signInOnce(u.email)
     try {
-      await login(page, ADMIN_EMAIL)
+      await login(page, seedAdmin.email)
       await page.goto('/admin/teilnehmer')
 
       await openRowMenu(page, 'QA promo')

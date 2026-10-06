@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import {
-  ADMIN_EMAIL,
   addParticipant,
   addWhiskyAs,
   closeAllActiveEvents,
+  createDisposableAdmin,
   createDisposableUser,
   createEventDirect,
   deleteEventsByLocationPrefix,
@@ -16,6 +16,20 @@ import {
   setActive,
   whiskyIdsByPosition,
 } from './helpers/auth'
+
+// PROJ-26: Wegwerf-Konten statt der Seed-Konten — das echte Admin-Konto und
+// test.teilnehmer@example.com werden von der Suite nicht mehr benutzt.
+let seedAdmin: { id: string; email: string }
+test.beforeAll(async () => {
+  if (!hasServiceClient) return
+  seedAdmin = await createDisposableAdmin(`adm${Date.now()}p${process.pid}`)
+})
+test.afterAll(async () => {
+  if (!hasServiceClient) return
+  // Vom Wegwerf-Admin angelegte Tastings halten ihn fest (created_by) → zuerst weg.
+  if (seedAdmin) await serviceClient().from('tasting_events').delete().eq('created_by', seedAdmin.id)
+  if (seedAdmin) await deleteUser(seedAdmin.id)
+})
 
 const STAMP = `${Date.now()}p${process.pid}`
 const LOC = (tag: string) => `QA14-${STAMP}-${tag}`
@@ -251,7 +265,7 @@ test('Admin sieht ein fremdes Profil genauso eingeschränkt wie jedes Mitglied',
 }) => {
   await setVisibility(owner.id, { show_favorite_dram: false })
 
-  await login(page, ADMIN_EMAIL)
+  await login(page, seedAdmin.email)
   await page.goto(`/profil/${owner.id}`, { waitUntil: 'networkidle' })
   await page.getByRole('heading', { level: 1 }).waitFor()
   await page.waitForTimeout(400)

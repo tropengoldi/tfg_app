@@ -35,6 +35,8 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   TS021: 'In diesem Tasting werden nur ganze Punkte vergeben.',
   TS022: 'Nur ganze oder halbe Punkte.',
   TS023: 'Tippen ist gerade nicht möglich.',
+  TS024: 'Testkonten können nur andere Testkonten anschreiben.',
+  TS025: 'Testkonten können keine Admins sein.',
 
   // --- Standard-PostgreSQL-Codes -----------------------------------------
   '23505': 'Dieser Eintrag existiert bereits.',
