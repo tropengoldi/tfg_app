@@ -19,6 +19,8 @@ export interface ComposeData {
   /** Die eigenen Tastings (Teilnehmer, Gastgeber oder Helfer), aktuellstes
    * zuerst, je mit Teilnehmerliste außer man selbst — für „Zu einem Tasting". */
   myTastings: ComposeTasting[]
+  /** PROJ-26: Absender ist Testkonto → nur Testkonten wählbar (DB lehnt sonst mit TS024 ab). */
+  testOnly: boolean
 }
 
 /**
@@ -26,7 +28,10 @@ export interface ComposeData {
  * (PROJ-16) — Umschalten zwischen den beiden Modi passiert danach rein im
  * Browser, ohne Nachladen.
  */
-export async function getComposeData(userId: string): Promise<ComposeData> {
+export async function getComposeData(
+  userId: string,
+  senderIsTest = false,
+): Promise<ComposeData> {
   const supabase = await createClient()
 
   const [members, participantRows] = await Promise.all([
@@ -80,10 +85,14 @@ export async function getComposeData(userId: string): Promise<ComposeData> {
     if (neededIds.length > 0) {
       const { data: profs, error: profsErr } = await supabase
         .from('profiles')
-        .select('id, display_name')
+        .select('id, display_name, is_test')
         .in('id', neededIds)
       if (profsErr) throw profsErr
-      for (const p of profs ?? []) namesById.set(p.id, p.display_name)
+      for (const p of profs ?? []) {
+        // Testkonto als Absender: echte Mitglieder gar nicht erst anbieten.
+        if (senderIsTest && !p.is_test) continue
+        namesById.set(p.id, p.display_name)
+      }
     }
 
     const seen = new Set<string>() // "eventId:profileId", falls je doppelt
@@ -101,7 +110,7 @@ export async function getComposeData(userId: string): Promise<ComposeData> {
   }
 
   return {
-    activeMembers: members.filter((m) => m.id !== userId),
+    activeMembers: members.filter((m) => m.id !== userId && (!senderIsTest || m.isTest)),
     myTastings: events.map((e) => ({
       id: e.id,
       eventDate: e.event_date,
@@ -110,6 +119,7 @@ export async function getComposeData(userId: string): Promise<ComposeData> {
         a.name.localeCompare(b.name, 'de'),
       ),
     })),
+    testOnly: senderIsTest,
   }
 }
 

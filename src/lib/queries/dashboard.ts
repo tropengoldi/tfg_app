@@ -2,11 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { todayISO } from '@/lib/dates'
 import type { EventStatus } from '@/lib/supabase/aliases'
 import { getOwnTipPosition } from '@/lib/queries/tips'
+import { testEventIds } from '@/lib/queries/test-flags'
 
 export interface DashboardParticipant {
   id: string
   name: string
   isHost: boolean
+  /** PROJ-26 */
+  isTest: boolean
 }
 
 export interface ActiveDashboard {
@@ -32,6 +35,8 @@ export interface ActiveDashboard {
   /** PROJ-22: Ausschank-Nummer des eigenen Sieger-Tipps; `null` = noch keiner
    * (nur für Mitverkoster im laufenden Tasting ermittelt). */
   myTipPosition: number | null
+  /** PROJ-26: Test-Tasting (nur für Admin/Testkonten überhaupt sichtbar). */
+  isTest: boolean
 }
 
 export interface PreviewDashboard {
@@ -86,13 +91,18 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
 
     const ids = (partRows ?? []).map((p) => p.profile_id)
     const names = new Map<string, string>()
+    const testIds = new Set<string>()
     if (ids.length > 0) {
       const { data: profs } = await supabase
         .from('profiles')
-        .select('id, display_name')
+        .select('id, display_name, is_test')
         .in('id', ids)
-      for (const p of profs ?? []) names.set(p.id, p.display_name)
+      for (const p of profs ?? []) {
+        names.set(p.id, p.display_name)
+        if (p.is_test) testIds.add(p.id)
+      }
     }
+    const isTest = (await testEventIds([active.id])).has(active.id)
 
     const isParticipant = ids.includes(userId)
     const myTipPosition =
@@ -119,6 +129,7 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
           id,
           name: names.get(id) ?? 'Unbekannt',
           isHost: id === active.host_id,
+          isTest: testIds.has(id),
         }))
         .sort((a, b) => Number(b.isHost) - Number(a.isHost) || a.name.localeCompare(b.name)),
       whiskyCount: count ?? 0,
@@ -126,6 +137,7 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
       isHost: active.host_id === userId,
       isHelper: active.helper_id === userId,
       myTipPosition,
+      isTest,
     }
   }
 

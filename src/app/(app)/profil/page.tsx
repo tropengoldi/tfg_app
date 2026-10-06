@@ -25,7 +25,7 @@ export default async function ProfilPage() {
 
   let balance: PersonalBalance | null = null
   try {
-    balance = await getPersonalBalance(userId)
+    balance = await getPersonalBalance(userId, profile.is_test)
   } catch {
     balance = null
   }

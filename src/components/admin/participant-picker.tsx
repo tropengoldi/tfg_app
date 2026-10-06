@@ -1,11 +1,14 @@
 'use client'
 
+import { TestBadge } from '@/components/common/test-badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 
 export interface PickerMember {
   id: string
   display_name: string
+  /** PROJ-26 */
+  is_test?: boolean
 }
 
 interface ParticipantPickerProps {
@@ -61,6 +64,7 @@ export function ParticipantPicker({
               className="flex-1 cursor-pointer font-normal"
             >
               {m.display_name}
+              {m.is_test ? <TestBadge className="ml-2" /> : null}
               {locked ? (
                 <span className="ml-2 text-xs text-muted-foreground">(Gastgeber)</span>
               ) : null}

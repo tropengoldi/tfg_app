@@ -10,6 +10,7 @@ import {
 
 import { GlassStrip } from '@/components/dashboard/glass-strip'
 import { EventStatusBadge } from '@/components/common/event-status-badge'
+import { TestBadge } from '@/components/common/test-badge'
 import { RealtimeRefresher } from '@/components/common/realtime-refresher'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { canRateNow, glassStates, progressLabel } from '@/lib/dashboard'
@@ -41,6 +42,7 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
               {formatEventDate(event.event_date)}
             </CardTitle>
             <EventStatusBadge status={event.status} />
+            {data.isTest ? <TestBadge /> : null}
           </div>
           <p className="text-sm text-muted-foreground">{event.location}</p>
         </CardHeader>
@@ -133,6 +135,7 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
                 <Link href={`/profil/${p.id}`} className="hover:underline">
                   {p.name}
                 </Link>
+                {p.isTest ? <TestBadge /> : null}
                 {p.isHost ? (
                   <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
                     Gastgeber

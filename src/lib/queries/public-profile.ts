@@ -6,6 +6,7 @@ import {
   type RankingRowLike,
 } from '@/lib/personal-balance'
 import { getKennerCount } from '@/lib/queries/tips'
+import { countsForBalance } from '@/lib/test-accounts'
 
 /** Jedes Feld fehlt (`undefined`), wenn der Profilinhaber es verborgen hat —
  * ununterscheidbar davon, dass die Sektion nie gerendert wird. */
@@ -45,6 +46,8 @@ type VisibilityFlags = {
   show_best_placement: boolean | null
   show_avg_points: boolean | null
   show_kenner_count: boolean | null
+  /** PROJ-26: Bilanz eines Testkontos zählt Test-Tastings, die eines echten nicht. */
+  is_test: boolean | null
 }
 
 /**
@@ -68,7 +71,7 @@ export async function getPublicProfile(targetId: string): Promise<PublicProfileD
     supabase
       .from('profiles_public')
       .select(
-        'id, display_name, bio, favorite_dram, favorite_region, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points, show_kenner_count',
+        'id, display_name, bio, favorite_dram, favorite_region, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points, show_kenner_count, is_test',
       )
       .eq('id', targetId)
       .maybeSingle(),
@@ -111,13 +114,17 @@ async function computeMaskedBalance(
 ): Promise<PublicBalance> {
   const supabase = await createClient()
 
+  const ownerIsTest = Boolean(flags.is_test)
   const [participations, rankings, breakdown] = await Promise.all([
     supabase.from('event_participants').select('event_id').eq('profile_id', targetId),
     supabase
       .from('whisky_rankings')
-      .select('rank, rating_count, name, event_id')
+      .select('rank, rating_count, name, event_id, is_test')
       .eq('brought_by', targetId),
-    supabase.from('whisky_score_breakdown').select('total_points').eq('rater_id', targetId),
+    supabase
+      .from('whisky_score_breakdown')
+      .select('total_points, is_test')
+      .eq('rater_id', targetId),
   ])
   if (participations.error) throw participations.error
   if (rankings.error) throw rankings.error
@@ -125,6 +132,7 @@ async function computeMaskedBalance(
 
   const rankingRows: RankingRowLike[] = (rankings.data ?? [])
     .filter((r): r is typeof r & { event_id: string } => Boolean(r.event_id))
+    .filter((r) => countsForBalance(r.is_test, ownerIsTest))
     .map((r) => ({
       rank: r.rank ?? 0,
       ratingCount: r.rating_count ?? 0,
@@ -151,13 +159,13 @@ async function computeMaskedBalance(
   if (participationEventIds.length > 0) {
     const { data: events, error } = await supabase
       .from('past_tastings')
-      .select('event_id, event_date')
+      .select('event_id, event_date, is_test')
       .in('event_id', participationEventIds)
     if (error) throw error
     for (const e of events ?? []) {
       if (!e.event_id || !e.event_date) continue
       eventDateById.set(e.event_id, e.event_date)
-      closed.add(e.event_id)
+      if (countsForBalance(e.is_test, ownerIsTest)) closed.add(e.event_id)
     }
   }
 
@@ -191,11 +199,13 @@ async function computeMaskedBalance(
     balance.bestPlacement = pickBestPlacement(rankingRows, eventDateById)
   }
   if (flags.show_avg_points) {
-    const totals = (breakdown.data ?? []).map((r) => Number(r.total_points ?? 0))
+    const totals = (breakdown.data ?? [])
+      .filter((r) => countsForBalance(r.is_test, ownerIsTest))
+      .map((r) => Number(r.total_points ?? 0))
     balance.avgPointsGiven = formatAvgGiven(totals)
   }
   if (flags.show_kenner_count) {
-    balance.kennerCount = await getKennerCount(targetId)
+    balance.kennerCount = await getKennerCount(targetId, ownerIsTest)
   }
   return balance
 }

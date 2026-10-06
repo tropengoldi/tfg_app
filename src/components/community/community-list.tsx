@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { TestBadge } from '@/components/common/test-badge'
 import { ChevronRight } from 'lucide-react'
 
 import type { CommunityMember } from '@/lib/queries/community'
@@ -19,7 +20,10 @@ export function CommunityList({ members }: { members: CommunityMember[] }) {
             href={`/profil/${member.id}`}
             className="flex min-h-11 items-center justify-between gap-3 p-4 transition-colors hover:bg-accent"
           >
-            <span className="font-medium">{member.name}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate font-medium">{member.name}</span>
+              {member.isTest ? <TestBadge /> : null}
+            </span>
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
           </Link>
         </li>

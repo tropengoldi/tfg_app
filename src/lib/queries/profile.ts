@@ -6,6 +6,7 @@ import {
   type RankingRowLike,
 } from '@/lib/personal-balance'
 import { getKennerCount } from '@/lib/queries/tips'
+import { countsForBalance } from '@/lib/test-accounts'
 
 /**
  * Die persönliche Bilanz (PROJ-10) aus vier RLS-abgesicherten Lesezugriffen:
@@ -47,17 +48,24 @@ export async function getOwnStammdaten(userId: string): Promise<OwnStammdaten> {
   }
 }
 
-export async function getPersonalBalance(userId: string): Promise<PersonalBalance> {
+/**
+ * PROJ-26: `ownerIsTest` — die Bilanz eines echten Kontos (auch des Admins, der
+ * Test-Tastings sehen darf) enthält keine Test-Tastings; ein Testkonto zählt sie.
+ */
+export async function getPersonalBalance(
+  userId: string,
+  ownerIsTest = false,
+): Promise<PersonalBalance> {
   const supabase = await createClient()
 
   const [participations, rankings, ratings, kennerCount] = await Promise.all([
     supabase.from('event_participants').select('event_id').eq('profile_id', userId),
     supabase
       .from('whisky_rankings')
-      .select('rank, rating_count, name, event_id')
+      .select('rank, rating_count, name, event_id, is_test')
       .eq('brought_by', userId),
     supabase.from('ratings').select('total_points, event_id').eq('profile_id', userId),
-    getKennerCount(userId),
+    getKennerCount(userId, ownerIsTest),
   ])
   if (participations.error) throw participations.error
   if (rankings.error) throw rankings.error
@@ -65,6 +73,7 @@ export async function getPersonalBalance(userId: string): Promise<PersonalBalanc
 
   const rankingRows: RankingRowLike[] = (rankings.data ?? [])
     .filter((r): r is typeof r & { event_id: string } => Boolean(r.event_id))
+    .filter((r) => countsForBalance(r.is_test, ownerIsTest))
     .map((r) => ({
       rank: r.rank ?? 0,
       ratingCount: r.rating_count ?? 0,
@@ -85,14 +94,21 @@ export async function getPersonalBalance(userId: string): Promise<PersonalBalanc
   const closed = new Set<string>()
   const eventDateById = new Map<string, string>()
   if (eventIds.length > 0) {
-    const { data: events, error } = await supabase
-      .from('tasting_events')
-      .select('id, event_date, status')
-      .in('id', eventIds)
+    const [{ data: events, error }, { data: flags, error: flagErr }] = await Promise.all([
+      supabase.from('tasting_events').select('id, event_date, status').in('id', eventIds),
+      supabase.from('past_tastings').select('event_id, is_test').in('event_id', eventIds),
+    ])
     if (error) throw error
+    if (flagErr) throw flagErr
+    const testEvents = new Set(
+      (flags ?? []).filter((f) => f.is_test && f.event_id).map((f) => f.event_id as string),
+    )
     for (const e of events ?? []) {
       eventDateById.set(e.id, e.event_date)
-      if (e.status === 'closed') closed.add(e.id)
+      // Test-Tastings zählen in der Bilanz eines echten Kontos nicht als „abgeschlossen".
+      if (e.status === 'closed' && countsForBalance(testEvents.has(e.id), ownerIsTest)) {
+        closed.add(e.id)
+      }
     }
   }
 

@@ -15,7 +15,7 @@ export default async function NeuesEventPage() {
   const members = await getMembers()
   const active = members
     .filter((m) => m.is_active)
-    .map((m) => ({ id: m.id, display_name: m.display_name }))
+    .map((m) => ({ id: m.id, display_name: m.display_name, is_test: m.is_test }))
 
   const defaultValues: EventFormInput = {
     eventDate: '',

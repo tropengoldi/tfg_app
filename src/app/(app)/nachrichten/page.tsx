@@ -9,10 +9,10 @@ import { getComposeData, getSentMessages } from '@/lib/queries/messages'
 export const metadata: Metadata = { title: 'Nachrichten' }
 
 export default async function NachrichtenPage() {
-  const { userId } = await requireUser()
+  const { userId, profile } = await requireUser()
 
   const [composeData, sentMessages] = await Promise.all([
-    getComposeData(userId),
+    getComposeData(userId, profile.is_test),
     getSentMessages(userId),
   ])
 

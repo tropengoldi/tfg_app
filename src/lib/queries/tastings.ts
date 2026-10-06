@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { todayISO } from '@/lib/dates'
+import { testEventIds } from '@/lib/queries/test-flags'
 import type { EventStatus } from '@/lib/supabase/aliases'
 
 export interface MyTastingRow {
@@ -14,6 +15,8 @@ export interface MyTastingRow {
   is_helper: boolean
   /** Hat der Abend überhaupt einen Helfer? (dann steuert der Gastgeber nicht) */
   has_helper: boolean
+  /** PROJ-26 */
+  is_test: boolean
 }
 
 /**
@@ -66,6 +69,8 @@ export async function getMyTastings(userId: string): Promise<MyTastingRow[]> {
     for (const h of hosts ?? []) hostNames.set(h.id, h.display_name)
   }
 
+  const testIds = await testEventIds(events.map((e) => e.id))
+
   const today = todayISO()
   return events
     .map((e) => ({
@@ -77,6 +82,7 @@ export async function getMyTastings(userId: string): Promise<MyTastingRow[]> {
       is_host: e.host_id === userId,
       is_helper: e.helper_id === userId,
       has_helper: e.helper_id !== null,
+      is_test: testIds.has(e.id),
     }))
     .sort((a, b) => {
       const aUpcoming = a.event_date >= today

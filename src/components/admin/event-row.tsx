@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { EventStatusBadge } from '@/components/common/event-status-badge'
+import { TestBadge } from '@/components/common/test-badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -44,6 +45,7 @@ export function EventRow({ event }: { event: EventListRow }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{formatEventDate(event.event_date)}</span>
           <EventStatusBadge status={event.status} />
+          {event.is_test ? <TestBadge /> : null}
         </div>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0" />

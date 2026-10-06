@@ -48,14 +48,19 @@ export async function getRevealedTips(eventId: string): Promise<RevealedTip[]> {
     }))
 }
 
-/** Wie oft die Person „Kenner der Woche" war (richtige Tipps in abgeschlossenen Tastings). */
-export async function getKennerCount(profileId: string): Promise<number> {
+/**
+ * Wie oft die Person „Kenner der Woche" war (richtige Tipps in abgeschlossenen
+ * Tastings). PROJ-26: Für ein echtes Konto zählen Test-Tastings nicht mit.
+ */
+export async function getKennerCount(profileId: string, ownerIsTest = false): Promise<number> {
   const supabase = await createClient()
-  const { count, error } = await supabase
+  let query = supabase
     .from('winner_tips_revealed')
     .select('event_id', { count: 'exact', head: true })
     .eq('profile_id', profileId)
     .eq('is_correct', true)
+  if (!ownerIsTest) query = query.eq('is_test', false)
+  const { count, error } = await query
   if (error) throw error
   return count ?? 0
 }

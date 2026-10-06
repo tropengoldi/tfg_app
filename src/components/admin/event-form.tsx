@@ -1,11 +1,13 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { EventDateField } from '@/components/admin/event-date-field'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { TestBadge } from '@/components/common/test-badge'
 import {
   ParticipantPicker,
   type PickerMember,
@@ -32,6 +34,7 @@ import {
 } from '@/components/ui/select'
 import { createEventAction, updateEventAction } from '@/lib/actions/admin-events'
 import { eventFormSchema, type EventFormInput } from '@/lib/schemas/admin-events'
+import { tastingMix } from '@/lib/test-accounts'
 
 interface EventFormProps {
   members: PickerMember[]
@@ -61,6 +64,18 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
   // Gastgeber-Auswahl: der Helfer darf nicht zugleich Gastgeber sein.
   const hostOptions = members.filter((m) => m.id === hostId || m.id !== helperId)
 
+  // PROJ-26: echte Mitglieder + Testkonto → Tasting wird für die Runde unsichtbar.
+  const mix = tastingMix(members, [hostId ?? '', helperId, ...participantIds])
+  const [mixedPending, setMixedPending] = useState<EventFormInput | null>(null)
+
+  function onValid(values: EventFormInput) {
+    if (mix === 'mixed') {
+      setMixedPending(values)
+      return
+    }
+    onSubmit(values)
+  }
+
   function onSubmit(values: EventFormInput) {
     startTransition(async () => {
       const helper = values.helperId ?? ''
@@ -85,7 +100,7 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form onSubmit={form.handleSubmit(onValid)} className="space-y-5" noValidate>
         {form.formState.errors.root ? (
           <Alert variant="destructive">
             <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
@@ -136,6 +151,7 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
                   {hostOptions.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.display_name}
+                      {m.is_test ? <TestBadge className="ml-2" /> : null}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -186,6 +202,7 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
                   {helperOptions.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.display_name}
+                      {m.is_test ? <TestBadge className="ml-2" /> : null}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -275,6 +292,15 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
           )}
         />
 
+        {mix === 'mixed' ? (
+          <Alert>
+            <AlertDescription>
+              Hier sind echte Mitglieder und Testkonten gemischt. Dieses Tasting wird für die
+              Runde unsichtbar — auch für die echten Teilnehmer.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         <div className="flex gap-3 pt-2">
           <Button type="submit" disabled={pending}>
             {pending
@@ -285,6 +311,21 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
           </Button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={mixedPending !== null}
+        onOpenChange={(o) => !o && setMixedPending(null)}
+        title="Tasting wird unsichtbar"
+        description="Dieses Tasting wird für die Runde unsichtbar, weil ein Testkonto beteiligt ist. Trotzdem speichern?"
+        confirmLabel="Trotzdem speichern"
+        cancelLabel="Zurück"
+        pending={pending}
+        onConfirm={() => {
+          const values = mixedPending
+          setMixedPending(null)
+          if (values) onSubmit(values)
+        }}
+      />
     </Form>
   )
 }

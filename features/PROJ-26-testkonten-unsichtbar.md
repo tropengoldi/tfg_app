@@ -368,6 +368,35 @@ Keine.
   (2 vorbestehende `fixme` in PROJ-3). Alle übrigen 15 Specs **161/161** grün. Die Suite läuft damit
   erstmals seit der Admin-Passwort-Änderung komplett, ohne Seed-Konten.
 
+### Implementation Notes (Frontend, 2026-10-06)
+- **Bausteine:** `common/test-badge.tsx` (shadcn `Badge`, gestrichelt, „Test“). `lib/test-accounts.ts`
+  (+ 10 Unit-Tests): `tastingMix` (real/test/mixed), `testToggleDescription` (Text der Rückfrage),
+  `countsForBalance` (Bilanz-Regel). `queries/test-flags.ts` `testEventIds()`: fragt
+  `is_test_event` nur ab, wenn der Betrachter Testdaten sehen darf. Für normale Mitglieder gibt es
+  keine Zusatzabfrage.
+- **Abzeichen-Prinzip:** Abzeichen erscheinen schlicht bei `is_test`. Normale Mitglieder bekommen
+  solche Datensätze von der Datenbank gar nicht, sehen also nie ein Abzeichen.
+- **Admin › Teilnehmer:** Abzeichen + Schalter „Testkonto“ je Nicht-Admin-Zeile (unter der E-Mail,
+  44 px hoch). Umlegen fragt zuerst die Auswirkung ab und zeigt dann die Rückfrage „… N Tastings
+  werden für die Runde aus-/eingeblendet“. „Zum Admin machen“ ist für Testkonten ausgeblendet.
+  Einladen-Dialog: Häkchen „Testkonto“.
+- **Admin › Events:** Abzeichen in der Liste. Im Formular stehen Abzeichen hinter den Namen
+  (Gastgeber, Teilnehmer, Steward). Bei gemischter Zusammensetzung erscheint ein Hinweis im
+  Formular und beim Speichern eine Rückfrage „Tasting wird unsichtbar“.
+- **Abzeichen in Mitglieder-Ansichten:** Community, Historie, Meine Tastings, Dashboard
+  (Tasting + Teilnehmer), Ergebnis-Kopf (Tasting + „Wer war dabei“).
+- **Bilanz:** `getPersonalBalance(userId, ownerIsTest)` und das fremde Profil rechnen Test-Tastings
+  für echte Konten heraus (Tastings, mitgebrachte Whiskys, beste Platzierung, Ø, Kenner).
+  `getKennerCount(…, ownerIsTest)`.
+- **Nachrichten:** `getComposeData(userId, senderIsTest)` bietet einem Testkonto nur Testkonten an
+  (allgemein + je Tasting). Ein Hinweis im Formular erklärt das. Die Datenbank lehnt den Rest mit
+  TS024 ab.
+- Typcheck + Lint sauber, Unit **199/199**. Sichtprüfung per Screenshots bei 360 px (Admin-Liste,
+  Rückfrage, Event-Formular gemischt, Community als Testkonto).
+- **Für die Einführung notiert:** Weitere Testreste ohne `qa-`-Präfix sind **nicht** markiert
+  („Repro A/C/E“, ggf. „hermann-68-“). Die Entscheidung liegt beim Nutzer (Schalter oder
+  `user:delete`).
+
 ## QA Test Results
 _To be added by /qa_
 

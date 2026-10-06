@@ -14,6 +14,8 @@ export interface EventListRow {
   max_whiskies_per_participant: number | null
   participant_count: number
   whisky_count: number
+  /** PROJ-26: ein Testkonto ist beteiligt. */
+  is_test: boolean
 }
 
 /** Alle Events für den Admin (RPC prüft die Admin-Rolle). Wirft bei Fehler. */

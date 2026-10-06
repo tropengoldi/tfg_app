@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 
 import { EventStatusBadge } from '@/components/common/event-status-badge'
+import { TestBadge } from '@/components/common/test-badge'
 import { formatEventDate } from '@/lib/dates'
 import type { MyTastingRow } from '@/lib/queries/tastings'
 
@@ -55,6 +56,7 @@ export function TastingRow({ row }: { row: MyTastingRow }) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{formatEventDate(row.event_date)}</span>
             <EventStatusBadge status={row.status} />
+            {row.is_test ? <TestBadge /> : null}
           </div>
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 shrink-0" />

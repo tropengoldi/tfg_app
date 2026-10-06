@@ -27,11 +27,11 @@ export default async function EventBearbeitenPage({
   const members = await getMembers()
   const active = members
     .filter((m) => m.is_active)
-    .map((m) => ({ id: m.id, display_name: m.display_name }))
+    .map((m) => ({ id: m.id, display_name: m.display_name, is_test: m.is_test }))
   // Den aktuellen Gastgeber sicher in der Auswahl halten.
   if (!active.some((m) => m.id === loaded.event.host_id)) {
     const host = members.find((m) => m.id === loaded.event.host_id)
-    if (host) active.unshift({ id: host.id, display_name: host.display_name })
+    if (host) active.unshift({ id: host.id, display_name: host.display_name, is_test: host.is_test })
   }
   // Ebenso den aktuellen Helfer (PROJ-11) — er könnte inzwischen deaktiviert sein.
   if (
@@ -39,7 +39,7 @@ export default async function EventBearbeitenPage({
     !active.some((m) => m.id === loaded.event.helper_id)
   ) {
     const helper = members.find((m) => m.id === loaded.event.helper_id)
-    if (helper) active.push({ id: helper.id, display_name: helper.display_name })
+    if (helper) active.push({ id: helper.id, display_name: helper.display_name, is_test: helper.is_test })
   }
 
   const defaultValues: EventFormInput = {

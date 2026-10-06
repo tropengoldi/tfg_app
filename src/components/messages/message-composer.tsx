@@ -24,7 +24,7 @@ import type { ComposeData, ComposeRecipient } from '@/lib/queries/messages'
 
 type Mode = 'general' | 'tasting'
 
-export function MessageComposer({ activeMembers, myTastings }: ComposeData) {
+export function MessageComposer({ activeMembers, myTastings, testOnly }: ComposeData) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [mode, setMode] = useState<Mode>('general')
@@ -93,6 +93,13 @@ export function MessageComposer({ activeMembers, myTastings }: ComposeData) {
         <CardTitle className="font-display text-lg">Neue Nachricht</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        {testOnly ? (
+          <Alert>
+            <AlertDescription>
+              Du bist als Testkonto angemeldet und kannst nur andere Testkonten anschreiben.
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <Tabs value={mode} onValueChange={switchMode}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="general">Allgemein</TabsTrigger>

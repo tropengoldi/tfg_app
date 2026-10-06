@@ -19,6 +19,8 @@ export interface PastTastingRow {
   host_name: string
   /** `null`, wenn kein Whisky bewertet wurde → „— kein Sieger". */
   winner_name: string | null
+  /** PROJ-26 */
+  is_test: boolean
 }
 
 /**
@@ -32,7 +34,7 @@ export async function getPastTastings(): Promise<PastTastingRow[]> {
   const { data, error } = await supabase
     .from('past_tastings')
     .select(
-      'event_id, event_date, location, host_id, host_name, winner_name, winner_rating_count, closed_at',
+      'event_id, event_date, location, host_id, host_name, winner_name, winner_rating_count, closed_at, is_test',
     )
     .order('event_date', { ascending: false })
   if (error) throw error
@@ -56,6 +58,7 @@ export async function getPastTastings(): Promise<PastTastingRow[]> {
       // Seit PROJ-19 sind 0 Punkte gültig → Sieger, sobald er ≥ 1 Bewertung hat
       // (PROJ-25, behebt PROJ-19 BUG-2).
       winner_name: (r.winner_rating_count ?? 0) > 0 ? r.winner_name : null,
+      is_test: Boolean(r.is_test),
     }))
 }
 
@@ -67,6 +70,8 @@ export interface ResultsParticipant {
   id: string
   name: string
   isHost: boolean
+  /** PROJ-26 */
+  isTest: boolean
 }
 
 export interface BreakdownEntry {
@@ -120,6 +125,8 @@ export interface EventResults {
     helper_id: string | null
     /** Anzeigename des neutralen Helfers (PROJ-11), oder null. */
     helper_name: string | null
+    /** PROJ-26 */
+    is_test: boolean
   }
   participants: ResultsParticipant[]
   ranking: RankingRow[]
@@ -157,7 +164,7 @@ export async function getEventResults(
   const [headRes, partRes, rankRes, breakdownRes, ownRes] = await Promise.all([
     supabase
       .from('past_tastings')
-      .select('event_date, location, theme, host_name, host_id, helper_id')
+      .select('event_date, location, theme, host_name, host_id, helper_id, is_test')
       .eq('event_id', eventId)
       .maybeSingle(),
     supabase.from('event_participants').select('profile_id').eq('event_id', eventId),
@@ -196,12 +203,16 @@ export async function getEventResults(
     ]),
   ]
   const names = new Map<string, string>()
+  const testIds = new Set<string>()
   if (needNames.length > 0) {
     const { data: profs } = await supabase
       .from('profiles')
-      .select('id, display_name')
+      .select('id, display_name, is_test')
       .in('id', needNames)
-    for (const p of profs ?? []) names.set(p.id, p.display_name)
+    for (const p of profs ?? []) {
+      names.set(p.id, p.display_name)
+      if (p.is_test) testIds.add(p.id)
+    }
   }
 
   const participants: ResultsParticipant[] = participantIds
@@ -209,6 +220,7 @@ export async function getEventResults(
       id,
       name: names.get(id) ?? 'Unbekannt',
       isHost: id === head.host_id,
+      isTest: testIds.has(id),
     }))
     .sort((a, b) => Number(b.isHost) - Number(a.isHost) || a.name.localeCompare(b.name, 'de'))
 
@@ -301,6 +313,7 @@ export async function getEventResults(
       host_name: head.host_name ?? 'Unbekannt',
       helper_id: helperId,
       helper_name: helperId ? names.get(helperId) ?? 'Unbekannt' : null,
+      is_test: Boolean(head.is_test),
     },
     participants,
     ranking,

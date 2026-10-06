@@ -6,9 +6,11 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { TestBadge } from '@/components/common/test-badge'
 import { MemberStatusBadge } from '@/components/admin/member-status-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,11 +20,14 @@ import {
 import {
   type ActionResult,
   deactivateMemberAction,
+  getTestAccountImpactAction,
   reactivateMemberAction,
   setMemberAdminAction,
+  setTestAccountAction,
 } from '@/lib/actions/admin'
 import { memberStatus } from '@/lib/member-status'
 import type { MemberRow } from '@/lib/queries/admin'
+import { testToggleDescription } from '@/lib/test-accounts'
 
 type Pending = 'deactivate' | 'reactivate' | 'promote' | 'demote' | null
 
@@ -38,6 +43,10 @@ export function ParticipantRow({
   const router = useRouter()
   const [busy, startTransition] = useTransition()
   const [dialog, setDialog] = useState<Pending>(null)
+  // PROJ-26: Rückfrage mit Anzahl betroffener Tastings, bevor umgelegt wird.
+  const [testToggle, setTestToggle] = useState<{ makeTest: boolean; affected: number } | null>(
+    null,
+  )
 
   const status = memberStatus(member)
   const isLastActiveAdmin =
@@ -45,7 +54,9 @@ export function ParticipantRow({
 
   const canDeactivate = status !== 'deactivated' && !isSelf && !isLastActiveAdmin
   const canReactivate = status === 'deactivated'
-  const canPromote = status === 'active' && member.role !== 'admin'
+  // Testkonten können keine Admins sein (PROJ-26).
+  const canPromote = status === 'active' && member.role !== 'admin' && !member.is_test
+  const canMarkTest = member.role !== 'admin'
   const canDemote = member.role === 'admin' && !isLastActiveAdmin
   const hasAction = canDeactivate || canReactivate || canPromote || canDemote
 
@@ -58,6 +69,32 @@ export function ParticipantRow({
         return
       }
       toast.success(successMsg)
+      router.refresh()
+    })
+  }
+
+  function askTestToggle(makeTest: boolean) {
+    startTransition(async () => {
+      const res = await getTestAccountImpactAction(member.id, makeTest)
+      if ('error' in res) {
+        toast.error(res.error)
+        return
+      }
+      setTestToggle({ makeTest, affected: res.affected })
+    })
+  }
+
+  function confirmTestToggle() {
+    if (!testToggle) return
+    const { makeTest } = testToggle
+    startTransition(async () => {
+      const res = await setTestAccountAction(member.id, makeTest)
+      setTestToggle(null)
+      if ('error' in res) {
+        toast.error(res.error)
+        return
+      }
+      toast.success(makeTest ? 'Als Testkonto markiert.' : 'Markierung entfernt.')
       router.refresh()
     })
   }
@@ -79,8 +116,25 @@ export function ParticipantRow({
               Admin
             </Badge>
           ) : null}
+          {member.is_test ? <TestBadge /> : null}
         </div>
         <p className="truncate text-sm text-muted-foreground">{member.email}</p>
+        {canMarkTest ? (
+          <div className="flex min-h-11 items-center gap-2">
+            <Switch
+              id={`test-${member.id}`}
+              checked={member.is_test}
+              disabled={busy}
+              onCheckedChange={(checked) => askTestToggle(checked)}
+            />
+            <label
+              htmlFor={`test-${member.id}`}
+              className="cursor-pointer text-xs text-muted-foreground"
+            >
+              Testkonto
+            </label>
+          </div>
+        ) : null}
       </div>
 
       <MemberStatusBadge status={status} />
@@ -128,6 +182,19 @@ export function ParticipantRow({
         <div className="w-9 shrink-0" aria-hidden />
       )}
 
+      <ConfirmDialog
+        open={testToggle !== null}
+        onOpenChange={(o) => !o && setTestToggle(null)}
+        title={testToggle?.makeTest ? 'Als Testkonto markieren?' : 'Markierung entfernen?'}
+        description={
+          testToggle
+            ? testToggleDescription(member.display_name, testToggle.makeTest, testToggle.affected)
+            : ''
+        }
+        confirmLabel={testToggle?.makeTest ? 'Markieren' : 'Entfernen'}
+        pending={busy}
+        onConfirm={confirmTestToggle}
+      />
       <ConfirmDialog
         open={dialog === 'promote'}
         onOpenChange={(o) => !o && setDialog(null)}

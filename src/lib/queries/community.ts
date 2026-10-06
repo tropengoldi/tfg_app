@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 export interface CommunityMember {
   id: string
   name: string
+  /** PROJ-26: nur für Admin/Testkonten je `true` — sonst liefert die DB keine Testkonten. */
+  isTest: boolean
 }
 
 /**
@@ -16,10 +18,10 @@ export async function getActiveMembers(): Promise<CommunityMember[]> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, display_name')
+    .select('id, display_name, is_test')
     .eq('is_active', true)
     .order('display_name', { ascending: true })
   if (error) throw error
 
-  return (data ?? []).map((p) => ({ id: p.id, name: p.display_name }))
+  return (data ?? []).map((p) => ({ id: p.id, name: p.display_name, isTest: p.is_test }))
 }

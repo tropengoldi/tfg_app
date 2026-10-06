@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { MapPin, UserRound } from 'lucide-react'
 
 import { EventStatusBadge } from '@/components/common/event-status-badge'
+import { TestBadge } from '@/components/common/test-badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatEventDate } from '@/lib/dates'
 import type { EventResults } from '@/lib/queries/results'
@@ -21,6 +22,7 @@ export function ResultsHeader({
             {formatEventDate(head.event_date)}
           </CardTitle>
           <EventStatusBadge status="closed" />
+          {head.is_test ? <TestBadge /> : null}
         </div>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -71,6 +73,7 @@ export function ResultsHeader({
                 <Link href={`/profil/${p.id}`} className="hover:underline">
                   {p.name}
                 </Link>
+                {p.isTest ? <TestBadge /> : null}
                 {p.isHost ? (
                   <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
                     Gastgeber

@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -37,7 +38,7 @@ export function InviteParticipantDialog() {
   const [pending, startTransition] = useTransition()
   const form = useForm<InviteMemberInput>({
     resolver: zodResolver(inviteMemberSchema),
-    defaultValues: { email: '', displayName: '' },
+    defaultValues: { email: '', displayName: '', isTest: false },
   })
 
   function onSubmit(values: InviteMemberInput) {
@@ -45,12 +46,13 @@ export function InviteParticipantDialog() {
       const fd = new FormData()
       fd.set('email', values.email)
       fd.set('displayName', values.displayName ?? '')
+      if (values.isTest) fd.set('isTest', 'true')
       const result = await inviteMemberAction(fd)
       if ('error' in result) {
         form.setError('root', { message: result.error })
         return
       }
-      toast.success('Einladung verschickt.')
+      toast.success(values.isTest ? 'Einladung verschickt (Testkonto).' : 'Einladung verschickt.')
       form.reset()
       setOpen(false)
       router.refresh()
@@ -121,6 +123,28 @@ export function InviteParticipantDialog() {
                     Leer lassen: dann wird der Teil vor dem @ genommen.
                   </FormDescription>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isTest"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start gap-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value ?? false}
+                      onCheckedChange={(c) => field.onChange(c === true)}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="font-normal">Testkonto</FormLabel>
+                    <FormDescription>
+                      Für normale Mitglieder unsichtbar, ebenso jedes Tasting, an dem es
+                      beteiligt ist.
+                    </FormDescription>
+                  </div>
                 </FormItem>
               )}
             />

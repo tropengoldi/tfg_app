@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ChevronRight, MapPin, Trophy, UserRound } from 'lucide-react'
 
+import { TestBadge } from '@/components/common/test-badge'
 import { formatEventDate } from '@/lib/dates'
 import type { PastTastingRow as Row } from '@/lib/queries/results'
 
@@ -12,7 +13,10 @@ export function PastTastingRow({ row }: { row: Row }) {
         className="flex flex-1 items-center gap-3 px-4 pb-1 pt-4 transition-colors hover:bg-accent"
       >
         <div className="min-w-0 flex-1 space-y-1">
-          <span className="font-medium">{formatEventDate(row.event_date)}</span>
+          <span className="flex items-center gap-2">
+            <span className="font-medium">{formatEventDate(row.event_date)}</span>
+            {row.is_test ? <TestBadge /> : null}
+          </span>
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
             {row.location}
