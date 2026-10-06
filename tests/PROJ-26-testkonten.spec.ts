@@ -330,6 +330,19 @@ test('Admin: Profil eines echten Mitglieds — Bilanz ohne Test-Tasting', async 
 // ===========================================================================
 // Mobil
 // ===========================================================================
+test('360 px: Ergebnis-Kopf mit „Test"-Abzeichen und „Gastgeber" läuft nicht über (BUG-1)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  await as(page, tester2)
+  await page.goto(`/tastings/${testEv}/ergebnisse`, { waitUntil: 'networkidle' })
+  await expect(page.getByText(/Wer war dabei/)).toBeVisible()
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(0)
+})
+
 test('360 px: Admin-Teilnehmerliste mit Schaltern ohne horizontales Scrollen, Schalter-Zeile ≥ 44 px', async ({
   page,
 }) => {

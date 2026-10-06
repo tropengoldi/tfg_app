@@ -69,7 +69,7 @@ export function ResultsHeader({
           </p>
           <ul className="space-y-1.5">
             {participants.map((p) => (
-              <li key={p.id} className="flex items-center gap-2">
+              <li key={p.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <Link href={`/profil/${p.id}`} className="hover:underline">
                   {p.name}
                 </Link>

@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { todayISO } from '@/lib/dates'
 import type { EventStatus } from '@/lib/supabase/aliases'
 import { getOwnTipPosition } from '@/lib/queries/tips'
-import { testEventIds } from '@/lib/queries/test-flags'
 
 export interface DashboardParticipant {
   id: string
@@ -90,19 +89,25 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
     ])
 
     const ids = (partRows ?? []).map((p) => p.profile_id)
+    // Den Whisky-Steward mitladen: er steht nicht in event_participants, macht
+    // ein Tasting aber ebenso zum Test-Tasting (PROJ-26).
+    const profileIds = active.helper_id ? [...ids, active.helper_id] : ids
     const names = new Map<string, string>()
     const testIds = new Set<string>()
-    if (ids.length > 0) {
+    if (profileIds.length > 0) {
       const { data: profs } = await supabase
         .from('profiles')
         .select('id, display_name, is_test')
-        .in('id', ids)
+        .in('id', profileIds)
       for (const p of profs ?? []) {
         names.set(p.id, p.display_name)
         if (p.is_test) testIds.add(p.id)
       }
     }
-    const isTest = (await testEventIds([active.id])).has(active.id)
+    // Test-Tasting direkt aus den geladenen Profilen ableiten — keine zusätzlichen
+    // Abfragen, die das Live-Neuladen verlangsamen (Gastgeber ist immer Teilnehmer).
+    // Normale Mitglieder bekommen Test-Tastings ohnehin nicht → für sie stets false.
+    const isTest = testIds.size > 0
 
     const isParticipant = ids.includes(userId)
     const myTipPosition =
