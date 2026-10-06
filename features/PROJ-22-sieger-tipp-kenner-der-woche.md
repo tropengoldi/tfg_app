@@ -302,8 +302,8 @@ kein aktives Tasting; danach keine Test-Events übrig)
 ### Automatisierte Tests
 - Unit: **183/183** (davon 8 neu in `src/lib/winner-tips.test.ts`)
 - DB-Integration (`npm run test:rls`): **167/167** (davon 11 in `winner-tips.integration.test.ts`)
-- E2E neu `tests/PROJ-22-sieger-tipp.spec.ts`: **17/17** in Chromium, **17/17** in Mobile
-  Safari, je 1 × `fixme` = BUG-1.
+- E2E neu `tests/PROJ-22-sieger-tipp.spec.ts`: nach dem BUG-1-Fix **19/19** in Chromium und
+  **19/19** in Mobile Safari (inkl. Netzwerkfehler-Tests für Tipp und Bewertung).
   Mit `--workers=1` laufen lassen: die Suite startet ein aktives Event.
 - Regression (Chromium) PROJ-7/8/9/10/11/14/25: alle grün bis auf den vorbestehenden Test
   „Admin sieht ein fremdes Profil …“ (PROJ-14) — Login mit Seed-Admin-Passwort, siehe
@@ -325,8 +325,8 @@ kein aktives Tasting; danach keine Test-Events übrig)
 - [x] Nicht-Teilnehmer: abgelehnt (Integration)
 - [x] Abgeschlossen: Feld gesperrt mit eigenem Tipp; Schnittstelle lehnt ab (Integration)
 - [x] In Vorbereitung: kein Feld
-- [ ] **BUG-1:** Speichern schlägt fehl (Netzwerk) → statt Fehlermeldung + Rücksprung ersetzt
-  die Fehlergrenze die ganze Bewertungsansicht
+- [x] Speichern schlägt fehl (Netzwerk) → Fehlermeldung, Rücksprung auf den gespeicherten Tipp
+  (nach Fix von BUG-1)
 
 #### Blindheit
 - [x] Während des Tastings sieht niemand (Teilnehmer, Gastgeber, Steward, Admin) fremde Tipps —
@@ -377,8 +377,12 @@ kein aktives Tasting; danach keine Test-Events übrig)
 
 ### Bugs Found
 
-#### BUG-1: Netzwerkfehler beim Tippen ersetzt die ganze Bewertungsansicht
+#### BUG-1: Netzwerkfehler beim Tippen ersetzt die ganze Bewertungsansicht — BEHOBEN
 - **Severity:** Medium
+- **Status:** behoben 2026-10-06 — `.catch()` um die Server-Action in `winner-tip-field.tsx`
+  (Toast „Verbindung fehlgeschlagen — Tipp nicht gespeichert.“ + Rücksprung) und ebenso in
+  `rating-view.tsx` (Toast, Eingaben bleiben, Status „Noch nicht gespeichert.“). Zwei E2E-Tests
+  (Tipp + Bewertung) in Chromium und Mobile Safari grün; PROJ-7-Regression 10/10.
 - **Steps to Reproduce:**
   1. Laufendes Tasting, Bewertungsansicht öffnen, Tipp „Whisky 2“ gespeichert
   2. Netzwerk weg (E2E: POST der Server-Action abgebrochen), „Whisky 1“ wählen
@@ -388,15 +392,15 @@ kein aktives Tasting; danach keine Test-Events übrig)
 - **Ursache:** `await setWinnerTipAction(…)` in `winner-tip-field.tsx` ohne `try/catch` — eine
   abgelehnte Server-Action wirft in der Transition zur Fehlergrenze durch. `rating-view.tsx`
   (`saveRatingAction`, PROJ-7) hat dasselbe Muster und ist vermutlich gleich betroffen.
-- **Test:** `test.fixme` in `tests/PROJ-22-sieger-tipp.spec.ts` — nach dem Fix aktivieren.
-- **Priority:** Fix vor dem Deployment empfohlen (klein); nicht blockierend
+- **Test:** `tests/PROJ-22-sieger-tipp.spec.ts` („Speichern schlägt fehl …“, „Bewertung
+  speichern schlägt fehl …“).
 
 ### Summary
-- **Acceptance Criteria:** 23/24 passed
-- **Bugs Found:** 1 total (0 critical, 0 high, 1 medium, 0 low)
+- **Acceptance Criteria:** 24/24 passed (nach Fix von BUG-1)
+- **Bugs Found:** 1 total (0 critical, 0 high, 1 medium, 0 low) — behoben
 - **Security:** Pass
 - **Production Ready:** YES (keine Critical/High-Bugs)
-- **Recommendation:** BUG-1 kurz fixen (try/catch + Toast + Rücksprung), dann deployen
+- **Recommendation:** Deploy
 
 ## Deployment
 _To be added by /deploy_

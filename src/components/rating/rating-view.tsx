@@ -124,7 +124,10 @@ export function RatingView({
   function save() {
     if (!focusWhiskyId) return
     startSaving(async () => {
-      const res = await saveRatingAction(eventId, focusWhiskyId, { nose, taste, notes })
+      // Netzwerkfehler abfangen: Eingaben bleiben stehen (PROJ-22 BUG-1).
+      const res = await saveRatingAction(eventId, focusWhiskyId, { nose, taste, notes }).catch(
+        () => ({ error: 'Verbindung fehlgeschlagen — Bewertung nicht gespeichert.' }),
+      )
       if ('error' in res) {
         toast.error(res.error)
         return

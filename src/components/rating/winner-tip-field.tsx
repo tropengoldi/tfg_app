@@ -47,7 +47,11 @@ export function WinnerTipField({
     if (position === saved) return
     setValue(position)
     startSaving(async () => {
-      const res = await setWinnerTipAction({ eventId, position })
+      // Ein Netzwerkfehler lässt die Server-Action werfen — abfangen, sonst
+      // ersetzt die Fehlergrenze die ganze Bewertungsansicht (PROJ-22 BUG-1).
+      const res = await setWinnerTipAction({ eventId, position }).catch(() => ({
+        error: 'Verbindung fehlgeschlagen — Tipp nicht gespeichert.',
+      }))
       if ('error' in res) {
         setValue(saved)
         toast.error(res.error)

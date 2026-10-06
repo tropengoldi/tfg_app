@@ -266,10 +266,8 @@ test('Gastgeber verkostet mit und darf tippen', async ({ page }) => {
   await expect.poll(() => storedTipPosition(liveId, a.id)).toBe(1)
 })
 
-// BUG-1 (PROJ-22 QA): Ein Netzwerkfehler der Server-Action wird nicht abgefangen —
-// statt Toast + Rücksprung ersetzt die Fehlergrenze die ganze Bewertungsansicht.
-// Nach dem Fix `fixme` entfernen.
-test.fixme('Speichern schlägt fehl → Fehlermeldung, Auswahl springt auf den gespeicherten Tipp zurück', async ({
+// BUG-1 (PROJ-22 QA, behoben): früher ersetzte die Fehlergrenze die ganze Ansicht.
+test('Speichern schlägt fehl → Fehlermeldung, Auswahl springt auf den gespeicherten Tipp zurück', async ({
   page,
 }) => {
   await login(page, b.email)
@@ -281,10 +279,31 @@ test.fixme('Speichern schlägt fehl → Fehlermeldung, Auswahl springt auf den g
     route.request().method() === 'POST' ? route.abort('failed') : route.continue(),
   )
   await chooseTip(page, 1)
-  await expect(page.getByText(/nicht gespeichert|fehlgeschlagen|Verbindung/i).first()).toBeVisible()
+  await expect(page.getByText('Verbindung fehlgeschlagen — Tipp nicht gespeichert.')).toBeVisible()
   await expect(tipTrigger(page)).toHaveText(/Whisky 2/)
+  await expect(page.getByRole('heading', { name: 'Bewerten' })).toBeVisible()
   await page.unroute(`**/tastings/${liveId}/bewerten`)
   expect(await storedTipPosition(liveId, b.id)).toBe(2)
+})
+
+test('Bewertung speichern schlägt fehl → Fehlermeldung, Eingaben bleiben stehen', async ({ page }) => {
+  await login(page, b.email)
+  await openRating(page, liveId)
+  const notes = page.getByLabel('Notiz für dich (optional)')
+  await notes.fill('Vanille, Honig')
+
+  await page.route(`**/tastings/${liveId}/bewerten`, (route) =>
+    route.request().method() === 'POST' ? route.abort('failed') : route.continue(),
+  )
+  await page.getByRole('button', { name: 'Speichern' }).click()
+  // 0/0 → Rückfrage (PROJ-19) bestätigen.
+  await page.getByRole('button', { name: 'Ja, speichern' }).click()
+  await expect(
+    page.getByText('Verbindung fehlgeschlagen — Bewertung nicht gespeichert.'),
+  ).toBeVisible()
+  await expect(notes).toHaveValue('Vanille, Honig')
+  await expect(page.getByText('Noch nicht gespeichert.')).toBeVisible()
+  await page.unroute(`**/tastings/${liveId}/bewerten`)
 })
 
 // ===========================================================================
