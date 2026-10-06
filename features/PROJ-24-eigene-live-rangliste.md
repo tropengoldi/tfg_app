@@ -1,6 +1,6 @@
 # PROJ-24: Eigene Live-Rangliste
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-06
 
@@ -168,13 +168,88 @@ und zeigt dann zusätzlich die aufgelösten Whisky-Namen.
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| Kein Backend-Umbau, keine Migration, kein neues Paket | Alle Daten liegen in der Bewertungsansicht schon vor (eigene Bewertungen + Ausschank-Nummern). Nach dem Abschluss kommen die Namen aus der bestehenden Ranglisten-Sicht | 2026-10-06 |
+| Rangliste wird im Browser aus den eigenen gespeicherten Bewertungen berechnet | Während des Tastings gehen keine neuen Daten an den Browser, die Blindheit bleibt unberührt. Nach jedem Speichern wird ohnehin neu geladen, also ordnet sich die Liste sofort neu | 2026-10-06 |
+| Eine gemeinsame Platzierungsregel für PROJ-24 und „Dein Platz“ (PROJ-25) | Bisher steckt die Regel in der Ergebnis-Statistik. Sie wird zu einer neutralen Stelle verschoben und von beiden genutzt. So können Live-Rangliste und Ergebnisseite nicht auseinanderlaufen | 2026-10-06 |
+| Whisky-Namen nur im abgeschlossenen Tasting aus der Sicht `whisky_rankings` | Die Sicht liefert Namen ausschließlich für abgeschlossene Tastings, die Datenbank erzwingt das also. Im laufenden Tasting wird gar nicht danach gefragt | 2026-10-06 |
+| Rangliste sitzt **in** der Bewertungsansicht-Komponente, nicht daneben | Nur so nutzt „Zeile antippen“ denselben Wechsel samt Rückfrage bei ungespeicherten Änderungen wie die Positionsleiste, ohne dass Logik doppelt entsteht | 2026-10-06 |
+| Gemeinsamer Tipp-Zustand für Tipp-Feld und Pokal-Knöpfe | Heute merkt sich das Tipp-Feld seinen Tipp allein. Künftig halten beide einen gemeinsamen Stand und nutzen dieselbe Speicher-Aktion samt Fehlerbehandlung (BUG-1-Fix aus PROJ-22). So bleiben Feld und Pokal immer synchron | 2026-10-06 |
+| Auf-/Zu-Zustand im Browser-Speicher des Geräts, für alle Tastings gemeinsam | „Pro Gerät merken“ ist genau das. Kein Server-Speicher nötig, und wer die Liste mag, hat sie auch beim nächsten Abend offen. Ist der Speicher gesperrt, startet die Liste zugeklappt (abgefangen, ohne Fehlermeldung) | 2026-10-06 |
+| Aufklapp-Bereich mit shadcn `Collapsible` (wie „Alle Tipps“ und „Einzelbewertungen“) | Bereits installiert und in der App etabliert, gleiches Verhalten für Tastatur und Screenreader | 2026-10-06 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Ein reines Frontend-Feature. Die Rangliste wird im Browser aus den eigenen **gespeicherten**
+Bewertungen berechnet, die die Bewertungsansicht schon heute lädt. Neu aus der Datenbank kommen
+nur die Whisky-Namen, und zwar ausschließlich im abgeschlossenen Tasting, über die bestehende
+Ranglisten-Sicht. Es gibt keine Migration, kein neues Paket, keine neue Seite und keine neue Route.
+
+### A) Bausteine
+
+```
+Bewertungsseite (/tastings/[id]/bewerten)
++-- NEU: gemeinsamer Tipp-Zustand (umschließt Tipp-Feld + Bewertungsansicht)
+|   +-- Tipp-Feld „Dein Sieger-Tipp“ (PROJ-22, liest/schreibt jetzt den gemeinsamen Stand)
+|   +-- Bewertungsansicht (PROJ-7)
+|       +-- Positionsleiste (bestehend)
+|       +-- Bewertungskarte (bestehend)
+|       +-- NEU: „Meine Rangliste (X von N bewertet)“, aufklappbar, Grundzustand zu
+|           +-- Leerzustand „Noch nichts bewertet — …“
+|           +-- Zeile je bewertetem Whisky
+|               +-- Platz · „Whisky N“ · [nach Abschluss: Name] · Punkte · Nase · Gaumen
+|               |   (antippen → springt zum Whisky, Rückfrage bei Ungespeichertem)
+|               +-- Pokal-Knopf ≥ 44 px: ausgefüllt = „Dein Tipp“, leer = „Als Sieger tippen“
+|                   (nach Abschluss gesperrt, Markierung bleibt)
+```
+
+Nicht angezeigt wird der Bereich im Entwurf, vor dem ersten Ausschank, für den Steward und für
+Nicht-Teilnehmer. Die letzten beiden erreichen die Seite ohnehin nicht.
+
+### B) Daten
+
+| Was | Woher | Wann |
+|---|---|---|
+| Eigene Bewertungen (Nase, Gaumen) | wie bisher, nur die eigenen | immer |
+| Ausschank-Nummern | wie bisher | immer |
+| Eigener Sieger-Tipp | wie bisher (PROJ-22) | laufend + abgeschlossen |
+| **Whisky-Namen** | NEU: Ranglisten-Sicht | **nur abgeschlossen** |
+| Auf/Zu der Liste | Browser-Speicher des Geräts | immer, gerätelokal |
+
+**Platzierung:** Gesamtpunkte ↓, dann Gaumen ↓, dann Nase ↓, dann Ausschank-Nummer ↑. Diese Regel
+liegt künftig an **einer** Stelle, die sich Live-Rangliste und „Dein Platz“ (PROJ-25) teilen.
+
+### C) Abläufe
+- **Bewertung speichern** → die Seite lädt den neuen Stand (wie bisher) → die Liste ordnet sich neu.
+- **Zeile antippen** → derselbe Wechsel wie über die Positionsleiste, inklusive Rückfrage bei
+  ungespeicherten Werten.
+- **Pokal antippen** → dieselbe Speicher-Aktion wie das Tipp-Feld. Bei Erfolg wandern Pokal und
+  Feld gemeinsam mit, bei Fehler gibt es eine Meldung und beide bleiben beim alten Tipp.
+- **Abschluss durch den Gastgeber** → die Ansicht aktualisiert sich live (bestehender Mechanismus).
+  Danach erscheinen die Namen, und die Pokale sind gesperrt.
+
+### D) Sicherheit / Blindheit
+Während des Tastings gehen keine zusätzlichen Daten an den Browser. Namen liefert die Ranglisten-
+Sicht nur für abgeschlossene Tastings, das erzwingt die Datenbank. Der Tipp läuft weiter über
+die bestehende Datenbank-Funktion mit allen Regeln aus PROJ-22.
+
+### E) Tests
+- **Unit:** gemeinsame Platzierungsregel (Gleichstände, halbe Punkte, 0/0, Unbewertete fehlen) und
+  die Zeilen-Aufbereitung. Bestehende Tests zu „Dein Platz“ laufen unverändert weiter.
+- **E2E:** Grundzustand zu und gemerkt; Zeilen und Reihenfolge; Neuordnen nach dem Speichern;
+  Zeile antippen inkl. Rückfrage; Pokal setzen und Feld synchron; Fehlerfall Tipp; nach dem Abschluss
+  Namen und gesperrte Pokale; kein Bereich vor dem ersten Ausschank; 360 px mit 10 Whiskies.
+- **Regression:** PROJ-7, PROJ-22, PROJ-25 („Dein Platz“).
+
+### F) Abhängigkeiten (Pakete)
+Keine. `Collapsible` (shadcn) ist bereits installiert.
+
+### Arbeitsaufteilung
+Nur `/frontend`. Kein `/backend` nötig, weil es keine Datenbankänderung gibt und nur eine
+zusätzliche Leseabfrage auf eine bestehende Sicht hinzukommt.
 
 ## QA Test Results
 _To be added by /qa_
