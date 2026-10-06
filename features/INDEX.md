@@ -38,7 +38,7 @@
 | PROJ-21 | Whisky-Steward bringt Whiskies mit | Roadmap | – | 2026-10-05 |
 | PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Deployed | [PROJ-22-sieger-tipp-kenner-der-woche.md](PROJ-22-sieger-tipp-kenner-der-woche.md) | 2026-10-05 |
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
-| PROJ-24 | Eigene Live-Rangliste | Approved | [PROJ-24-eigene-live-rangliste.md](PROJ-24-eigene-live-rangliste.md) | 2026-10-05 |
+| PROJ-24 | Eigene Live-Rangliste | Deployed | [PROJ-24-eigene-live-rangliste.md](PROJ-24-eigene-live-rangliste.md) | 2026-10-05 |
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Roadmap | – | 2026-10-05 |
 
@@ -106,6 +106,11 @@ eigenem Sichtbarkeits-Schalter) am 2026-10-06 als `v1.10.0` live (mit DB-Migrati
 (TS023), Sicht `winner_tips_revealed`, `profiles.show_kenner_count`; 24/24 AC,
 1 Medium-Bug während der QA gefunden und behoben — Netzwerkfehler beim Tippen/
 Bewerten landete in der Fehlergrenze, Fix gilt auch für PROJ-7).
+PROJ-24 (Eigene Live-Rangliste: aufklappbar in der Bewertungsansicht, nur aus den
+eigenen gespeicherten Wertungen, Zeile springt zum Whisky, Pokal-Knopf setzt den
+Sieger-Tipp, nach dem Abschluss mit Namen) am 2026-10-06 als `v1.11.0` live — ohne
+DB-Migration; gemeinsame Platzierungsregel mit „Dein Platz" (PROJ-25); 25/25 AC,
+2 Low-Bugs gefunden und behoben (davon 1 vorbestehend aus PROJ-7).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)

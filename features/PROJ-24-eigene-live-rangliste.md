@@ -1,6 +1,6 @@
 # PROJ-24: Eigene Live-Rangliste
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-06
 
@@ -384,4 +384,19 @@ Tasting, keine Test-Events übrig)
 - **Recommendation:** Deploy
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-06 als `v1.11.0` (Push `f530a97` auf `main` → Vercel-Auto-Deploy, Status success)
+- **DB-Migration:** keine (reines Frontend-Feature)
+- **Pre-Deploy:** kein Tasting aktiv, Lint + Production-Build grün, keine neuen
+  Umgebungsvariablen, kein neues Paket
+- **Post-Deploy-Verifikation:** `tests/PROJ-24-eigene-rangliste.spec.ts`, `tests/PROJ-22-sieger-tipp.spec.ts`
+  und `tests/PROJ-7-bewertungsansicht.spec.ts` gegen die Produktions-URL: **86/86 grün** (Chromium +
+  Mobile Safari; 8 PROJ-7-Fälle laufen bewusst nur in Chromium). Danach kein aktives Tasting und
+  keine Test-Events übrig
+- **Behoben mit diesem Release:** PROJ-24 BUG-1 (vorbestehend aus PROJ-7: „du kannst die Werte noch
+  ändern“ nach dem Abschluss) und BUG-2 (Screenreader-Text gesperrter Pokale)
+- **Nebenwirkung:** „Dein Platz“ (PROJ-25) nutzt jetzt dieselbe Platzierungsregel wie die Live-Rangliste
+  (gleiches Ergebnis, nur eine Stelle im Code)
+- **Rollback:** Vercel → vorherige Version „Promote to Production“. Es gibt keine DB-Änderung, die
+  zurückgenommen werden müsste
