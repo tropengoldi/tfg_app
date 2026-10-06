@@ -1,6 +1,6 @@
 # PROJ-26: Testkonten für normale Nutzer unsichtbar
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-06
 
@@ -186,7 +186,19 @@ wird das auf **Datenbankebene**, nicht nur in der Oberfläche.
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _To be added by /architecture_ | | |
+| Markierung als neues Profil-Merkmal „Testkonto“ (ja/nein), änderbar nur durch den Admin | Ein Merkmal am Konto ist die eine Quelle der Wahrheit. Mitglieder dürfen es an ihrem eigenen Profil nicht ändern (gleiche Technik wie bei den gesperrten Profilfeldern aus PROJ-14) | 2026-10-06 |
+| Datenbank-Regel „Testkonto und Admin schließen sich aus“ | Wird in der Datenbank erzwungen, nicht nur im Formular. Gilt beim Markieren und beim Befördern zum Admin | 2026-10-06 |
+| „Test-Tasting“ wird bei jeder Abfrage aus den Beteiligten **berechnet**, nicht als eigenes Feld gespeichert | Eine Stelle, keine Synchronisation, die auseinanderlaufen kann (Teilnehmer hinzufügen, Gastgeber wechseln, Markierung umlegen). Bei der Datenmenge der Runde (Dutzende Tastings) kostet das nichts Messbares | 2026-10-06 |
+| Drei zentrale Prüfungen: „Betrachter darf Testdaten sehen“, „Profil ist sichtbar“, „Tasting ist sichtbar“ | Alle Zugriffsregeln und Sichten nutzen dieselben drei Bausteine, statt die Logik zu kopieren. Gleiches Muster wie die bestehenden Prüfungen „ist Admin“ / „ist Teilnehmer“ | 2026-10-06 |
+| Zugriffsregeln werden **verschärft**, nicht ersetzt: zusätzliche Bedingung „sichtbar“ | Bestehende Rechte (Teilnehmer, Steward, Admin, abgeschlossen) bleiben unverändert. Hinzu kommt nur „und nicht Test, außer der Betrachter darf Test sehen“. Das senkt das Risiko für die Blindheit der Verkostung | 2026-10-06 |
+| Sichten liefern zusätzlich eine Kennzeichnung „Test“ mit | Admin und Testkonten brauchen das Abzeichen, und die Bilanz echter Konten muss Test-Tastings herausrechnen, auch beim Admin, der sie sehen darf | 2026-10-06 |
+| Bilanz-Regel: Bilanz eines echten Kontos ohne Test-Tastings, Bilanz eines Testkontos mit | Unabhängig davon, wer hinschaut. Für normale Mitglieder erledigt das schon die Datenbank, für den Admin rechnet die App die gekennzeichneten Tastings heraus | 2026-10-06 |
+| Markierung beim Einladen über die geschützten Konto-Metadaten, die nur der Server setzen kann | Das Konto ist vom ersten Augenblick an Testkonto, ohne Zeitfenster. Die Metadaten kann der Nutzer selbst nicht verändern | 2026-10-06 |
+| Rückfrage-Zahl „N Tastings werden aus-/eingeblendet“ von einer Admin-Funktion berechnet | Berücksichtigt korrekt, ob ein anderes Testkonto im selben Tasting beteiligt bleibt | 2026-10-06 |
+| Mixed-Warnung im Event-Formular rein in der Oberfläche | Der Admin sieht die Markierung aller Konten ohnehin. Es ist eine Warnung, keine Sperre, deshalb braucht es keine Datenbank-Regel | 2026-10-06 |
+| Nachrichten: Empfänger-Prüfung in der bestehenden Empfänger-Funktion (PROJ-16) | Ein Testkonto als Absender bekommt nur Testkonten als Empfänger aufgelöst. Ein Versuch mit echten Empfängern wird abgelehnt, auch über die Schnittstelle | 2026-10-06 |
+| Regel „ein aktives Tasting“ unverändert | Produktentscheidung (global) | 2026-10-06 |
+| Testsuite: Wegwerf-Konten standardmäßig Testkonto, Wegwerf-Admin statt Seed-Admin | Testläufe sind für die Runde unsichtbar, und die Suite hängt nicht mehr an echten Passwörtern | 2026-10-06 |
 
 ### Betriebsnotiz
 - Weil die Regel „ein aktives Tasting“ global bleibt, gilt weiter: **vor jedem E2E-Lauf prüfen,
@@ -196,7 +208,118 @@ wird das auf **Datenbankebene**, nicht nur in der Oberfläche.
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Ein Backend-lastiges Feature. Neu sind ein Merkmal „Testkonto“ am Profil und drei zentrale
+Sichtbarkeits-Prüfungen in der Datenbank. Alle bestehenden Zugriffsregeln, Sichten und
+Admin-Funktionen, die andere Personen oder Tastings liefern, bekommen eine zusätzliche Bedingung.
+Die Oberfläche bekommt nur kleine Ergänzungen (Abzeichen, Häkchen, Schalter, Rückfragen,
+Warnung). Dazu kommt der Umbau der Testsuite. Es gibt kein neues Paket und keine neue Seite.
+
+### A) Sichtbarkeitsmodell
+
+| Betrachter | Testkonten | Test-Tastings | Abzeichen „Test“ | Bilanz zählt Test-Tastings |
+|---|---|---|---|---|
+| Normales Mitglied | unsichtbar | unsichtbar (auch als Teilnehmer) | – | nein |
+| Testkonto | sichtbar | sichtbar (nach den üblichen Regeln) | ja | ja (eigene Bilanz) |
+| Admin | sichtbar | sichtbar | ja | nein (eigene Bilanz) |
+
+Ein Test-Tasting ist ein Tasting, bei dem Gastgeber, Whisky-Steward oder ein Teilnehmer
+Testkonto ist. Das wird bei jeder Abfrage berechnet.
+
+### B) Datenmodell
+- **Profil:** NEU Merkmal „Testkonto“ (ja/nein, Standard nein). Nur der Admin kann es ändern.
+  Datenbank-Regel: nie gleichzeitig Admin.
+- **Konto-Anlage:** Das Merkmal wird aus den geschützten Konto-Metadaten übernommen, die beim
+  Einladen bzw. von der Testsuite gesetzt werden.
+- **Keine neue Tabelle**, kein gespeichertes „Test-Tasting“-Feld.
+
+### C) Datenbank-Bausteine (eine Migration)
+
+**Drei zentrale Prüfungen**
+1. *Betrachter darf Testdaten sehen*: Admin oder selbst Testkonto.
+2. *Profil sichtbar*: eigenes Profil, kein Testkonto, oder Betrachter darf Testdaten sehen.
+3. *Tasting sichtbar*: kein Test-Tasting, oder Betrachter darf Testdaten sehen.
+
+**Zugriffsregeln (zusätzliche Bedingung)**
+
+| Bereich | heute | neu zusätzlich |
+|---|---|---|
+| Profile | alle lesbar | nur sichtbare Profile |
+| Tastings, Teilnehmerlisten, Whiskys, Whisky-Details | Teilnehmer / Steward / Admin / abgeschlossen | und Tasting sichtbar |
+| Sammlungen (PROJ-15) | eigene / freigegeben | und Profil sichtbar |
+| Eigene Bewertungen, Tipps, Nachrichten | nur eigene | unverändert |
+
+**Sichten** (Profil-Sicht, Historie, Ranglisten, Einzelbewertungen, aufgedeckte Tipps): Sie filtern
+mit denselben Prüfungen und liefern die Kennzeichnung „Test“ mit (Tasting bzw. Person).
+
+**Funktionen**
+- Admin-Listen „Mitglieder“ und „Events“: liefern die Kennzeichnung „Test“.
+- NEU Admin-Funktion „Testkonto setzen“ mit Ergebnis „N Tastings betroffen“ und NEU
+  „Auswirkung abfragen“ für die Rückfrage, bevor gesetzt wird.
+- „Zum Admin machen“: lehnt Testkonten ab.
+- Nachrichten-Empfänger auflösen: Testkonto als Absender → nur Testkonten. Echte Empfänger
+  werden abgelehnt (neuer Fehlercode).
+- Konto-Anlage: übernimmt das Merkmal.
+
+**Datenpflege in derselben Migration:** Das Seed-Testkonto und alle `qa-…@example.com`-Konten
+werden als Testkonto markiert. Echte Konten bleiben unberührt.
+
+### D) Oberfläche
+
+```
+Admin › Teilnehmer (PROJ-3)
++-- Einladen-Dialog: NEU Häkchen „Testkonto“
++-- Zeile: NEU Abzeichen „Test“ + Schalter „Testkonto“ (nicht bei Admins)
+    +-- Rückfrage „N Tastings werden für die Runde aus-/eingeblendet“
+
+Admin › Events (PROJ-4)
++-- Liste: NEU Abzeichen „Test“
++-- Formular: NEU Warnung beim Speichern eines gemischten Tastings („wird für die Runde unsichtbar“)
+
+Überall dort, wo Personen/Tastings erscheinen (Community, Historie, Dashboard, Teilnehmerlisten,
+Ergebnis-Kopf): NEU Abzeichen „Test“, nur für Admin und Testkonten sichtbar
+(gemeinsame kleine Komponente auf Basis des shadcn `Badge`)
+
+Profil-Bilanz (PROJ-10/14): rechnet Test-Tastings heraus, wenn das betrachtete Konto echt ist
+Nachrichten (PROJ-16): Empfänger-Auswahl zeigt, was die Datenbank liefert, also für ein
+Testkonto automatisch nur Testkonten
+```
+
+„Nicht gefunden“ für direkte Aufrufe ergibt sich von selbst: Die Seiten bekommen keine Daten mehr
+und antworten wie bei unbekannten IDs.
+
+### E) Testsuite
+- Wegwerf-Konten werden standardmäßig als Testkonto angelegt. Eine Option erzeugt bei Bedarf ein
+  „normales Mitglied“.
+- NEU Wegwerf-Admin. Die etwa 40 Anmeldungen mit Seed-Admin bzw. Seed-Testkonto in 5 Testdateien
+  (PROJ-2, 3, 4, 6, 14) werden darauf umgestellt.
+- Neue Integrationstests (Datenbank) für alle drei Betrachter-Rollen: Profile, Tastings,
+  Teilnehmerlisten, Whiskys, Sichten, Sammlung, Nachrichten-Empfänger, Admin-Regel, Markieren.
+- Neue E2E-Tests: Einladen mit Häkchen, Schalter + Rückfrage, Mixed-Warnung, Unsichtbarkeit für
+  ein normales Mitglied (Liste und direkter Aufruf), Abzeichen, Admin-Bilanz ohne Test-Tastings.
+- Danach die **volle Regressionssuite** (`--workers=1`), weil alle Lesewege betroffen sind.
+
+### F) Einführung (Reihenfolge)
+1. Nutzer spielt die Migration ein (`db:push`) und erzeugt die Typen neu. Die alte App läuft weiter,
+   weil nur Spalten hinzukommen und Regeln verschärft werden.
+2. Integrationstests (`test:rls`) bestätigen die Regeln gegen die Live-Datenbank.
+3. Code-Push.
+4. Kontrolle: Das echte Tasting vom 2026-10-03 ist für Mitglieder sichtbar, die `qa-…`-Konten
+   nicht. Danach optional Aufräumen per `user:delete`.
+
+### G) Risiken
+- **Blindheit:** Die Zugriffsregeln für Whiskys und Details werden nur verschärft, nie geöffnet.
+  Die bestehenden Blindheits-Tests laufen unverändert mit.
+- **Leistung:** Die Berechnung „Test-Tasting“ läuft pro Zeile. Bei der Größe der Runde ist das
+  unkritisch. Ändert sich das, kann später ein gespeichertes Merkmal nachgezogen werden.
+
+### H) Abhängigkeiten (Pakete)
+Keine.
+
+### Arbeitsaufteilung
+`/backend` zuerst (Migration, Typen, Server-Aktionen, Integrationstests, Testsuite-Helfer), dann
+`/frontend` (Abzeichen, Häkchen, Schalter, Rückfragen, Warnung, Bilanz-Filter).
 
 ## QA Test Results
 _To be added by /qa_
