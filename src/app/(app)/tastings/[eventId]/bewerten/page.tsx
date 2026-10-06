@@ -4,12 +4,14 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft, Lock } from 'lucide-react'
 
 import { RatingView } from '@/components/rating/rating-view'
+import { WinnerTipField } from '@/components/rating/winner-tip-field'
 import { PageHeader } from '@/components/layout/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
 import { formatEventDate } from '@/lib/dates'
 import { getRatingViewData } from '@/lib/queries/ratings'
+import { getOwnTipPosition } from '@/lib/queries/tips'
 
 export const metadata: Metadata = { title: 'Bewerten' }
 
@@ -25,6 +27,9 @@ export default async function BewertenPage({
   if (!data) notFound()
 
   const { event, total, whiskies, myRatings } = data
+  // PROJ-22: nur Teilnehmer erreichen diese Seite (der Steward ist keiner).
+  const tipPosition =
+    event.status === 'draft' ? null : await getOwnTipPosition(eventId, userId)
 
   return (
     <>
@@ -54,6 +59,17 @@ export default async function BewertenPage({
             </Link>
           </CardContent>
         </Card>
+      ) : null}
+
+      {event.status === 'active' ? (
+        <div className="mb-5">
+          <WinnerTipField
+            eventId={eventId}
+            total={total}
+            savedPosition={tipPosition}
+            editable
+          />
+        </div>
       ) : null}
 
       {event.status === 'active' && event.current_position < 1 ? (
@@ -90,6 +106,14 @@ export default async function BewertenPage({
               </Link>
             </AlertDescription>
           </Alert>
+          {tipPosition !== null ? (
+            <WinnerTipField
+              eventId={eventId}
+              total={total}
+              savedPosition={tipPosition}
+              editable={false}
+            />
+          ) : null}
           {myRatings.length > 0 ? (
             <RatingView
               eventId={eventId}
@@ -97,7 +121,7 @@ export default async function BewertenPage({
               total={total}
               whiskies={whiskies}
               myRatings={myRatings}
-          ratingStep={event.rating_step}
+              ratingStep={event.rating_step}
               editable={false}
             />
           ) : (

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatEventDate } from '@/lib/dates'
 import { ordinalPlace, type PersonalBalance } from '@/lib/personal-balance'
+import { formatKennerCount } from '@/lib/winner-tips'
 
 export function BalanceCard({ balance }: { balance: PersonalBalance | null }) {
   return (
@@ -42,6 +43,8 @@ export function BalanceCard({ balance }: { balance: PersonalBalance | null }) {
                     : 'noch nichts bewertet'
                 }
               />
+
+              <Stat label="Kenner der Woche" value={formatKennerCount(balance.kennerCount)} />
             </dl>
           </>
         )}

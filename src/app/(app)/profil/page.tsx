@@ -75,6 +75,7 @@ export default async function ProfilPage() {
             show_whisky_count: profile.show_whisky_count,
             show_best_placement: profile.show_best_placement,
             show_avg_points: profile.show_avg_points,
+            show_kenner_count: profile.show_kenner_count,
             show_collection: profile.show_collection,
           }}
         />

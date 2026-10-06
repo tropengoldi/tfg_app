@@ -22,6 +22,7 @@ import {
   whiskySearchUrl,
 } from '@/lib/results'
 import { cn } from '@/lib/utils'
+import type { KennerSummary } from '@/lib/winner-tips'
 
 export function RankingRow({
   row,
@@ -31,8 +32,11 @@ export function RankingRow({
   eventId,
   eventDate,
   viewerHasRated,
+  kenner,
 }: {
   row: Row
+  /** PROJ-22: nur an der Sieger-Zeile gesetzt. */
+  kenner?: KennerSummary
   /** PROJ-25: nur wer selbst bewertet hat, sieht „Dein Platz". */
   viewerHasRated: boolean
   participantCount: number
@@ -93,6 +97,7 @@ export function RankingRow({
                   Sieger des Abends
                 </p>
               ) : null}
+              {isWinnerRow && kenner ? <KennerLine summary={kenner} /> : null}
             </div>
 
             <div className="shrink-0 text-right">
@@ -187,6 +192,26 @@ export function RankingRow({
         />
       ) : null}
     </li>
+  )
+}
+
+function KennerLine({ summary }: { summary: KennerSummary }) {
+  if (summary.kind === 'no-kenner') {
+    return <p className="text-sm text-muted-foreground">Diesmal kein Kenner</p>
+  }
+  if (summary.kind !== 'kenner') return null
+  return (
+    <p className="text-sm">
+      <span className="font-medium text-gold">Kenner der Woche:</span>{' '}
+      {summary.kenner.map((k, i) => (
+        <span key={k.id}>
+          {i > 0 ? ', ' : null}
+          <Link href={`/profil/${k.id}`} className="hover:underline">
+            {k.name}
+          </Link>
+        </span>
+      ))}
+    </p>
   )
 }
 

@@ -5,6 +5,7 @@ import {
   type BestPlacement,
   type RankingRowLike,
 } from '@/lib/personal-balance'
+import { getKennerCount } from '@/lib/queries/tips'
 
 /** Jedes Feld fehlt (`undefined`), wenn der Profilinhaber es verborgen hat —
  * ununterscheidbar davon, dass die Sektion nie gerendert wird. */
@@ -13,6 +14,8 @@ export interface PublicBalance {
   whiskyCount?: number
   bestPlacement?: BestPlacement | null
   avgPointsGiven?: { avg: string; count: number } | null
+  /** PROJ-22 */
+  kennerCount?: number
 }
 
 export interface PublicProfileData {
@@ -41,6 +44,7 @@ type VisibilityFlags = {
   show_whisky_count: boolean | null
   show_best_placement: boolean | null
   show_avg_points: boolean | null
+  show_kenner_count: boolean | null
 }
 
 /**
@@ -64,7 +68,7 @@ export async function getPublicProfile(targetId: string): Promise<PublicProfileD
     supabase
       .from('profiles_public')
       .select(
-        'id, display_name, bio, favorite_dram, favorite_region, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points',
+        'id, display_name, bio, favorite_dram, favorite_region, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points, show_kenner_count',
       )
       .eq('id', targetId)
       .maybeSingle(),
@@ -77,7 +81,8 @@ export async function getPublicProfile(targetId: string): Promise<PublicProfileD
     Boolean(row.show_tasting_count) ||
     Boolean(row.show_whisky_count) ||
     Boolean(row.show_best_placement) ||
-    Boolean(row.show_avg_points)
+    Boolean(row.show_avg_points) ||
+    Boolean(row.show_kenner_count)
 
   let balance: PublicBalance | null = null
   if (showAnyBalance) {
@@ -188,6 +193,9 @@ async function computeMaskedBalance(
   if (flags.show_avg_points) {
     const totals = (breakdown.data ?? []).map((r) => Number(r.total_points ?? 0))
     balance.avgPointsGiven = formatAvgGiven(totals)
+  }
+  if (flags.show_kenner_count) {
+    balance.kennerCount = await getKennerCount(targetId)
   }
   return balance
 }

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatEventDate } from '@/lib/dates'
 import { ordinalPlace } from '@/lib/personal-balance'
 import type { PublicProfileData } from '@/lib/queries/public-profile'
+import { formatKennerCount } from '@/lib/winner-tips'
 
 /**
  * Read-only Ansicht eines fremden Profils (PROJ-14). Jedes Feld ist bereits
@@ -74,6 +75,9 @@ export function PublicProfileView({ profile }: { profile: PublicProfileData }) {
                         : 'noch nichts bewertet'
                     }
                   />
+                ) : null}
+                {balance.kennerCount !== undefined ? (
+                  <Stat label="Kenner der Woche" value={formatKennerCount(balance.kennerCount)} />
                 ) : null}
               </dl>
             )}

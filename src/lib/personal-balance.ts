@@ -18,6 +18,8 @@ export interface PersonalBalance {
   bestPlacement: BestPlacement | null
   /** `null` bei 0 abgegebenen Bewertungen. */
   avgPointsGiven: { avg: string; count: number } | null
+  /** PROJ-22: wie oft „Kenner der Woche". */
+  kennerCount: number
   /** Noch kein abgeschlossenes Tasting, kein Whisky, keine Bewertung. */
   isFresh: boolean
 }

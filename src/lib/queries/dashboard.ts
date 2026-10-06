@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { todayISO } from '@/lib/dates'
 import type { EventStatus } from '@/lib/supabase/aliases'
+import { getOwnTipPosition } from '@/lib/queries/tips'
 
 export interface DashboardParticipant {
   id: string
@@ -28,6 +29,9 @@ export interface ActiveDashboard {
   isParticipant: boolean
   isHost: boolean
   isHelper: boolean
+  /** PROJ-22: Ausschank-Nummer des eigenen Sieger-Tipps; `null` = noch keiner
+   * (nur für Mitverkoster im laufenden Tasting ermittelt). */
+  myTipPosition: number | null
 }
 
 export interface PreviewDashboard {
@@ -90,6 +94,12 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
       for (const p of profs ?? []) names.set(p.id, p.display_name)
     }
 
+    const isParticipant = ids.includes(userId)
+    const myTipPosition =
+      isParticipant && active.status === 'active'
+        ? await getOwnTipPosition(active.id, userId)
+        : null
+
     return {
       kind: 'active',
       event: {
@@ -112,9 +122,10 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
         }))
         .sort((a, b) => Number(b.isHost) - Number(a.isHost) || a.name.localeCompare(b.name)),
       whiskyCount: count ?? 0,
-      isParticipant: ids.includes(userId),
+      isParticipant,
       isHost: active.host_id === userId,
       isHelper: active.helper_id === userId,
+      myTipPosition,
     }
   }
 

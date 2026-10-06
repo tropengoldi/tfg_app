@@ -4,6 +4,7 @@ import { RankingRow } from '@/components/results/ranking-row'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { EventResults } from '@/lib/queries/results'
 import { tieRanks } from '@/lib/results'
+import type { KennerSummary } from '@/lib/winner-tips'
 
 export function RankingList({
   ranking,
@@ -12,6 +13,7 @@ export function RankingList({
   eventId,
   eventDate,
   viewerHasRated,
+  kenner,
 }: {
   ranking: EventResults['ranking']
   participantCount: number
@@ -19,6 +21,8 @@ export function RankingList({
   eventId: string
   eventDate: string
   viewerHasRated: boolean
+  /** PROJ-22: Kenner-Hinweis für die Sieger-Zeile. */
+  kenner?: KennerSummary
 }) {
   const ties = tieRanks(
     ranking.map((r) => ({ rank: r.rank, totalPoints: r.totalPoints })),
@@ -48,6 +52,7 @@ export function RankingList({
             eventId={eventId}
             eventDate={eventDate}
             viewerHasRated={viewerHasRated}
+            kenner={row.rank === 1 ? kenner : undefined}
           />
         ))}
       </ol>

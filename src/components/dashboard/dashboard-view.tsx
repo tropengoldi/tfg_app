@@ -17,7 +17,8 @@ import { formatEventDate } from '@/lib/dates'
 import type { ActiveDashboard } from '@/lib/queries/dashboard'
 
 export function DashboardView({ data }: { data: ActiveDashboard }) {
-  const { event, participants, whiskyCount, isParticipant, isHost, isHelper } = data
+  const { event, participants, whiskyCount, isParticipant, isHost, isHelper, myTipPosition } =
+    data
   // Mit Helfer steuert der Helfer den Abend, nicht der Gastgeber (PROJ-11).
   const canControl = isHelper || (isHost && !event.helper_id)
   // Der Gastgeber-mit-Helfer steuert nicht, pflegt aber weiter die Eckdaten.
@@ -26,6 +27,8 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
   const label = progressLabel(whiskyCount, event.current_position, event.status)
   const closed = event.status === 'closed'
   const halfPoints = event.rating_step === 0.5
+  // PROJ-22: Tipp-Hinweis nur für Mitverkoster im laufenden Tasting.
+  const showTip = canRateNow(event.status, isParticipant) && !isHelper
 
   return (
     <div className="space-y-4">
@@ -47,6 +50,27 @@ export function DashboardView({ data }: { data: ActiveDashboard }) {
           {closed ? (
             <p className="text-sm text-muted-foreground">
               Der Abend ist abgeschlossen.
+            </p>
+          ) : null}
+
+          {showTip ? (
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <Trophy className="h-4 w-4 shrink-0 text-gold" />
+              {myTipPosition !== null ? (
+                <span>
+                  Dein Tipp: <span className="font-medium">Whisky {myTipPosition}</span>
+                </span>
+              ) : (
+                <>
+                  <span className="text-muted-foreground">Noch kein Sieger-Tipp abgegeben</span>
+                  <Link
+                    href={`/tastings/${event.id}/bewerten`}
+                    className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+                  >
+                    Jetzt tippen
+                  </Link>
+                </>
+              )}
             </p>
           ) : null}
 

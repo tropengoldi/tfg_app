@@ -5,6 +5,7 @@ import {
   type PersonalBalance,
   type RankingRowLike,
 } from '@/lib/personal-balance'
+import { getKennerCount } from '@/lib/queries/tips'
 
 /**
  * Die persönliche Bilanz (PROJ-10) aus vier RLS-abgesicherten Lesezugriffen:
@@ -49,13 +50,14 @@ export async function getOwnStammdaten(userId: string): Promise<OwnStammdaten> {
 export async function getPersonalBalance(userId: string): Promise<PersonalBalance> {
   const supabase = await createClient()
 
-  const [participations, rankings, ratings] = await Promise.all([
+  const [participations, rankings, ratings, kennerCount] = await Promise.all([
     supabase.from('event_participants').select('event_id').eq('profile_id', userId),
     supabase
       .from('whisky_rankings')
       .select('rank, rating_count, name, event_id')
       .eq('brought_by', userId),
     supabase.from('ratings').select('total_points, event_id').eq('profile_id', userId),
+    getKennerCount(userId),
   ])
   if (participations.error) throw participations.error
   if (rankings.error) throw rankings.error
@@ -110,6 +112,7 @@ export async function getPersonalBalance(userId: string): Promise<PersonalBalanc
     whiskyCount,
     bestPlacement,
     avgPointsGiven,
+    kennerCount,
     isFresh: tastingCount === 0 && whiskyCount === 0 && totals.length === 0,
   }
 }

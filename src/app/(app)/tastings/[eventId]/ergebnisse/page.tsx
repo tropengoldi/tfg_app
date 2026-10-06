@@ -6,11 +6,14 @@ import { ChevronLeft } from 'lucide-react'
 import { RankingList } from '@/components/results/ranking-list'
 import { ResultsHeader } from '@/components/results/results-header'
 import { StatsSection } from '@/components/results/stats-section'
+import { TipsSection } from '@/components/results/tips-section'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
 import { formatEventDate } from '@/lib/dates'
 import { getEventResults } from '@/lib/queries/results'
+import { getRevealedTips } from '@/lib/queries/tips'
+import { kennerSummary, type RevealedTip } from '@/lib/winner-tips'
 
 export const metadata: Metadata = { title: 'Ergebnisse' }
 
@@ -24,6 +27,17 @@ export default async function ErgebnissePage({
 
   const data = await getEventResults(eventId, userId)
   if (data === null) notFound()
+
+  // PROJ-22: Tipps sind Beiwerk — schlägt das Laden fehl, bleibt die Seite nutzbar.
+  let tips: RevealedTip[] = []
+  if (data.phase === 'closed') {
+    try {
+      tips = await getRevealedTips(eventId)
+    } catch {
+      tips = []
+    }
+  }
+  const kenner = data.phase === 'closed' ? kennerSummary(tips, data.hasAnyRatings) : undefined
 
   return (
     <>
@@ -64,7 +78,9 @@ export default async function ErgebnissePage({
               eventId={eventId}
               eventDate={data.head.event_date}
               viewerHasRated={data.viewerHasRated}
+              kenner={kenner}
             />
+            {kenner ? <TipsSection tips={tips} summary={kenner} /> : null}
             {data.hasAnyRatings ? (
               <StatsSection whiskies={data.statsWhiskies} stats={data.stats} />
             ) : null}

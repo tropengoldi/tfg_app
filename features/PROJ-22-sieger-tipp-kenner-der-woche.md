@@ -2,7 +2,7 @@
 
 ## Status: In Progress
 **Created:** 2026-10-05
-**Last Updated:** 2026-10-05
+**Last Updated:** 2026-10-06
 
 ## Dependencies
 - **Requires: PROJ-7 (Bewertungsansicht)** — dort wird getippt.
@@ -126,8 +126,8 @@ Auswertungen über die Runde hinweg).
 - Tipp-Regeln (nur Mitverkoster, nur laufendes Tasting, gültige Whisky-Nummer) serverseitig.
 
 ## Open Questions
-- [ ] Bilanz: „0×" oder „—" bei null Kenner-Titeln? → in `/frontend` an die bestehenden
-  Kennzahlen angleichen.
+- [x] Bilanz: „0×" oder „—" bei null Kenner-Titeln? → **„0×"**, wie die übrigen Zähler
+  (Tastings, mitgebrachte Whiskys zeigen „0", nicht „—"). Entschieden in `/frontend`.
 
 ## Decision Log
 
@@ -267,6 +267,29 @@ Keine.
   darf, kein Direktschreiben, Blindheit Tabelle + Sicht für Teilnehmer/Gastgeber/Steward/Admin,
   Aufdecken mit `is_correct`, Tasting ohne Bewertung, Profil-Schalter) — läuft nach `db:push`.
 - `db:push` durch den Nutzer am 2026-10-05, danach `db:types`; `auth.ts` Session-Spalten um `show_kenner_count` ergänzt (sonst Typfehler). `npm run test:rls`: **167/167** grün (inkl. 11 neue).
+
+### Implementation Notes (Frontend, 2026-10-06)
+- **Logik** `src/lib/winner-tips.ts` (+ 8 Unit-Tests): `kennerSummary` (none / no-winner /
+  no-kenner / kenner, alphabetisch), `sortTips`, `tipLine`, `formatKennerCount`, `tipOptions`.
+- **Lesezugriffe** `src/lib/queries/tips.ts`: `getOwnTipPosition` (eigene Zeile aus
+  `winner_tips` → Position über `whiskies`), `getRevealedTips` (Sicht), `getKennerCount`.
+- **Bewertungsansicht:** neue Komponente `rating/winner-tip-field.tsx` (shadcn Select,
+  `min-h-11`, `text-base`), über der Bewertung — auch schon, solange der erste Whisky noch
+  nicht ausgeschenkt ist. Speichert sofort, Toast „Tipp gespeichert: Whisky N", bei Fehler
+  Rücksprung auf den gespeicherten Wert. Im abgeschlossenen Tasting nur angezeigt, wenn ein
+  Tipp existiert, dann gesperrt. Entwurf: kein Feld. Steward: erreicht die Seite ohnehin
+  nicht (kein Teilnehmer → 404).
+- **Dashboard:** `ActiveDashboard.myTipPosition`; Zeile „Dein Tipp: Whisky N" bzw. „Noch
+  kein Sieger-Tipp abgegeben · Jetzt tippen" — nur Mitverkoster im laufenden Tasting.
+- **Ergebnisseite:** Sieger-Zeile zeigt „Kenner der Woche: …" (Profil-Links) bzw. „Diesmal
+  kein Kenner". Neuer Abschnitt `results/tips-section.tsx` „Sieger-Tipps" mit aufklappbarem
+  „Alle Tipps (n)", richtige Tipps gold hinterlegt + Häkchen; bei Tasting ohne Bewertung
+  Hinweis „Kein Sieger — keine Kenner". Ohne Tipps wird nichts gerendert. Ein Ladefehler der
+  Tipps lässt die übrige Seite unberührt.
+- **Profil:** Kennzahl „Kenner der Woche: n×" in der eigenen Bilanz und im fremden Profil
+  (nur bei `show_kenner_count`); Schalter „Kenner der Woche" in der Gruppe „Persönliche Bilanz".
+- Kein neues Paket, keine neue Route. Lint sauber, Unit 183/183, `npm run build` ok.
+  E2E-Tests folgen in `/qa`.
 
 ## QA Test Results
 _To be added by /qa_
