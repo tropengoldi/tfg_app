@@ -1,6 +1,6 @@
 # PROJ-22: Sieger-Tipp & „Kenner der Woche"
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-05
 **Last Updated:** 2026-10-06
 
@@ -292,7 +292,111 @@ Keine.
   E2E-Tests folgen in `/qa`.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-06
+**App URL:** http://localhost:3000 (Production-Build) gegen die Live-DB (vorher geprüft:
+kein aktives Tasting; danach keine Test-Events übrig)
+**Tester:** QA Engineer (AI)
+**Browser:** Chromium (Desktop) + Mobile Safari (WebKit, iPhone 13); 360 px per Viewport
+
+### Automatisierte Tests
+- Unit: **183/183** (davon 8 neu in `src/lib/winner-tips.test.ts`)
+- DB-Integration (`npm run test:rls`): **167/167** (davon 11 in `winner-tips.integration.test.ts`)
+- E2E neu `tests/PROJ-22-sieger-tipp.spec.ts`: **17/17** in Chromium, **17/17** in Mobile
+  Safari, je 1 × `fixme` = BUG-1.
+  Mit `--workers=1` laufen lassen: die Suite startet ein aktives Event.
+- Regression (Chromium) PROJ-7/8/9/10/11/14/25: alle grün bis auf den vorbestehenden Test
+  „Admin sieht ein fremdes Profil …“ (PROJ-14) — Login mit Seed-Admin-Passwort, siehe
+  Backlog „E2E-Suite hängt an den Seed-Konten“; nicht PROJ-22-bezogen.
+- **Test-Anpassung PROJ-14:** „Alle Felder verborgen → nur der Anzeigename“ schaltete nur die
+  sieben alten Schalter aus; mit dem neuen `show_kenner_count` (Default an) erschien die
+  Bilanz-Karte mit „0×“. App-Verhalten korrekt, Test um den neuen Schalter ergänzt.
+
+### Acceptance Criteria Status
+
+#### Tippen (Bewertungsansicht)
+- [x] Feld „Dein Sieger-Tipp“ mit Whisky 1 … N über der Bewertung (Teilnehmer + Gastgeber)
+- [x] Alle Nummern wählbar, auch nicht ausgeschenkte (Position 1, Tipp auf 3)
+- [x] Sofort gespeichert, Bestätigung „Tipp gespeichert: Whisky N“
+- [x] Neuer Tipp ersetzt den alten — DB hat genau eine Zeile
+- [x] Nach Neuladen und auf einem zweiten Gerät (neuer Browser-Kontext) vorausgewählt
+- [x] Tipp auf den eigenen Whisky erlaubt
+- [x] Steward: kein Tipp-Feld (Seite nicht erreichbar); Schnittstelle lehnt ab (Integration)
+- [x] Nicht-Teilnehmer: abgelehnt (Integration)
+- [x] Abgeschlossen: Feld gesperrt mit eigenem Tipp; Schnittstelle lehnt ab (Integration)
+- [x] In Vorbereitung: kein Feld
+- [ ] **BUG-1:** Speichern schlägt fehl (Netzwerk) → statt Fehlermeldung + Rücksprung ersetzt
+  die Fehlergrenze die ganze Bewertungsansicht
+
+#### Blindheit
+- [x] Während des Tastings sieht niemand (Teilnehmer, Gastgeber, Steward, Admin) fremde Tipps —
+  weder Tabelle noch Sicht (Integration)
+
+#### Dashboard
+- [x] Ohne Tipp: „Noch kein Sieger-Tipp abgegeben“ + „Jetzt tippen“ → Bewertungsansicht
+- [x] Mit Tipp: „Dein Tipp: Whisky N“
+- [x] Steward: kein Hinweis
+
+#### Ergebnisseite
+- [x] Sieger-Zeile: „Kenner der Woche: A, C“ alphabetisch, Links auf die Profile
+- [x] Tipps, keiner richtig: „Diesmal kein Kenner“
+- [x] Keine Tipps: kein Kenner-Hinweis, kein „Alle Tipps“
+- [x] „Alle Tipps (n)“ aufklappbar, Zeilen „Name → #n Whisky (Platz r)“, richtige hervorgehoben
+  (Häkchen mit Screenreader-Label), Nicht-Tipper fehlen
+- [x] Keine Bewertung: „Kein Sieger — keine Kenner.“
+
+#### Bilanz & Sichtbarkeit
+- [x] „Kenner der Woche“ als „1×“ / „0×“
+- [x] Schalter „Kenner der Woche“, Default an
+- [x] Schalter aus → fehlt im fremden Profil, eigene Ansicht zeigt ihn weiter
+
+#### Mobil
+- [x] 360 px: Dashboard, Tipp-Feld, „Alle Tipps“ ohne horizontales Scrollen; Tipp-Feld ≥ 44 px
+
+### Edge Cases Status
+- [x] Tipp in letzter Sekunde: `for share`-Sperre + TS023 nach Abschluss (Integration)
+- [x] Gastgeber ohne Steward darf tippen (E2E)
+- [x] Mehrere Geräte: der zuletzt gespeicherte gilt (E2E, zweiter Kontext)
+- [x] Tasting ohne Bewertung → niemand Kenner (Integration + E2E)
+- [x] Deaktivierter Teilnehmer: Sicht filtert `profiles` nicht auf aktiv → Tipp bleibt sichtbar
+  (Code-Review)
+- [x] Event gelöscht: Tipps per `on delete cascade` weg, Zähler sinkt (Code-Review)
+- [x] Gleichstand an der Spitze: nicht möglich, Rang 1 eindeutig (Ranglisten-Sicht)
+- [x] **Zusatz:** Tipp ändern verwirft keine ungespeicherte Bewertung/Notiz (E2E)
+
+### Security Audit Results
+- [x] Schreiben nur über `set_winner_tip` (SECURITY DEFINER, `search_path = ''`); `insert/update/
+  delete` für `authenticated` entzogen, `anon` ohne Rechte
+- [x] Regeln serverseitig: aktives Mitglied, Event `active`, Teilnehmer, gültige Nummer → TS004/TS023
+- [x] Blindheit auf DB-Ebene (RLS `select` nur eigene Zeile; Sicht nur `closed`)
+- [x] Eingabe: Zod (UUID, Ganzzahl 1–10) passt zur DB-Regel `position between 1 and 10`
+- [x] XSS: Namen werden als React-Text gerendert, kein `dangerouslySetInnerHTML`
+- [x] Spam/Rate-Limit: Upsert auf eine Zeile pro Person — kein Wachstum, unkritisch
+- [i] Bekannt + gewollt (Decision Log): der Kenner-Schalter wird in der App ausgewertet; wer
+  will, kann die Kenner über die Ergebnisseiten selbst zählen
+
+### Bugs Found
+
+#### BUG-1: Netzwerkfehler beim Tippen ersetzt die ganze Bewertungsansicht
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Laufendes Tasting, Bewertungsansicht öffnen, Tipp „Whisky 2“ gespeichert
+  2. Netzwerk weg (E2E: POST der Server-Action abgebrochen), „Whisky 1“ wählen
+  3. Expected: Fehlermeldung (Toast), Auswahl springt zurück auf „Whisky 2“
+  4. Actual: `error.tsx` „Die Bewertungsansicht liess sich gerade nicht laden.“ ersetzt die
+     Seite; ungespeicherte Bewertungs-Eingaben gehen verloren. Der alte Tipp bleibt in der DB.
+- **Ursache:** `await setWinnerTipAction(…)` in `winner-tip-field.tsx` ohne `try/catch` — eine
+  abgelehnte Server-Action wirft in der Transition zur Fehlergrenze durch. `rating-view.tsx`
+  (`saveRatingAction`, PROJ-7) hat dasselbe Muster und ist vermutlich gleich betroffen.
+- **Test:** `test.fixme` in `tests/PROJ-22-sieger-tipp.spec.ts` — nach dem Fix aktivieren.
+- **Priority:** Fix vor dem Deployment empfohlen (klein); nicht blockierend
+
+### Summary
+- **Acceptance Criteria:** 23/24 passed
+- **Bugs Found:** 1 total (0 critical, 0 high, 1 medium, 0 low)
+- **Security:** Pass
+- **Production Ready:** YES (keine Critical/High-Bugs)
+- **Recommendation:** BUG-1 kurz fixen (try/catch + Toast + Rücksprung), dann deployen
 
 ## Deployment
 _To be added by /deploy_

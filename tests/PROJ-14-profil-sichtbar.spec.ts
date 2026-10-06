@@ -59,6 +59,7 @@ type VisibilityColumn =
   | 'show_whisky_count'
   | 'show_best_placement'
   | 'show_avg_points'
+  | 'show_kenner_count'
 
 async function setVisibility(userId: string, patch: Partial<Record<VisibilityColumn, boolean>>) {
   const { error } = await serviceClient().from('profiles').update(patch).eq('id', userId)
@@ -208,6 +209,7 @@ test('Alle Felder verborgen → nur der Anzeigename', async ({ page }) => {
     show_whisky_count: false,
     show_best_placement: false,
     show_avg_points: false,
+    show_kenner_count: false, // PROJ-22
   })
 
   await login(page, viewer.email)
@@ -227,6 +229,7 @@ test('Alle Felder verborgen → nur der Anzeigename', async ({ page }) => {
     show_whisky_count: true,
     show_best_placement: true,
     show_avg_points: true,
+    show_kenner_count: true,
   })
 })
 
