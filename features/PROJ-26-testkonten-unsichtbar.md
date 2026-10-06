@@ -393,9 +393,12 @@ Keine.
   TS024 ab.
 - Typcheck + Lint sauber, Unit **199/199**. Sichtprüfung per Screenshots bei 360 px (Admin-Liste,
   Rückfrage, Event-Formular gemischt, Community als Testkonto).
-- **Für die Einführung notiert:** Weitere Testreste ohne `qa-`-Präfix sind **nicht** markiert
-  („Repro A/C/E“, ggf. „hermann-68-“). Die Entscheidung liegt beim Nutzer (Schalter oder
-  `user:delete`).
+- **Aufgeräumt (2026-10-06, auf Wunsch des Nutzers):** weitere Testreste ohne `qa-`-Präfix
+  gelöscht: „hermann-68-“ (vom Nutzer angelegt) sowie „Repro A/C/E“ (`repro…@example.com`, aus
+  der PROJ-16-Fehlersuche vom 2026-09-28). Alle ohne Fußabdruck. Die drei Repro-Konten hielten
+  allerdings je eine gesendete Testnachricht („Testnachricht“, „Testnachricht 2“, „seq test“,
+  ohne verbliebene Empfänger). Die Nachrichten wurden zuerst gelöscht, weil `messages.sender_id`
+  das Löschen mit `on delete restrict` blockiert.
 
 ## QA Test Results
 _To be added by /qa_

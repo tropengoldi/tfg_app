@@ -154,6 +154,10 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       auf der Ergebnisseite tragen ihr `aria-label` auf einem `div` ohne Rolle; Screenreader
       ignorieren es. Fix: `role="img"` + kurze Textzusammenfassung je Diagramm
       (`metric-bar-chart.tsx`, `metric-scatter-chart.tsx`).
+- [ ] **`user:delete`-Bericht kennt keine Nachrichten** — `MODE=report` meldet „hard ist sicher“,
+      obwohl gesendete Nachrichten (`messages.sender_id … on delete restrict`, PROJ-16) das
+      Löschen blockieren („Database error deleting user“). Fix: im Bericht mitzählen und bei
+      `hard` darauf hinweisen (`scripts/delete-user.mjs`). Aufgefallen bei PROJ-26 (2026-10-06).
 - [ ] **E2E-Specs in CI sharden / `--workers=1`** (BUG-2) plus der projektweite
       transiente Hydration-Doppelrender
 
