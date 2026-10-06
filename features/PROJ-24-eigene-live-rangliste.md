@@ -1,6 +1,6 @@
 # PROJ-24: Eigene Live-Rangliste
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-06
 
@@ -250,6 +250,28 @@ Keine. `Collapsible` (shadcn) ist bereits installiert.
 ### Arbeitsaufteilung
 Nur `/frontend`. Kein `/backend` nötig, weil es keine Datenbankänderung gibt und nur eine
 zusätzliche Leseabfrage auf eine bestehende Sicht hinzukommt.
+
+### Implementation Notes (Frontend, 2026-10-06)
+- **Platzierungsregel** `src/lib/own-ranking.ts` (`rankOwnRatings`, + 6 Unit-Tests). `ownPlacements`
+  in `result-stats.ts` (PROJ-25 „Dein Platz“) nutzt sie jetzt ebenfalls. Die bestehenden Tests
+  laufen unverändert grün.
+- **Gemeinsamer Tipp-Zustand** `rating/winner-tip-context.tsx` (`WinnerTipProvider` /
+  `useWinnerTip`): ein Speicherweg inkl. Netzwerkfehler-Abfang (PROJ-22 BUG-1). `winner-tip-field.tsx`
+  liest und schreibt nur noch darüber (Props jetzt nur `total`). Die Bewertungsseite umschließt
+  Tipp-Feld und Bewertungsansicht im laufenden und im abgeschlossenen Zweig mit dem Provider.
+- **Rangliste** `rating/own-ranking.tsx`: shadcn `Collapsible` unter der Bewertungskarte, in
+  `rating-view.tsx` eingebaut (Zeile → `requestSwitch`, also dieselbe Rückfrage wie die
+  Positionsleiste). Zeile: Platz · „Whisky N“ [· Name] · Nase · Gaumen · Gesamt. Der Whisky im
+  Fokus ist hinterlegt. Pokal-Knopf 44 px, `aria-pressed`, im abgeschlossenen Tasting gesperrt.
+- **Auf/Zu** im `localStorage` (`whizzky.own-ranking.open`, gerätweit) über `useSyncExternalStore`:
+  Der Server rendert „zu“, es gibt keine Hydration-Abweichung. Ist der Speicher gesperrt, wird der
+  Zustand nur bis zum Neuladen gemerkt, ohne Fehlermeldung.
+- **Namen** nach dem Abschluss: `getRatingViewData` fragt `whisky_rankings` nur bei Status `closed`.
+- Kein neues Paket, keine Migration. Lint sauber, Unit 189/189, `npm run build` ok. Regression E2E
+  PROJ-7/22/25: 42/42 grün (Chromium). Sichtprüfung per Screenshots bei 360 px (laufend,
+  nach Neuladen, abgeschlossen mit langen Namen).
+- **Für /qa notiert (vorbestehend, PROJ-7):** Im abgeschlossenen Tasting zeigt die Bewertungskarte
+  weiterhin „Gespeichert — du kannst die Werte noch ändern.“
 
 ## QA Test Results
 _To be added by /qa_

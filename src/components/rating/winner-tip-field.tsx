@@ -1,10 +1,8 @@
 'use client'
 
 import { Trophy } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState, useTransition } from 'react'
-import { toast } from 'sonner'
 
+import { useWinnerTip } from '@/components/rating/winner-tip-context'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
@@ -13,55 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { setWinnerTipAction } from '@/lib/actions/tips'
 import { tipOptions } from '@/lib/winner-tips'
 
 /**
  * „Dein Sieger-Tipp" (PROJ-22): Auswahl Whisky 1 … N, speichert sofort.
- * Bei Fehler springt die Auswahl auf den zuletzt gespeicherten Tipp zurück.
+ * Stand und Speichern kommen aus dem `WinnerTipProvider` — geteilt mit den
+ * Pokal-Knöpfen der eigenen Rangliste (PROJ-24).
  */
-export function WinnerTipField({
-  eventId,
-  total,
-  savedPosition,
-  editable,
-}: {
-  eventId: string
-  total: number
-  savedPosition: number | null
-  editable: boolean
-}) {
-  const router = useRouter()
-  const [pending, startSaving] = useTransition()
-  const [saved, setSaved] = useState(savedPosition)
-  const [value, setValue] = useState(savedPosition)
-
-  // Serverstand (anderes Gerät, router.refresh) übernehmen.
-  useEffect(() => {
-    setSaved(savedPosition)
-    setValue(savedPosition)
-  }, [savedPosition])
-
-  function onChange(next: string) {
-    const position = Number(next)
-    if (position === saved) return
-    setValue(position)
-    startSaving(async () => {
-      // Ein Netzwerkfehler lässt die Server-Action werfen — abfangen, sonst
-      // ersetzt die Fehlergrenze die ganze Bewertungsansicht (PROJ-22 BUG-1).
-      const res = await setWinnerTipAction({ eventId, position }).catch(() => ({
-        error: 'Verbindung fehlgeschlagen — Tipp nicht gespeichert.',
-      }))
-      if ('error' in res) {
-        setValue(saved)
-        toast.error(res.error)
-        return
-      }
-      setSaved(position)
-      toast.success(`Tipp gespeichert: Whisky ${position}`)
-      router.refresh()
-    })
-  }
+export function WinnerTipField({ total }: { total: number }) {
+  const tip = useWinnerTip()
+  if (!tip) return null
+  const { position, pending, editable, choose } = tip
 
   return (
     <Card>
@@ -81,8 +41,8 @@ export function WinnerTipField({
           </p>
         </div>
         <Select
-          value={value === null ? undefined : String(value)}
-          onValueChange={onChange}
+          value={position === null ? undefined : String(position)}
+          onValueChange={(v) => choose(Number(v))}
           disabled={!editable || pending || total === 0}
         >
           <SelectTrigger

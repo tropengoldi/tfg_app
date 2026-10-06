@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft, Lock } from 'lucide-react'
 
 import { RatingView } from '@/components/rating/rating-view'
+import { WinnerTipProvider } from '@/components/rating/winner-tip-context'
 import { WinnerTipField } from '@/components/rating/winner-tip-field'
 import { PageHeader } from '@/components/layout/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -26,7 +27,7 @@ export default async function BewertenPage({
   const data = await getRatingViewData(eventId, userId)
   if (!data) notFound()
 
-  const { event, total, whiskies, myRatings } = data
+  const { event, total, whiskies, myRatings, whiskyNames } = data
   // PROJ-22: nur Teilnehmer erreichen diese Seite (der Steward ist keiner).
   const tipPosition =
     event.status === 'draft' ? null : await getOwnTipPosition(eventId, userId)
@@ -62,59 +63,19 @@ export default async function BewertenPage({
       ) : null}
 
       {event.status === 'active' ? (
-        <div className="mb-5">
-          <WinnerTipField
-            eventId={eventId}
-            total={total}
-            savedPosition={tipPosition}
-            editable
-          />
-        </div>
-      ) : null}
+        // PROJ-24: Tipp-Feld und Pokal-Knöpfe der eigenen Rangliste teilen den Tipp.
+        <WinnerTipProvider eventId={eventId} savedPosition={tipPosition} editable>
+          <div className="mb-5">
+            <WinnerTipField total={total} />
+          </div>
 
-      {event.status === 'active' && event.current_position < 1 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Gleich geht&apos;s los — warte auf den ersten Whisky.
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {event.status === 'active' && event.current_position >= 1 ? (
-        <RatingView
-          eventId={eventId}
-          currentPosition={event.current_position}
-          total={total}
-          whiskies={whiskies}
-          myRatings={myRatings}
-          ratingStep={event.rating_step}
-          editable
-        />
-      ) : null}
-
-      {event.status === 'closed' ? (
-        <div className="space-y-4">
-          <Alert>
-            <Lock className="h-4 w-4" />
-            <AlertDescription>
-              Der Abend ist abgeschlossen — Bewertungen sind eingefroren.{' '}
-              <Link
-                href={`/tastings/${eventId}/ergebnisse`}
-                className="font-medium text-primary hover:underline"
-              >
-                Zu den Ergebnissen
-              </Link>
-            </AlertDescription>
-          </Alert>
-          {tipPosition !== null ? (
-            <WinnerTipField
-              eventId={eventId}
-              total={total}
-              savedPosition={tipPosition}
-              editable={false}
-            />
-          ) : null}
-          {myRatings.length > 0 ? (
+          {event.current_position < 1 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                Gleich geht&apos;s los — warte auf den ersten Whisky.
+              </CardContent>
+            </Card>
+          ) : (
             <RatingView
               eventId={eventId}
               currentPosition={event.current_position}
@@ -122,16 +83,48 @@ export default async function BewertenPage({
               whiskies={whiskies}
               myRatings={myRatings}
               ratingStep={event.rating_step}
-              editable={false}
+              editable
             />
-          ) : (
-            <Card>
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Du hast an diesem Abend nichts bewertet.
-              </CardContent>
-            </Card>
           )}
-        </div>
+        </WinnerTipProvider>
+      ) : null}
+
+      {event.status === 'closed' ? (
+        <WinnerTipProvider eventId={eventId} savedPosition={tipPosition} editable={false}>
+          <div className="space-y-4">
+            <Alert>
+              <Lock className="h-4 w-4" />
+              <AlertDescription>
+                Der Abend ist abgeschlossen — Bewertungen sind eingefroren.{' '}
+                <Link
+                  href={`/tastings/${eventId}/ergebnisse`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Zu den Ergebnissen
+                </Link>
+              </AlertDescription>
+            </Alert>
+            {tipPosition !== null ? <WinnerTipField total={total} /> : null}
+            {myRatings.length > 0 ? (
+              <RatingView
+                eventId={eventId}
+                currentPosition={event.current_position}
+                total={total}
+                whiskies={whiskies}
+                myRatings={myRatings}
+                ratingStep={event.rating_step}
+                editable={false}
+                whiskyNames={whiskyNames}
+              />
+            ) : (
+              <Card>
+                <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                  Du hast an diesem Abend nichts bewertet.
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </WinnerTipProvider>
       ) : null}
     </>
   )

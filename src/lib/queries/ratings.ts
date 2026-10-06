@@ -15,6 +15,8 @@ export interface RatingViewData {
   total: number
   whiskies: WhiskyPosition[]
   myRatings: MyRating[]
+  /** PROJ-24: Whisky-Namen je ID — nur im abgeschlossenen Tasting, sonst leer. */
+  whiskyNames: Record<string, string>
 }
 
 /**
@@ -57,6 +59,19 @@ export async function getRatingViewData(
     .eq('event_id', eventId)
     .eq('profile_id', userId)
 
+  // Namen liefert die Ranglisten-Sicht ohnehin nur für abgeschlossene Tastings;
+  // im laufenden Tasting wird gar nicht erst gefragt.
+  const whiskyNames: Record<string, string> = {}
+  if (event.status === 'closed') {
+    const { data: ranked } = await supabase
+      .from('whisky_rankings')
+      .select('whisky_id, name')
+      .eq('event_id', eventId)
+    for (const r of ranked ?? []) {
+      if (r.whisky_id && r.name) whiskyNames[r.whisky_id] = r.name
+    }
+  }
+
   const whiskies: WhiskyPosition[] = (rows ?? []).map((r) => ({
     position: r.position,
     whisky_id: r.id,
@@ -79,5 +94,6 @@ export async function getRatingViewData(
       taste_points: Number(r.taste_points),
       notes: r.notes,
     })),
+    whiskyNames,
   }
 }

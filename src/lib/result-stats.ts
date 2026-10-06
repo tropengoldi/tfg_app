@@ -5,6 +5,8 @@
  * Alle Gleichstände bei Karten: besser platziert gewinnt (Rang ist eindeutig).
  */
 
+import { rankOwnRatings } from '@/lib/own-ranking'
+
 export interface StatsWhisky {
   whiskyId: string
   /** Ausschank-Nummer. */
@@ -87,14 +89,13 @@ export function ownPlacements(
   own: OwnRating[],
 ): Map<string, number> {
   const pos = new Map(whiskies.map((w) => [w.whiskyId, w.position]))
-  const rated = own
-    .filter((r) => pos.has(r.whiskyId))
-    .map((r) => ({ ...r, total: r.nose + r.taste, position: pos.get(r.whiskyId)! }))
-    .sort(
-      (a, b) =>
-        b.total - a.total || b.taste - a.taste || b.nose - a.nose || a.position - b.position,
-    )
-  return new Map(rated.map((r, i) => [r.whiskyId, i + 1]))
+  // Gemeinsame Regel mit der Live-Rangliste (PROJ-24).
+  const ranked = rankOwnRatings(
+    own
+      .filter((r) => pos.has(r.whiskyId))
+      .map((r) => ({ ...r, position: pos.get(r.whiskyId)! })),
+  )
+  return new Map(ranked.map((r) => [r.whiskyId, r.place]))
 }
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { OwnRanking } from '@/components/rating/own-ranking'
 import { PositionBar } from '@/components/rating/position-bar'
 import { ScoreField } from '@/components/rating/score-field'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { useEventRealtime } from '@/hooks/use-event-realtime'
 import { saveRatingAction } from '@/lib/actions/ratings'
+import { rankOwnRatings } from '@/lib/own-ranking'
 import type { RatingStep } from '@/lib/points'
 import { ratingFormSchema } from '@/lib/schemas/rating'
 import {
@@ -34,6 +36,8 @@ interface RatingViewProps {
   /** PROJ-19: 1 = ganze, 0,5 = halbe Punkte. */
   ratingStep: RatingStep
   editable: boolean
+  /** PROJ-24: Whisky-Namen je ID — nur im abgeschlossenen Tasting gesetzt. */
+  whiskyNames?: Record<string, string>
 }
 
 export function RatingView({
@@ -44,6 +48,7 @@ export function RatingView({
   myRatings,
   ratingStep,
   editable,
+  whiskyNames,
 }: RatingViewProps) {
   const router = useRouter()
   const { isLive, refresh, ping } = useEventRealtime(editable ? eventId : null)
@@ -60,6 +65,21 @@ export function RatingView({
   )
   const rated = useMemo(() => computeRated(whiskies, myRatings), [whiskies, myRatings])
   const rKey = ratingsKey(myRatings)
+
+  // PROJ-24: eigene Rangliste nur aus gespeicherten Bewertungen.
+  const ownRows = useMemo(() => {
+    const positionById = new Map(whiskies.map((w) => [w.whisky_id, w.position]))
+    return rankOwnRatings(
+      myRatings
+        .filter((r) => positionById.has(r.whisky_id))
+        .map((r) => ({
+          whiskyId: r.whisky_id,
+          position: positionById.get(r.whisky_id)!,
+          nose: r.nose_points,
+          taste: r.taste_points,
+        })),
+    ).map((r) => ({ ...r, name: whiskyNames?.[r.whiskyId] ?? null }))
+  }, [whiskies, myRatings, whiskyNames])
 
   const [focus, setFocus] = useState(() => initialFocus(currentPosition, total))
   const [nose, setNose] = useState(NOSE_DEFAULT)
@@ -261,6 +281,8 @@ export function RatingView({
           ) : null}
         </CardContent>
       </Card>
+
+      <OwnRanking rows={ownRows} total={total} focus={focus} onSelect={requestSwitch} />
 
       <ConfirmDialog
         open={confirmZero}
