@@ -1,6 +1,6 @@
 # PROJ-26: Testkonten für normale Nutzer unsichtbar
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-06
 
@@ -401,7 +401,115 @@ Keine.
   das Löschen mit `on delete restrict` blockiert.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-06
+**App URL:** http://localhost:3000 gegen die Live-DB (Migration eingespielt; vor und nach jedem
+Lauf geprüft: kein aktives Tasting)
+**Tester:** QA Engineer (AI)
+**Browser:** Chromium (Desktop) + Mobile Safari (WebKit, iPhone 13); 360 px per Viewport
+
+### Automatisierte Tests
+- Unit: **199/199** (10 neu in `src/lib/test-accounts.test.ts`)
+- DB-Integration (`npm run test:rls`): **188/188** (21 neu in `test-accounts.integration.test.ts`,
+  alle drei Rollen. Die bestehenden Blindheits- und Zugriffstests sind unverändert grün)
+- E2E neu `tests/PROJ-26-testkonten.spec.ts`: **19/19** in Chromium, **19/19** in Mobile Safari
+- **Volle Regression** (alle Specs, Chromium, `--workers=1`): 251 bestanden, 2 übersprungen
+  (vorbestehende `fixme` PROJ-3), **1 wackelig → reproduzierbar rot, wenn einzeln ausgeführt:
+  BUG-1**
+- Die Suite läuft komplett ohne Seed-Konten (Wegwerf-Admin/-Mitglied)
+
+### Acceptance Criteria Status
+
+#### Markieren (Admin)
+- [x] Einladen-Dialog mit Häkchen „Testkonto“ → Konto ist ab der Einladung Testkonto (E2E + DB-Prüfung)
+- [x] Teilnehmerliste: Schalter je Nicht-Admin-Konto, Abzeichen „Test“
+- [x] Markieren mit Rückfrage „1 Tasting wird für die Runde ausgeblendet.“
+- [x] Entfernen mit Rückfrage „… sichtbar“. Ein weiteres Testkonto im Tasting wird berücksichtigt
+  (Integration). Abbrechen ändert nichts
+- [x] Admin-Konto ohne Schalter; Versuch über die Schnittstelle → TS025 (Integration)
+- [x] Testkonto zum Admin machen → abgelehnt (TS025, Integration); Menüpunkt ausgeblendet (E2E)
+
+#### Test-Tastings
+- [x] Test-Tasting = Gastgeber/Steward/Teilnehmer ist Testkonto (Integration, gemischtes Tasting)
+- [x] Mischwarnung im Event-Formular: Hinweis + Rückfrage „Tasting wird unsichtbar“, „Zurück“ legt
+  nichts an
+- [x] Abzeichen „Test“ in der Event-Verwaltung
+
+#### Unsichtbarkeit für normale Mitglieder
+- [x] Community, Nachrichten-Empfänger ohne Testkonten (E2E); Teilnehmerlisten, „mitgebracht von“,
+  Kenner/Tipps über die Sichten (Integration)
+- [x] Profil + Sammlung eines Testkontos direkt aufgerufen → „Seite nicht gefunden“
+- [x] Test-Tasting fehlt in Meine Tastings und Historie, **auch als Teilnehmer**. Ergebnis-,
+  Bewertungs- und Whisky-Seite → „Seite nicht gefunden“
+- [x] Bilanz zählt nur echte Tastings (E2E: Tastings = 1 trotz Teilnahme am gemischten)
+- [x] Direkte Datenbank-Abfragen liefern keine Testkonten/-Tastings (Integration: Tabellen + 5 Sichten)
+
+#### Testkonten
+- [x] Sieht echte Mitglieder + Testkonten + abgeschlossene Test-Tastings
+- [x] Nachrichten nur an Testkonten (Auswahl + Hinweis, E2E); echtes Mitglied → TS024 (Integration)
+- [x] Eigene Bilanz zählt Test-Tastings
+- [x] Abzeichen „Test“ in Community, Historie, Ergebnis-Kopf
+
+#### Admin
+- [x] Sieht alles mit Abzeichen (Teilnehmer, Events, Historie, Community, Teilnehmerlisten)
+- [x] Eigene Bilanz ohne Test-Tastings (E2E: 1 statt 2); Bilanz eines echten Mitglieds im fremden
+  Profil ebenso
+- [x] Darf Testkonten und echte Mitglieder anschreiben (Integration)
+
+#### Automatische Tests & Einführung
+- [x] Wegwerf-Konten automatisch Testkonten; Ausnahme `test: false`
+- [x] Wegwerf-Admin statt echtem Admin, Suite läuft ohne Seed-Passwort
+- [x] Einführung: Seed-Testkonto + 19 `qa-…` markiert; 0 Admins, 0 echte Konten; Tasting 2026-10-03
+  sichtbar
+- [ ] **BUG-1:** „Alle bestehenden E2E-Tests weiter grün“ — ein PROJ-18-Layouttest ist rot
+
+### Edge Cases Status
+- [x] Testkonto als Gastgeber mit echten Teilnehmern → ganzes Tasting unsichtbar (E2E/Integration)
+- [x] Markieren/Entfernen wirkt sofort (Integration: Sichtbarkeit direkt danach geprüft)
+- [x] Entfernen bei weiterem Testkonto → Tasting bleibt ausgeblendet, Zählung korrekt
+- [x] Gesendet-Liste zeigt nur Empfänger-Anzahlen, keine Namen (Code-Review)
+- [x] Gemischtes Tasting in einer alten Nachricht → Tasting nicht mehr verknüpft, Nachricht bleibt
+  (Code-Review: Einbettung über RLS)
+- [x] Laufendes Test-Tasting → für normale Mitglieder „kein Tasting“ auf dem Dashboard (Code-Review:
+  RLS auf `tasting_events`)
+
+### Security Audit Results
+- [x] `is_test` nur über Admin-Funktion änderbar; eigenes Update → abgelehnt (Integration)
+- [x] Metadaten-Weg sicher: Registrierung gesperrt, der Trigger liest nur beim Anlegen. Spätere
+  Änderungen der eigenen `user_metadata` wirken nicht
+- [x] Zugriffsregeln nur verschärft, Blindheits-Tests unverändert grün
+- [x] Admin-Funktionen prüfen die Rolle (TS004), Konstrukt „Testkonto ≠ Admin“ zusätzlich als Constraint
+- [x] Nachrichten: Testkonto → echtes Mitglied serverseitig blockiert (TS024)
+- [i] **Hinweis (kein Bug):** `is_test_profile(id)` / `is_test_event(id)` sind für angemeldete
+  Mitglieder direkt aufrufbar. Wer eine Konto- oder Tasting-ID kennt, kann so erfahren, ob es Test
+  ist. Abschalten geht nicht, weil die Zugriffsregeln die Funktionen mit den Rechten des Betrachters
+  aufrufen. Die IDs sind zufällige UUIDs, die normale Mitglieder nirgends sehen
+- [i] **Hinweis:** Ein echtes Mitglied in einem gemischten Tasting kann über die Schnittstelle weiter
+  schreiben (z. B. bewerten), sieht das Tasting aber nicht. Das ist der Fall, vor dem die
+  Mischwarnung schützt
+
+### Bugs Found
+
+#### BUG-1 (High laut Regressionsregel; tatsächliche Auswirkung gering): Teilnehmerzeile läuft bei 360 px über
+- **Steps to Reproduce:** `npx playwright test tests/PROJ-18-begriffe.spec.ts -g "Summenzeile bleibt"`
+  — oder als Admin/Testkonto ein Tasting mit langen Namen bei 360 px öffnen
+- **Expected:** kein horizontales Scrollen
+- **Actual:** Ergebnisseite 10 px zu breit; gemessen ragt das Abzeichen „Gastgeber“ auf 372 px
+- **Ursache:** In „Wer war dabei“ (`results-header.tsx`) und „Wer ist dabei“ (`dashboard-view.tsx`)
+  sitzen Name, NEU „Test“-Abzeichen und „Gastgeber“ in einer Zeile ohne Umbruch
+  (`li … flex items-center gap-2`)
+- **Betroffen:** nur Admin und Testkonten (normale Mitglieder sehen keine Testkonten), praktisch
+  nur bei langen Namen wie den automatischen Testnamen
+- **Fix-Vorschlag:** `flex-wrap` in beiden Listenzeilen
+- **Priority:** vor dem Deployment beheben (kleine Änderung, macht die Suite wieder grün)
+
+### Summary
+- **Acceptance Criteria:** 25/26 passed (das Kriterium „alle bestehenden E2E-Tests grün“ scheitert
+  an BUG-1)
+- **Bugs Found:** 1 (0 critical, 1 high laut Regressionsregel, 0 medium, 0 low)
+- **Security:** Pass (2 Hinweise ohne Handlungsbedarf)
+- **Production Ready:** NO — erst BUG-1 beheben
+- **Recommendation:** `flex-wrap` in beiden Teilnehmerlisten, dann gezielter Nachtest + Deploy
 
 ## Deployment
 _To be added by /deploy_
