@@ -1,6 +1,6 @@
 # PROJ-24: Eigene Live-Rangliste
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-06
 
@@ -274,7 +274,109 @@ zusätzliche Leseabfrage auf eine bestehende Sicht hinzukommt.
   weiterhin „Gespeichert — du kannst die Werte noch ändern.“
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-06
+**App URL:** http://localhost:3000 gegen die Live-DB (vorher und nachher geprüft: kein aktives
+Tasting, keine Test-Events übrig)
+**Tester:** QA Engineer (AI)
+**Browser:** Chromium (Desktop) + Mobile Safari (WebKit, iPhone 13); 360 px per Viewport
+
+### Automatisierte Tests
+- Unit: **189/189** (davon 6 in `src/lib/own-ranking.test.ts`; die PROJ-25-Tests zu `ownPlacements`
+  laufen nach der Umstellung auf die gemeinsame Regel unverändert grün)
+- E2E neu `tests/PROJ-24-eigene-rangliste.spec.ts`: **18/18** in Chromium, **18/18** in Mobile
+  Safari. Mit `--workers=1` laufen lassen, weil die Suite aktive Events startet.
+- Regression: PROJ-22 (Tipp-Feld läuft jetzt über den gemeinsamen Zustand) **19/19** in Mobile
+  Safari. PROJ-7, PROJ-19, PROJ-25 grün in Chromium. PROJ-8 und PROJ-9 einzeln **22/22** grün. Im
+  gemeinsamen Lauf mit anderen Specs fielen 2 PROJ-8/9-Tests um (Dashboard sieht ein „gerade
+  abgeschlossenes“ Event einer anderen Spec). Das ist das bekannte Backlog-Thema „E2E-Specs
+  sharden / `--workers=1`“ und betrifft keine von PROJ-24 berührte Seite.
+- Zusätzlich während `/frontend`: Sichtprüfung per Screenshot bei 360 px (laufend, nach
+  Neuladen, abgeschlossen mit langen Namen).
+
+### Acceptance Criteria Status
+
+#### Anzeige während des Tastings
+- [x] Bereich „Meine Rangliste (X von N bewertet)“ unter der Bewertungskarte
+- [x] Beim ersten Öffnen zugeklappt
+- [x] Auf/Zu bleibt über Neuladen und Whisky-Wechsel erhalten (in beide Richtungen)
+- [x] Nur bewertete Whiskies, Zeile mit Platz · „Whisky N“ · Nase · Gaumen · Gesamt
+- [x] Halbe Punkte mit Komma („13,5“, „Nase 4,5“)
+- [x] Leerzustand „Noch nichts bewertet — …“
+
+#### Reihenfolge
+- [x] Gleichstand: Gaumen → Nase → Ausschank-Nummer, eindeutige Plätze (Unit)
+- [x] Nach dem Abschluss: Plätze = „Dein Platz“ auf der Ergebnisseite (E2E, 4 Whiskies)
+- [x] Nach dem Speichern sofort neu geordnet, ohne Neuladen
+- [x] Ungespeicherte Werte ändern die Liste nicht
+
+#### Zum Whisky springen
+- [x] Zeile antippen → Karte zeigt den Whisky mit gespeicherten Werten
+- [x] Bei ungespeicherten Änderungen dieselbe Rückfrage „Nicht gespeicherte Bewertung“
+
+#### Sieger-Tipp in der Rangliste
+- [x] Ausgefüllter Pokal (`aria-pressed`) beim getippten Whisky
+- [x] Pokal in anderer Zeile setzt den Tipp sofort; Bestätigung, Pokal wandert, Tipp-Feld zieht mit
+- [x] Tipp über das Feld geändert → Pokal wandert mit
+- [x] Getippter Whisky unbewertet → kein Pokal in der Liste, Feld zeigt den Tipp
+- [x] Speichern schlägt fehl → Meldung, Pokal und Feld bleiben beim alten Tipp
+- [x] Eigenen Tipp-Pokal erneut antippen → nichts passiert
+
+#### Nach dem Abschluss
+- [x] Liste bleibt, zusätzlich mit Whisky-Namen
+- [x] Pokale gesperrt, Tipp bleibt markiert
+
+#### Blindheit & Berechtigungen
+- [x] Laufendes Tasting: kein Whisky-Name in der ausgelieferten Seite (HTML inkl. eingebetteter Daten)
+- [x] Steward erreicht die Bewertungsansicht nicht, also keine Rangliste
+- [x] In Vorbereitung und vor dem ersten Ausschank: keine Rangliste
+
+#### Mobil
+- [x] 360 px, 10 bewertete Whiskies: kein horizontales Scrollen, kein inneres Scrollen, Zeilen und
+  Pokale ≥ 44 px
+- [x] Lange Namen nach dem Abschluss brechen um, die Punkte bleiben sichtbar (Screenshot)
+
+### Edge Cases Status
+- [x] Nur ein Whisky bewertet / alles 0/0: eine Zeile bzw. Reihenfolge nach Ausschank-Nummer (Unit)
+- [x] Gastgeber schaltet weiter: Fokus springt, die Liste bleibt offen (Whisky-Wechsel-Test)
+- [x] Gastgeber schließt ab: bestehender Live-Refresh der Bewertungsansicht (PROJ-7); danach Namen
+  und gesperrte Pokale (E2E nach Abschluss)
+- [x] Gesperrter Gerätespeicher: startet zu, lässt sich öffnen, keine Fehlerseite (E2E mit
+  werfendem `localStorage`)
+- [x] 10 Whiskies ohne inneres Scrollen (E2E)
+- [x] Zwei Geräte: Daten kommen bei jedem Laden frisch vom Server, wie in PROJ-7/22
+
+### Security Audit Results
+- [x] Keine neue Schreib-Schnittstelle. Der Tipp läuft weiter über `set_winner_tip` mit allen
+  PROJ-22-Regeln
+- [x] Namen werden nur bei Status `closed` abgefragt. Die Sicht `whisky_rankings` liefert sie
+  ohnehin nur für abgeschlossene Tastings (DB-Ebene). E2E bestätigt: keine Namen im HTML
+- [x] Nur eigene Bewertungen gehen in die Liste, es entsteht kein neuer Lesezugriff auf fremde Daten
+- [x] `localStorage` hält nur „offen/zu“, keine personenbezogenen oder geheimen Daten
+- [x] XSS: Namen werden als React-Text gerendert
+
+### Bugs Found
+
+#### BUG-1 (Low, vorbestehend aus PROJ-7): falscher Hinweis auf der Bewertungskarte nach dem Abschluss
+- **Steps to Reproduce:** abgeschlossenes Tasting → Bewertungsansicht → Karte eines bewerteten Whiskys
+- **Expected:** ein Hinweis wie „Gespeichert.“ ohne Aufforderung zum Ändern
+- **Actual:** „Gespeichert — du kannst die Werte noch ändern.“, obwohl alles eingefroren ist
+- **Priority:** Nice to have. Nicht durch PROJ-24 entstanden, fällt hier aber stärker auf, weil die
+  Seite nach dem Abschluss jetzt häufiger geöffnet wird
+
+#### BUG-2 (Low): Screenreader-Text der gesperrten Pokale nach dem Abschluss
+- **Steps to Reproduce:** abgeschlossenes Tasting → Rangliste aufklappen → Pokal einer nicht
+  getippten Zeile mit dem Screenreader ansteuern
+- **Expected:** z. B. „Whisky 3, nicht getippt“
+- **Actual:** „Whisky 3 als Sieger tippen, gesperrt“: Der Text nennt eine Aktion, die es nicht mehr gibt
+- **Priority:** Nice to have
+
+### Summary
+- **Acceptance Criteria:** 25/25 passed
+- **Bugs Found:** 2 total (0 critical, 0 high, 0 medium, 2 low; davon 1 vorbestehend aus PROJ-7)
+- **Security:** Pass
+- **Production Ready:** YES
+- **Recommendation:** Deploy. Die beiden Low-Bugs lassen sich bei Gelegenheit in einem Rutsch beheben
 
 ## Deployment
 _To be added by /deploy_
