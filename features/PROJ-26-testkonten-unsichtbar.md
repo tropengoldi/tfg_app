@@ -490,7 +490,9 @@ Lauf geprüft: kein aktives Tasting)
 
 ### Bugs Found
 
-#### BUG-1 (High laut Regressionsregel; tatsächliche Auswirkung gering): Teilnehmerzeile läuft bei 360 px über
+#### BUG-1 (High laut Regressionsregel; tatsächliche Auswirkung gering): Teilnehmerzeile läuft bei 360 px über — BEHOBEN
+- **Fix (2026-10-06, `28e7c8c`):** `flex-wrap` in beiden Listen. PROJ-18-Test 3/3 grün, neuer
+  360-px-Test in `PROJ-26-testkonten.spec.ts` (20/20 Chromium, 20/20 Mobile Safari)
 - **Steps to Reproduce:** `npx playwright test tests/PROJ-18-begriffe.spec.ts -g "Summenzeile bleibt"`
   — oder als Admin/Testkonto ein Tasting mit langen Namen bei 360 px öffnen
 - **Expected:** kein horizontales Scrollen
@@ -503,13 +505,32 @@ Lauf geprüft: kein aktives Tasting)
 - **Fix-Vorschlag:** `flex-wrap` in beiden Listenzeilen
 - **Priority:** vor dem Deployment beheben (kleine Änderung, macht die Suite wieder grün)
 
+#### BUG-2 (High): Live-Aktualisierung des Dashboards bleibt für Testkonten/Admin stehen
+- **Gefunden:** beim Nachtest von BUG-1. `tests/PROJ-8-tasting-dashboard.spec.ts` („Live: …“)
+  scheitert mit Testkonten (die die Suite seit PROJ-26 standardmäßig nutzt) in fast jedem Lauf,
+  mit normalen Mitgliedern **12/12 grün**
+- **Steps to Reproduce:** PROJ-8 „Live: Weiterschalten aktualisiert den Streifen ohne Neuladen“
+  ausführen (dev oder Production-Build)
+- **Expected:** nach dem Weiterschalten zeigt das Dashboard „Whisky 2 von 3“
+- **Actual:** Anzeige bleibt bei „Whisky 1 von 3“
+- **Analyse:** Das Realtime-Ereignis kommt an. Das Neuladen (`router.refresh`) wird ausgelöst, und
+  die RSC-Antwort enthält nachweislich „Whisky 2 von 3“. Trotzdem übernimmt der Browser den neuen
+  Stand nicht, ohne Fehler in der Konsole. Auslöser sind die „Test“-Abzeichen auf dem Dashboard:
+  ohne sie 3/3 grün. Icon, Text, Position oder Zusatz-Abfragen sind es nicht (jeweils einzeln
+  geprüft). Mit schlichtem `span` statt shadcn-`Badge` wird es seltener, aber nicht weg. Die genaue
+  Ursache im Next-Router ist noch offen
+- **Betroffen:** nur Admin und Testkonten bei einem Test-Tasting (normale Mitglieder sehen keine
+  Abzeichen), also Testläufe
+- **Nebenbefund (Low):** `TestBadge` ist ein `div` (shadcn `Badge`) und sitzt in Community-Liste,
+  Historie und Teilnehmer-Auswahl innerhalb von `span`/`label`. Das ist ungültige Verschachtelung
+
 ### Summary
 - **Acceptance Criteria:** 25/26 passed (das Kriterium „alle bestehenden E2E-Tests grün“ scheitert
   an BUG-1)
-- **Bugs Found:** 1 (0 critical, 1 high laut Regressionsregel, 0 medium, 0 low)
+- **Bugs Found:** 2 + 1 Nebenbefund (0 critical, 2 high, 0 medium, 1 low). BUG-1 behoben, BUG-2 offen
 - **Security:** Pass (2 Hinweise ohne Handlungsbedarf)
-- **Production Ready:** NO — erst BUG-1 beheben
-- **Recommendation:** `flex-wrap` in beiden Teilnehmerlisten, dann gezielter Nachtest + Deploy
+- **Production Ready:** NO — BUG-2 offen
+- **Recommendation:** siehe Optionen zu BUG-2 (Entscheidung des Nutzers)
 
 ## Deployment
 _To be added by /deploy_
