@@ -1,8 +1,8 @@
 # PROJ-26: Testkonten für normale Nutzer unsichtbar
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-10-06
-**Last Updated:** 2026-10-06
+**Last Updated:** 2026-10-07
 
 ## Dependencies
 - **Requires: PROJ-3 (Admin – Teilnehmerverwaltung)**: Dort wird markiert (Einladen-Dialog + Liste).
@@ -505,7 +505,24 @@ Lauf geprüft: kein aktives Tasting)
 - **Fix-Vorschlag:** `flex-wrap` in beiden Listenzeilen
 - **Priority:** vor dem Deployment beheben (kleine Änderung, macht die Suite wieder grün)
 
-#### BUG-2 (High): Live-Aktualisierung des Dashboards bleibt für Testkonten/Admin stehen
+#### BUG-2 (High): Live-Aktualisierung des Dashboards bleibt für Testkonten/Admin stehen — UMGANGEN
+- **Lösung (2026-10-07):** drei Teile
+  1. **Keine „Test“-Abzeichen auf dem Dashboard** (Kopf und „Wer ist dabei“). Bewusste Abweichung:
+     überall sonst bleiben die Abzeichen, auch in „Wer war dabei“ auf der Ergebnisseite
+  2. **`useEventRealtime` lädt nach jedem Ereignis 1,5 s später ein zweites Mal nach.** Auch ohne
+     Abzeichen blieb die Anzeige gelegentlich stehen (13/15 Läufe gleich grün). Mitschnitt:
+     Ereignis kommt an, Neuladen geht raus, der Router übernimmt die Antwort trotzdem nicht. Der
+     zweite Durchlauf fängt das ab
+  3. **`useEventRealtime` lädt auch beim ersten Verbinden einmal nach** (bisher nur beim
+     Reconnect). Mitschnitt: Das Datenbank-Abo wird erst ca. 250 ms vor einer sofortigen
+     Änderung scharf. Änderungen zwischen Seitenaufbau und Abo-Start gingen ganz verloren. Das
+     betrifft auch normale Mitglieder, wenn der Gastgeber genau beim Laden weiterschaltet
+- **Nachtest:** PROJ-8 komplett 32/32 (4×, ohne Wiederholungen); Live-Tests 23/24 nach Teil 1+2, der
+  Ausreißer war die Lücke aus Teil 3. Gegenprobe mit Abzeichen und Teil 2+3: 6/12 rot. Die
+  Abzeichen bleiben also der eigentliche Auslöser
+- **Offen:** genaue Ursache im Next-Router (warum Abzeichen das Übernehmen der Neulade-Antwort
+  verhindern). Kein Handlungsbedarf, solange das Dashboard ohne Abzeichen auskommt
+- **Nebenbefund behoben:** `TestBadge` ist jetzt ein `span` mit den Badge-Stilen
 - **Gefunden:** beim Nachtest von BUG-1. `tests/PROJ-8-tasting-dashboard.spec.ts` („Live: …“)
   scheitert mit Testkonten (die die Suite seit PROJ-26 standardmäßig nutzt) in fast jedem Lauf,
   mit normalen Mitgliedern **12/12 grün**
@@ -527,10 +544,14 @@ Lauf geprüft: kein aktives Tasting)
 ### Summary
 - **Acceptance Criteria:** 25/26 passed (das Kriterium „alle bestehenden E2E-Tests grün“ scheitert
   an BUG-1)
-- **Bugs Found:** 2 + 1 Nebenbefund (0 critical, 2 high, 0 medium, 1 low). BUG-1 behoben, BUG-2 offen
+- **Bugs Found:** 2 + 1 Nebenbefund (0 critical, 2 high, 0 medium, 1 low). BUG-1 behoben, BUG-2
+  umgangen (Dashboard ohne Abzeichen + robusteres Live-Neuladen), Nebenbefund behoben
 - **Security:** Pass (2 Hinweise ohne Handlungsbedarf)
-- **Production Ready:** NO — BUG-2 offen
-- **Recommendation:** siehe Optionen zu BUG-2 (Entscheidung des Nutzers)
+- **Regression (2026-10-07):** PROJ-7/22/24/26 auf Chromium + Mobile Safari: 125 passed, 8 skipped,
+  1 flaky (PROJ-22 „Ergebnis: ohne Tipps …“, Mobile Safari, im Wiederholungslauf grün; Seite ohne
+  Live-Hook, kein Bezug zu den Änderungen erkennbar)
+- **Production Ready:** YES
+- **Recommendation:** `/deploy`
 
 ## Deployment
 _To be added by /deploy_
