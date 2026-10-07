@@ -280,6 +280,11 @@ Keine neuen Pakete.
   Entwurf/Abschluss abgelehnt, Umfang nur ausgeschenkte Whiskies, 0 Punkte ≠ offen, Änderung früherer
   Wertung, Tipps, Abweisung für Gastgeber/Teilnehmer/Admin/Außenstehenden/anderen Steward,
   Zugriffsregeln unverändert, Testkonten-Fall)
+- **Eingespielt + verifiziert (2026-10-07):** Nutzer hat `db:push` ausgeführt; `npm run db:types`
+  erzeugt exakt die vorab eingetragenen Typen. `npm run test:rls` komplett grün (198/198, davon 10/10
+  neu). Zwei Testfehler im ersten Lauf lagen am Test (7,5 Punkte in einem Ganz-Punkte-Tasting → TS021),
+  drei Dateien scheiterten zunächst nur am Anmelde-Ratenlimit von Supabase und liefen nach einer Pause
+  grün
 - **Für `/frontend` offen:** Karte „Wertungen“, Hinweise in der Bewertungsansicht, Live-Signal beim
   Speichern eines Sieger-Tipps (`winner-tip-context.tsx` sendet bisher keins)
 
