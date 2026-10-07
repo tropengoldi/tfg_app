@@ -1,6 +1,6 @@
 # PROJ-21: Whisky-Steward bringt Whiskies mit
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-07
 **Last Updated:** 2026-10-07
 
@@ -137,12 +137,82 @@ mitverkostet.
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| **Nur eine Prüfung in der Datenbank erweitern:** „Eintragen“ erlaubt künftig „Teilnehmer **oder** Steward dieses Abends“ | Ändern und Entfernen prüfen schon heute nur „eigener Whisky ∧ Entwurf“ bzw. „Bringer oder Admin“ — sie funktionieren für den Steward ohne Änderung | 2026-10-07 |
+| Steward bekommt das Teilnehmer-Limit (kein +1) | Der Bonus hängt an „ist Gastgeber“; der Steward kann laut PROJ-11 nie Gastgeber sein | 2026-10-07 |
+| **Keine Änderung an den Lese-Regeln** (`whisky_details`, Ranglisten-Sichten) | Der Steward sieht ohnehin alle Details seines Abends; der Gastgeber-mit-Steward sieht weiter nur Eigenes; Teilnehmer bleiben blind. Rangliste und Bilanz lesen „mitgebracht von“ und sind damit automatisch richtig | 2026-10-07 |
+| Steward-Wechsel mit Whiskies: Ablehnung in der Event-Bearbeitung mit dem bestehenden Code **TS009** | Gleicher Code wie „Teilnehmer mit Whiskies entfernen“; die App zeigt bereits eine passende Meldung, der Text der Datenbank nennt den Steward | 2026-10-07 |
+| „Tastings“ in der Bilanz unverändert (zählt Teilnehmerliste) | Der Steward steht nicht auf der Teilnehmerliste → zählt nicht, wie entschieden | 2026-10-07 |
+| Seite „Meine Whiskys“: Zugang „Teilnehmer **oder** Steward“; Dashboard-Vorschau und „Meine Tastings“ berücksichtigen den Steward | Keine neue Seite; nur die drei Einstiege kennen den Steward bisher nicht | 2026-10-07 |
+| Keine neuen Pakete | — | 2026-10-07 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Kleine Änderung in **Backend und Frontend**. Eine Migration mit zwei angepassten Datenbank-Funktionen.
+Kein neues Datenfeld, keine neue Tabelle, keine geänderten Lese-Regeln.
+
+### A) Komponenten-Struktur
+
+```
+Meine Tastings /tastings                      (bestehend)
++-- Zeile eines Abends im Entwurf, für den Steward
+    +-- „Steuern“                              (unverändert)
+    +-- NEU: „Meine Whiskys“
+
+Dashboard /                                    (bestehend)
++-- Vorschau-Karte „Nächster Abend“            (NEU auch für den Steward)
+    +-- „Meine Whiskys“
+
+Meine Whiskys /tastings/[id]/whiskies         (bestehend, unverändert im Aufbau)
++-- Zugang NEU auch für den Steward
++-- Limit-Hinweis: für ihn wie für Teilnehmer (kein Gastgeber-Bonus)
++-- Liste eigener Whiskies, Formular, Bearbeiten, Entfernen (unverändert)
+
+Admin: Abend anlegen / bearbeiten              (bestehend)
++-- Hinweis zum Limit: „gilt auch für den Whisky-Steward; der Gastgeber darf einen mehr“
++-- Steward-Wechsel mit Whiskies → Fehlermeldung (kommt aus der Datenbank)
+```
+
+### B) Datenmodell (in Worten)
+Nichts Neues. Ein Whisky des Stewards ist ein ganz normaler Whisky: „mitgebracht von“ = der
+Steward. Alles, was darauf aufbaut (Rangliste, „mitgebracht von {Name}“, Bilanz, Profil), funktioniert
+ohne Änderung.
+
+### C) Änderungen in der Datenbank (eine Migration)
+1. **Whisky eintragen:** Die Berechtigung „nur Teilnehmer“ wird zu „Teilnehmer oder Steward dieses
+   Abends“. Limit, Obergrenze 10 und „nur im Entwurf“ bleiben exakt wie heute. Der Gastgeber-Bonus
+   hängt weiter nur am Gastgeber.
+2. **Abend bearbeiten (Admin):** Wird der Steward gewechselt oder entfernt und hat der bisherige
+   Steward schon Whiskies in diesem Abend, lehnt die Datenbank ab (TS009, Text nennt den Steward).
+3. Ändern und Entfernen eines Whiskies brauchen keine Anpassung (prüfen schon heute nur „eigener
+   Whisky im Entwurf“ bzw. „Bringer oder Admin“).
+
+### D) Änderungen in der App
+- **„Meine Whiskys“-Daten:** Zugang, wenn der Nutzer Teilnehmer **oder** Steward ist (bisher nur
+  Teilnehmer). Für den Steward kein Gastgeber-Bonus im Limit-Hinweis
+- **„Meine Tastings“:** Die Steward-Zeile eines Entwurfs zeigt zusätzlich „Meine Whiskys“
+- **Dashboard:** Die Vorschau „Nächster Abend“ findet auch Entwürfe, in denen der Nutzer Steward ist
+- **Admin-Formular:** angepasster Hinweistext zum Limit
+
+### E) Tests
+- **Integration:** Steward darf eintragen (bis Limit, ohne Bonus, Obergrenze 10, nur Entwurf),
+  ändern, entfernen; Außenstehender weiter abgelehnt; Gastgeber-mit-Steward sieht den Steward-Whisky
+  vor dem Abschluss nicht; Steward-Wechsel mit Whiskies → TS009, ohne Whiskies erlaubt. Bestehende
+  Blindheits-Tests grün
+- **Unit:** Limit-Anzeige für den Steward (kein Bonus), Zeilen-Aktionen in „Meine Tastings“
+- **E2E:** Steward trägt über die Oberfläche ein; Rangliste zeigt „mitgebracht von {Steward}“;
+  Bilanz zählt mitgebracht, nicht Tastings; Admin-Wechsel blockiert
+
+### F) Abhängigkeiten
+Keine neuen Pakete.
+
+### G) Reihenfolge der Umsetzung
+`/backend` (Migration + Integrationstests, du spielst sie per `db:push` ein), dann `/frontend`. Die
+Migration lockert nur das Eintragen für den Steward und verschärft den Steward-Wechsel. Die laufende
+App bemerkt davon nichts, bis das Frontend die neuen Einstiege zeigt.
 
 ## QA Test Results
 _To be added by /qa_
