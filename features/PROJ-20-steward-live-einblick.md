@@ -1,6 +1,6 @@
 # PROJ-20: Whisky-Steward: Live-Einblick in Wertungen
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-07
 **Last Updated:** 2026-10-07
 
@@ -62,64 +62,64 @@ mehr als bisher.
 **Format:** Angenommen [Vorbedingung] / Wenn [Aktion] / Dann [Ergebnis]
 
 ### Sichtbarkeit der Karte
-- [ ] Angenommen ein Tasting mit Whisky-Steward läuft, wenn der Steward seine Steuerungsseite öffnet,
+- [x] Angenommen ein Tasting mit Whisky-Steward läuft, wenn der Steward seine Steuerungsseite öffnet,
   dann sieht er unter „Läuft gerade“ eine Karte „Wertungen“.
-- [ ] Angenommen das Tasting ist noch nicht gestartet (Entwurf), wenn der Steward die Steuerungsseite
+- [x] Angenommen das Tasting ist noch nicht gestartet (Entwurf), wenn der Steward die Steuerungsseite
   öffnet, dann gibt es keine Karte „Wertungen“.
-- [ ] Angenommen das Tasting ist abgeschlossen, wenn der Steward die Steuerungsseite oder die
+- [x] Angenommen das Tasting ist abgeschlossen, wenn der Steward die Steuerungsseite oder die
   Ergebnisseite öffnet, dann sieht er keine fremden Notizen und keine Karte „Wertungen“ mehr.
-- [ ] Angenommen ein Tasting **ohne** Steward läuft, wenn Gastgeber oder Admin die Steuerungsseite
+- [x] Angenommen ein Tasting **ohne** Steward läuft, wenn Gastgeber oder Admin die Steuerungsseite
   öffnen, dann gibt es keine Karte „Wertungen“. Sie sehen wie bisher nur den Zähler.
-- [ ] Angenommen ein Tasting mit Steward läuft, wenn der Admin die Steuerungsseite öffnet, dann gibt
+- [x] Angenommen ein Tasting mit Steward läuft, wenn der Admin die Steuerungsseite öffnet, dann gibt
   es für ihn keine Karte „Wertungen“.
 
 ### Inhalt der Karte
-- [ ] Angenommen der dritte Whisky ist ausgeschenkt, wenn der Steward die Karte sieht, dann ist
+- [x] Angenommen der dritte Whisky ist ausgeschenkt, wenn der Steward die Karte sieht, dann ist
   Whisky 3 vorausgewählt. Er kann über eine Auswahl Whisky 1 bis 3 wählen. Noch nicht ausgeschenkte
   Whiskies sind nicht wählbar.
-- [ ] Angenommen der Steward hat einen Whisky gewählt, dann sieht er dessen Ausschank-Nummer und Namen
+- [x] Angenommen der Steward hat einen Whisky gewählt, dann sieht er dessen Ausschank-Nummer und Namen
   sowie den Durchschnitt der Gesamtpunkte der bisher abgegebenen Wertungen.
-- [ ] Angenommen ein Whisky ist gewählt, dann steht für jeden Teilnehmer eine Zeile mit Name,
+- [x] Angenommen ein Whisky ist gewählt, dann steht für jeden Teilnehmer eine Zeile mit Name,
   Nasenpunkten, Gaumenpunkten und Summe. Hat er eine Notiz geschrieben, steht sie unter der Zeile.
-- [ ] Angenommen ein Teilnehmer hat den gewählten Whisky noch nicht bewertet, dann steht in seiner
+- [x] Angenommen ein Teilnehmer hat den gewählten Whisky noch nicht bewertet, dann steht in seiner
   Zeile „noch offen“.
-- [ ] Angenommen ein Teilnehmer hat 0 Punkte vergeben, dann steht dort „0“ und nicht „noch offen“.
-- [ ] Angenommen das Tasting bewertet in halben Punkten, dann erscheinen Punkte mit Komma („7,5“).
-- [ ] Angenommen der Steward öffnet den Bereich „Sieger-Tipps“ in der Karte, dann sieht er je
+- [x] Angenommen ein Teilnehmer hat 0 Punkte vergeben, dann steht dort „0“ und nicht „noch offen“.
+- [x] Angenommen das Tasting bewertet in halben Punkten, dann erscheinen Punkte mit Komma („7,5“).
+- [x] Angenommen der Steward öffnet den Bereich „Sieger-Tipps“ in der Karte, dann sieht er je
   Teilnehmer den getippten Whisky mit Ausschank-Nummer und Namen oder „kein Tipp“.
-- [ ] Angenommen die Karte zeigt bis zu 10 Teilnehmer bei 360 px Breite, dann gibt es kein
+- [x] Angenommen die Karte zeigt bis zu 10 Teilnehmer bei 360 px Breite, dann gibt es kein
   horizontales Scrollen.
 
 ### Live-Aktualisierung
-- [ ] Angenommen der Steward hat die Karte offen, wenn ein Teilnehmer eine Wertung speichert oder
+- [x] Angenommen der Steward hat die Karte offen, wenn ein Teilnehmer eine Wertung speichert oder
   ändert, dann erscheint die Änderung ohne Neuladen in der Karte.
-- [ ] Angenommen der Steward hat einen früheren Whisky gewählt, wenn eine Live-Aktualisierung kommt,
+- [x] Angenommen der Steward hat einen früheren Whisky gewählt, wenn eine Live-Aktualisierung kommt,
   dann bleibt seine Auswahl erhalten.
-- [ ] Angenommen der Steward schaltet auf den nächsten Whisky, dann springt die Auswahl auf den neuen
+- [x] Angenommen der Steward schaltet auf den nächsten Whisky, dann springt die Auswahl auf den neuen
   aktuellen Whisky.
-- [ ] Angenommen ein Teilnehmer ändert seinen Sieger-Tipp, dann erscheint der neue Tipp ohne Neuladen.
+- [x] Angenommen ein Teilnehmer ändert seinen Sieger-Tipp, dann erscheint der neue Tipp ohne Neuladen.
 
 ### Hinweis für die Teilnehmer
-- [ ] Angenommen ein Tasting mit Steward läuft, wenn ein Teilnehmer die Bewertungsansicht öffnet, dann
+- [x] Angenommen ein Tasting mit Steward läuft, wenn ein Teilnehmer die Bewertungsansicht öffnet, dann
   steht am Notizfeld dauerhaft der Hinweis „Whisky-Steward {Name} sieht deine Punkte und Notizen bis
   zum Abschluss.“
-- [ ] Angenommen ein Tasting mit Steward läuft, dann steht auch am Sieger-Tipp-Feld ein kurzer
+- [x] Angenommen ein Tasting mit Steward läuft, dann steht auch am Sieger-Tipp-Feld ein kurzer
   Hinweis, dass der Steward den Tipp sieht.
-- [ ] Angenommen ein Tasting **ohne** Steward läuft, dann gibt es keinen solchen Hinweis.
-- [ ] Angenommen das Tasting ist abgeschlossen, dann verschwindet der Hinweis.
+- [x] Angenommen ein Tasting **ohne** Steward läuft, dann gibt es keinen solchen Hinweis.
+- [x] Angenommen das Tasting ist abgeschlossen, dann verschwindet der Hinweis.
 
 ### Schutz auf Datenbankebene
-- [ ] Angenommen ein Tasting mit Steward läuft, wenn der Steward die Wertungen, Notizen und Tipps
+- [x] Angenommen ein Tasting mit Steward läuft, wenn der Steward die Wertungen, Notizen und Tipps
   seines Events direkt abfragt, dann bekommt er sie.
-- [ ] Angenommen das Tasting ist abgeschlossen, wenn der (ehemalige) Steward direkt Notizen abfragt,
+- [x] Angenommen das Tasting ist abgeschlossen, wenn der (ehemalige) Steward direkt Notizen abfragt,
   dann bekommt er keine fremden Notizen.
-- [ ] Angenommen jemand ist Steward eines anderen Events, wenn er Wertungen dieses Events abfragt, dann
+- [x] Angenommen jemand ist Steward eines anderen Events, wenn er Wertungen dieses Events abfragt, dann
   bekommt er nichts.
-- [ ] Angenommen ein Teilnehmer, der Gastgeber oder ein normales Mitglied fragt während des Tastings
+- [x] Angenommen ein Teilnehmer, der Gastgeber oder ein normales Mitglied fragt während des Tastings
   fremde Wertungen, Notizen oder Tipps direkt ab, dann bekommt er nichts, wie bisher.
-- [ ] Angenommen der Steward fragt direkt ab, dann kann er keine fremden Wertungen oder Tipps
+- [x] Angenommen der Steward fragt direkt ab, dann kann er keine fremden Wertungen oder Tipps
   verändern.
-- [ ] Angenommen alle bestehenden Blindheits- und RLS-Tests laufen, dann sind sie weiter grün.
+- [x] Angenommen alle bestehenden Blindheits- und RLS-Tests laufen, dann sind sie weiter grün.
 
 ## Edge Cases
 - **Steward wechselt während des Abends:** ausgeschlossen. Die Steward-Zuordnung ist nur im Entwurf
@@ -311,7 +311,98 @@ Keine neuen Pakete.
   auf der Seite und ist nur bei Bedarf im Blick. Bei Bedarf als kleiner Nachzug
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-07
+**App URL:** http://localhost:3000 (Production-Build) gegen die Live-DB; vorher geprüft: kein aktives
+Tasting
+**Tester:** QA Engineer (AI)
+**Automatisiert:** `tests/PROJ-20-steward-einblick.spec.ts` (7 Tests) — Chromium 7/7, Mobile Safari
+7/7, Chromium 5× wiederholt 35/35 ohne Retry. Integration `steward-insight` 10/10, RLS-Suite
+198/198. Unit 207/207 (inkl. `steward-insight.test.ts`, 8 Tests)
+
+### Acceptance Criteria Status
+
+#### Sichtbarkeit der Karte
+- [x] Laufendes Tasting mit Steward → Karte „Wertungen“ unter „Läuft gerade“ (E2E)
+- [x] Entwurf → keine Karte (E2E)
+- [x] Abgeschlossen → keine Karte, keine fremden Notizen (E2E; Datenbank lehnt ab, Integration)
+- [x] Tasting ohne Steward → Gastgeber sieht nur den Zähler (E2E)
+- [x] Admin auf der Steuerungsseite eines Steward-Tastings → keine Karte, nur Zähler (E2E)
+
+#### Inhalt der Karte
+- [x] Aktueller Whisky vorausgewählt, nur ausgeschenkte wählbar (E2E: 2 Knöpfe bei Position 2)
+- [x] Ausschank-Nummer, Name, Durchschnitt („Ø 4,5 · 2 von 10 bewertet“) (E2E)
+- [x] Zeile je Teilnehmer mit Nase · Gaumen = Summe, Notiz darunter (E2E)
+- [x] „noch offen“ ohne Wertung (E2E)
+- [x] 0 Punkte als „0“, nicht „noch offen“ (E2E + Integration + Unit)
+- [x] Halbe Punkte mit Komma („7,5“, „11,5“) (E2E)
+- [x] Sieger-Tipps aufklappbar, getippter Whisky oder „kein Tipp“ (E2E)
+- [x] 10 Teilnehmer bei 360 px ohne horizontales Scrollen, auch mit aufgeklappter langer Notiz (E2E)
+
+#### Live-Aktualisierung
+- [x] Teilnehmer speichert Wertung über die Oberfläche → erscheint ohne Neuladen (E2E)
+- [x] Gewählter früherer Whisky bleibt beim Live-Neuladen gewählt (E2E)
+- [x] Weiterschalten → Auswahl springt auf den neuen Whisky (E2E)
+- [x] Tipp-Änderung erscheint ohne Neuladen (E2E)
+
+#### Hinweis für die Teilnehmer
+- [x] Hinweis am Notizfeld mit Namen, per `aria-describedby` verknüpft; Platzhalter ohne „Sieht sonst
+  niemand.“ (E2E)
+- [x] Hinweis am Tipp-Feld (E2E)
+- [x] Ohne Steward kein Hinweis, alter Platzhalter bleibt (E2E)
+- [x] Nach dem Abschluss kein Hinweis (E2E)
+
+#### Schutz auf Datenbankebene
+- [x] Steward bekommt Wertungen, Notizen, Tipps im laufenden Tasting (Integration)
+- [x] Nach dem Abschluss abgelehnt (Integration)
+- [x] Steward eines anderen Events abgelehnt (Integration)
+- [x] Teilnehmer, Gastgeber, Admin, Außenstehender abgelehnt; direkte Abfragen von `ratings` /
+  `winner_tips` liefern weiter nur Eigenes (Integration)
+- [x] Steward kann nichts verändern: Funktionen nur lesend; kein Schreibrecht auf `ratings` fremder
+  Personen und keins auf `tasting_events` (Code-Review)
+- [x] Bestehende Blindheits- und RLS-Tests grün (198/198)
+
+### Edge Cases Status
+- [x] Steward-Wechsel während des Abends ausgeschlossen (nur im Entwurf änderbar, PROJ-11)
+- [x] Geänderte frühere Wertung sofort sichtbar (Integration)
+- [x] Geleerte Notiz verschwindet (Unit: Leer-/Leerzeichen-Notiz → keine Notiz)
+- [x] Sehr lange Notiz: auf 3 Zeilen gekürzt, „mehr“/„weniger“, kein Scrollen (E2E)
+- [x] Noch niemand bewertet: „–“ als Durchschnitt, alle „noch offen“ (Unit)
+- [x] Live-Verbindung weg: bestehender „Nicht live“-Hinweis der Steuerungsseite greift (unverändert)
+- [x] Deaktivierter Teilnehmer: Wertungen bleiben sichtbar (Code-Review: kein Aktiv-Filter auf den
+  Teilnehmern)
+- [x] Testkonten: echter Steward eines Test-Tastings bekommt nichts (Integration)
+- [x] Steward öffnet die Bewertungsansicht: weiterhin kein Zugang (unverändert, PROJ-11)
+
+### Security Audit Results
+- [x] Prüfung strikt auf `helper_id` = Aufrufer ∧ läuft ∧ aktiv ∧ sichtbar, nicht `can_run_host_control`
+  (Admin ausgeschlossen; Integration)
+- [x] Keine Erweiterung der Zugriffsregeln auf `ratings` / `winner_tips`; `anon` hat keine Rechte
+- [x] Steward-Zuordnung nicht kaperbar: `tasting_events` hat für Mitglieder kein Schreibrecht, die
+  Zuordnung läuft nur über die Admin-Funktion im Entwurf
+- [x] Notizen werden als Text ausgegeben, keine HTML-Einfügung → kein XSS über Notizen
+- [x] Notizen gelangen nur in die Antwort an den Steward: die Steuerungsseite fragt den Einblick nur
+  für ihn ab, Admin/Gastgeber bekommen ihn auch nicht im RSC-Payload
+- [i] **Hinweis (kein Bug):** `steward_can_view_insight(id)` ist für Mitglieder aufrufbar und verrät
+  nur, ob man selbst Steward eines laufenden Events ist
+- [i] **Hinweis (vorbestehend):** Das inhaltslose Live-Signal kann jedes Mitglied auf dem Kanal
+  senden; Folge ist nur ein Neuladen. Unverändert seit PROJ-8
+
+### Regression
+- PROJ-7/8/11/22/24 auf Chromium + Mobile Safari: 101 passed, 13 skipped, 2 failed → beide derselbe
+  PROJ-11-Test („Helfer sieht ‚Steuern‘ …“). **Keine App-Regression:** der Steward sieht den
+  Whisky-Namen jetzt zweimal (neue Karte + Reihenfolge), der Test suchte unscharf
+  (`getByText('run-Dram-1')` → 2 Treffer). Locator auf `exact: true` geschärft, PROJ-11 danach 10/10
+
+### Bugs Found
+Keine.
+
+### Summary
+- **Acceptance Criteria:** 27/27 passed
+- **Bugs Found:** 0
+- **Security:** Pass (2 Hinweise ohne Handlungsbedarf)
+- **Production Ready:** YES
+- **Recommendation:** `/deploy` (Migration `20261010120000_steward_insight.sql` ist bereits live)
 
 ## Deployment
 _To be added by /deploy_

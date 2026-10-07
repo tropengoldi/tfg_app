@@ -130,7 +130,7 @@ test('Helfer sieht „Steuern" auf der /tastings-Zeile und öffnet die Steuern-S
   await page.waitForURL(`**/tastings/${evId}/gastgeber`)
   await expect(page.getByRole('heading', { name: 'Steuern' })).toBeVisible()
   // Der Helfer sieht die Whisky-Namen in der Reihenfolge-Liste.
-  await expect(page.getByText('run-Dram-1')).toBeVisible()
+  await expect(page.getByText('run-Dram-1', { exact: true })).toBeVisible()
 
   await closeAllActiveEvents()
 })
