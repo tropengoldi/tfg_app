@@ -1,6 +1,6 @@
 # PROJ-20: Whisky-Steward: Live-Einblick in Wertungen
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-07
 **Last Updated:** 2026-10-07
 
@@ -405,4 +405,8 @@ Keine.
 - **Recommendation:** `/deploy` (Migration `20261010120000_steward_insight.sql` ist bereits live)
 
 ## Deployment
-_To be added by /deploy_
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-07 als `v1.13.0` (Commit `77ce289`, Vercel „Deployment has completed“)
+- **DB-Migration:** `20261010120000_steward_insight.sql` war vorab per `db:push` eingespielt (in der
+  QA verifiziert); kein aktives Tasting zum Zeitpunkt des Deployments
+- **Pre-Deploy-Checks:** Build + Lint grün, keine Secrets im Repo, QA ohne Bugs

@@ -34,7 +34,7 @@
 | PROJ-17 | Web Push Benachrichtigungen für Nachrichten | Roadmap | – | 2026-09-29 |
 | PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | Deployed | [PROJ-18-begriffe-gaumenpunkte-whisky-steward.md](PROJ-18-begriffe-gaumenpunkte-whisky-steward.md) | 2026-10-05 |
 | PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Deployed | [PROJ-19-flexible-punkteskala.md](PROJ-19-flexible-punkteskala.md) | 2026-10-05 |
-| PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Approved | [PROJ-20-steward-live-einblick.md](PROJ-20-steward-live-einblick.md) | 2026-10-05 |
+| PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Deployed | [PROJ-20-steward-live-einblick.md](PROJ-20-steward-live-einblick.md) | 2026-10-05 |
 | PROJ-21 | Whisky-Steward bringt Whiskies mit | Roadmap | – | 2026-10-05 |
 | PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Deployed | [PROJ-22-sieger-tipp-kenner-der-woche.md](PROJ-22-sieger-tipp-kenner-der-woche.md) | 2026-10-05 |
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
@@ -116,6 +116,11 @@ Mitglieder sehen weder Testkonten noch Tastings mit Testkonten-Beteiligung, Durc
 E2E-Wegwerfkonten automatisch Testkonten, Wegwerf-Admin statt Seed-Admin) am 2026-10-07 als
 `v1.12.0` live (mit DB-Migration `20261009120000_test_accounts.sql`; 26/26 AC, 2 High-Bugs während
 der QA: BUG-1 behoben, BUG-2 umgangen — Dashboard ohne „Test“-Abzeichen, Live-Neuladen robuster).
+PROJ-20 (Whisky-Steward: Live-Einblick — Karte „Wertungen“ auf der Steuerungsseite mit
+Einzelwertungen, Notizen und Sieger-Tipps aller Teilnehmer, nur solange das Tasting läuft; Hinweise
+für die Teilnehmer am Notiz- und Tipp-Feld) am 2026-10-07 als `v1.13.0` live (mit DB-Migration
+`20261010120000_steward_insight.sql` — zwei lesende Funktionen, Zugriffsregeln unverändert; 27/27 AC,
+0 Bugs).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
