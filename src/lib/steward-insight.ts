@@ -102,3 +102,18 @@ export function mapStewardTips(rows: StewardTipInput[]): StewardTip[] {
     }))
     .sort((a, b) => a.name.localeCompare(b.name, 'de'))
 }
+
+/** „Whisky-Steward Anna" bzw. „Der Whisky-Steward", wenn der Name fehlt. */
+export function stewardLabel(name: string | null): string {
+  return name ? `Whisky-Steward ${name}` : 'Der Whisky-Steward'
+}
+
+/** Hinweis am Notizfeld der Bewertungsansicht (PROJ-20). */
+export function stewardNotesHint(name: string | null): string {
+  return `${stewardLabel(name)} sieht deine Punkte und Notizen bis zum Abschluss.`
+}
+
+/** Hinweis am Sieger-Tipp-Feld (PROJ-20). */
+export function stewardTipHint(name: string | null): string {
+  return `${stewardLabel(name)} sieht deinen Tipp.`
+}

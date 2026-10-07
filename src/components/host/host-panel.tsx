@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import type { HostControlData } from '@/lib/queries/host-control'
 
 export function HostPanel({ data }: { data: HostControlData }) {
-  const { event, whiskies, progress } = data
+  const { event, whiskies, progress, stewardInsight } = data
   const eckdaten = {
     theme: event.theme ?? '',
     foodInfo: event.food_info ?? '',
@@ -33,6 +33,7 @@ export function HostPanel({ data }: { data: HostControlData }) {
           currentPosition={event.current_position}
           whiskies={whiskies}
           progress={progress}
+          stewardInsight={stewardInsight}
         />
       ) : null}
 

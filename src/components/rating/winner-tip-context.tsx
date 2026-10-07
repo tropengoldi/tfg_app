@@ -1,7 +1,15 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { createContext, useContext, useEffect, useState, useTransition } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from 'react'
 import { toast } from 'sonner'
 
 import { setWinnerTipAction } from '@/lib/actions/tips'
@@ -12,6 +20,9 @@ interface WinnerTipState {
   pending: boolean
   editable: boolean
   choose: (position: number) => void
+  /** PROJ-20: Die Bewertungsansicht hängt hier ihr Live-Signal ein — nach dem
+   * Speichern eines Tipps erfährt so auch der Whisky-Steward davon. */
+  registerPing: (ping: (() => void) | null) => void
 }
 
 const WinnerTipContext = createContext<WinnerTipState | null>(null)
@@ -36,6 +47,10 @@ export function WinnerTipProvider({
   const [pending, startSaving] = useTransition()
   const [saved, setSaved] = useState(savedPosition)
   const [position, setPosition] = useState(savedPosition)
+  const pingRef = useRef<(() => void) | null>(null)
+  const registerPing = useCallback((ping: (() => void) | null) => {
+    pingRef.current = ping
+  }, [])
 
   // Serverstand (anderes Gerät, router.refresh) übernehmen.
   useEffect(() => {
@@ -59,12 +74,13 @@ export function WinnerTipProvider({
       }
       setSaved(next)
       toast.success(`Tipp gespeichert: Whisky ${next}`)
+      pingRef.current?.()
       router.refresh()
     })
   }
 
   return (
-    <WinnerTipContext.Provider value={{ position, pending, editable, choose }}>
+    <WinnerTipContext.Provider value={{ position, pending, editable, choose, registerPing }}>
       {children}
     </WinnerTipContext.Provider>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { Trophy } from 'lucide-react'
+import { Eye, Trophy } from 'lucide-react'
 
 import { useWinnerTip } from '@/components/rating/winner-tip-context'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,14 +11,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import type { StewardNotice } from '@/lib/queries/ratings'
+import { stewardTipHint } from '@/lib/steward-insight'
 import { tipOptions } from '@/lib/winner-tips'
 
 /**
  * „Dein Sieger-Tipp" (PROJ-22): Auswahl Whisky 1 … N, speichert sofort.
  * Stand und Speichern kommen aus dem `WinnerTipProvider` — geteilt mit den
  * Pokal-Knöpfen der eigenen Rangliste (PROJ-24).
+ * Liest ein Whisky-Steward mit, steht das darunter (PROJ-20).
  */
-export function WinnerTipField({ total }: { total: number }) {
+export function WinnerTipField({
+  total,
+  steward = null,
+}: {
+  total: number
+  steward?: StewardNotice | null
+}) {
   const tip = useWinnerTip()
   if (!tip) return null
   const { position, pending, editable, choose } = tip
@@ -39,6 +48,12 @@ export function WinnerTipField({ total }: { total: number }) {
               ? 'Welcher Whisky gewinnt? Bis zum Abschluss änderbar.'
               : 'Der Abend ist abgeschlossen — dein Tipp ist eingefroren.'}
           </p>
+          {steward && editable ? (
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              {stewardTipHint(steward.name)}
+            </p>
+          ) : null}
         </div>
         <Select
           value={position === null ? undefined : String(position)}

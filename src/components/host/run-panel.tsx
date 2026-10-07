@@ -5,22 +5,35 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { StewardInsightCard } from '@/components/host/steward-insight-card'
 import { WhiskyOrderList } from '@/components/host/whisky-order-list'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { closeEventAction, nextRoundAction } from '@/lib/actions/host-control'
 import { isLastWhisky, nextRoundLabel } from '@/lib/host-order'
-import type { OrderedWhisky, RatingProgress } from '@/lib/queries/host-control'
+import type {
+  OrderedWhisky,
+  RatingProgress,
+  StewardInsight,
+} from '@/lib/queries/host-control'
 
 interface RunPanelProps {
   eventId: string
   currentPosition: number
   whiskies: OrderedWhisky[]
   progress: RatingProgress | null
+  /** PROJ-20: nur für den Whisky-Steward gesetzt. */
+  stewardInsight?: StewardInsight | null
 }
 
-export function RunPanel({ eventId, currentPosition, whiskies, progress }: RunPanelProps) {
+export function RunPanel({
+  eventId,
+  currentPosition,
+  whiskies,
+  progress,
+  stewardInsight = null,
+}: RunPanelProps) {
   const router = useRouter()
   const total = whiskies.length
   const last = isLastWhisky(currentPosition, total)
@@ -108,6 +121,16 @@ export function RunPanel({ eventId, currentPosition, whiskies, progress }: RunPa
           )}
         </CardContent>
       </Card>
+
+      {stewardInsight ? (
+        // key: Beim Weiterschalten springt die Auswahl auf den neuen Whisky,
+        // beim Live-Neuladen bleibt sie.
+        <StewardInsightCard
+          key={currentPosition}
+          insight={stewardInsight}
+          currentPosition={currentPosition}
+        />
+      ) : null}
 
       <Card>
         <CardHeader>

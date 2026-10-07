@@ -59,7 +59,7 @@ export default async function GastgeberPage({
     )
   }
 
-  const data = await getHostControlData(eventId)
+  const data = await getHostControlData(eventId, session.userId)
   if (!data) notFound()
 
   return (

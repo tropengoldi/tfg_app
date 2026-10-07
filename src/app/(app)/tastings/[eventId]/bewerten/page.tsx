@@ -27,7 +27,7 @@ export default async function BewertenPage({
   const data = await getRatingViewData(eventId, userId)
   if (!data) notFound()
 
-  const { event, total, whiskies, myRatings, whiskyNames } = data
+  const { event, total, whiskies, myRatings, whiskyNames, steward } = data
   // PROJ-22: nur Teilnehmer erreichen diese Seite (der Steward ist keiner).
   const tipPosition =
     event.status === 'draft' ? null : await getOwnTipPosition(eventId, userId)
@@ -66,7 +66,7 @@ export default async function BewertenPage({
         // PROJ-24: Tipp-Feld und Pokal-Knöpfe der eigenen Rangliste teilen den Tipp.
         <WinnerTipProvider eventId={eventId} savedPosition={tipPosition} editable>
           <div className="mb-5">
-            <WinnerTipField total={total} />
+            <WinnerTipField total={total} steward={steward} />
           </div>
 
           {event.current_position < 1 ? (
@@ -84,6 +84,7 @@ export default async function BewertenPage({
               myRatings={myRatings}
               ratingStep={event.rating_step}
               editable
+              steward={steward}
             />
           )}
         </WinnerTipProvider>

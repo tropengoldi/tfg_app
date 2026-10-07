@@ -1,6 +1,6 @@
 'use client'
 
-import { RefreshCw, WifiOff } from 'lucide-react'
+import { Eye, RefreshCw, WifiOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { OwnRanking } from '@/components/rating/own-ranking'
 import { PositionBar } from '@/components/rating/position-bar'
 import { ScoreField } from '@/components/rating/score-field'
+import { useWinnerTip } from '@/components/rating/winner-tip-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,7 +17,9 @@ import { useEventRealtime } from '@/hooks/use-event-realtime'
 import { saveRatingAction } from '@/lib/actions/ratings'
 import { rankOwnRatings } from '@/lib/own-ranking'
 import type { RatingStep } from '@/lib/points'
+import type { StewardNotice } from '@/lib/queries/ratings'
 import { ratingFormSchema } from '@/lib/schemas/rating'
+import { stewardNotesHint } from '@/lib/steward-insight'
 import {
   NOSE_DEFAULT,
   TASTE_DEFAULT,
@@ -38,6 +41,8 @@ interface RatingViewProps {
   editable: boolean
   /** PROJ-24: Whisky-Namen je ID — nur im abgeschlossenen Tasting gesetzt. */
   whiskyNames?: Record<string, string>
+  /** PROJ-20: Ein Whisky-Steward liest mit (nur im laufenden Tasting). */
+  steward?: StewardNotice | null
 }
 
 export function RatingView({
@@ -49,9 +54,18 @@ export function RatingView({
   ratingStep,
   editable,
   whiskyNames,
+  steward = null,
 }: RatingViewProps) {
   const router = useRouter()
   const { isLive, refresh, ping } = useEventRealtime(editable ? eventId : null)
+
+  // PROJ-20: Auch ein gespeicherter Sieger-Tipp meldet sich auf dem Live-Kanal.
+  const registerPing = useWinnerTip()?.registerPing
+  useEffect(() => {
+    if (!registerPing || !editable) return
+    registerPing(ping)
+    return () => registerPing(null)
+  }, [registerPing, ping, editable])
   const [pending, startSaving] = useTransition()
   const [refreshing, startRefreshing] = useTransition()
 
@@ -267,13 +281,27 @@ export function RatingView({
               rows={3}
               value={notes}
               disabled={!editable}
-              placeholder="Was riechst und schmeckst du? Sieht sonst niemand."
+              placeholder={
+                steward
+                  ? 'Was riechst und schmeckst du?'
+                  : 'Was riechst und schmeckst du? Sieht sonst niemand.'
+              }
+              aria-describedby={steward && editable ? 'rating-notes-steward' : undefined}
               onChange={(e) => {
                 setNotes(e.target.value)
                 setNotesError(null)
                 markDirty()
               }}
             />
+            {steward && editable ? (
+              <p
+                id="rating-notes-steward"
+                className="flex items-start gap-1.5 text-xs text-muted-foreground"
+              >
+                <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                {stewardNotesHint(steward.name)}
+              </p>
+            ) : null}
             {notesError ? (
               <p className="text-sm text-destructive">{notesError}</p>
             ) : null}

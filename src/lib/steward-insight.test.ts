@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   groupStewardRatings,
   mapStewardTips,
+  stewardNotesHint,
+  stewardTipHint,
   type StewardRatingInput,
 } from './steward-insight'
 
@@ -75,5 +77,18 @@ describe('mapStewardTips', () => {
       { raterId: 'a', name: 'Anna', position: 3, whiskyName: 'Talisker 10' },
       { raterId: 'b', name: 'Bernd', position: null, whiskyName: null },
     ])
+  })
+})
+
+describe('Hinweise für Teilnehmer', () => {
+  it('mit Namen', () => {
+    expect(stewardNotesHint('Anna')).toBe(
+      'Whisky-Steward Anna sieht deine Punkte und Notizen bis zum Abschluss.',
+    )
+    expect(stewardTipHint('Anna')).toBe('Whisky-Steward Anna sieht deinen Tipp.')
+  })
+
+  it('ohne Namen', () => {
+    expect(stewardTipHint(null)).toBe('Der Whisky-Steward sieht deinen Tipp.')
   })
 })

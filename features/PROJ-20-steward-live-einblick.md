@@ -144,7 +144,7 @@ mehr als bisher.
 - Mobile-first: lesbar bei 360 px, bis 10 Teilnehmer ohne horizontales Scrollen.
 
 ## Open Questions
-- [ ] Wortlaut des Hinweises am Notizfeld und am Tipp-Feld, im `/frontend` mit dem Nutzer abstimmen.
+- [ ] Wortlaut der Hinweise am Notiz- und Tipp-Feld bestätigen (umgesetzt: siehe „Umsetzung Frontend“).
 - [ ] Soll der Steward die Notizen mit einem Schalter ausblenden können, wenn Teilnehmer ihm über die
   Schulter schauen? Vorschlag: im `/frontend` entscheiden, kein Datenbank-Thema.
 
@@ -285,8 +285,30 @@ Keine neuen Pakete.
   neu). Zwei Testfehler im ersten Lauf lagen am Test (7,5 Punkte in einem Ganz-Punkte-Tasting → TS021),
   drei Dateien scheiterten zunächst nur am Anmelde-Ratenlimit von Supabase und liefen nach einer Pause
   grün
-- **Für `/frontend` offen:** Karte „Wertungen“, Hinweise in der Bewertungsansicht, Live-Signal beim
-  Speichern eines Sieger-Tipps (`winner-tip-context.tsx` sendet bisher keins)
+
+### Umsetzung Frontend (2026-10-07)
+- **Karte „Wertungen“** `src/components/host/steward-insight-card.tsx` (Client-Komponente):
+  Knopfleiste 1 … aktueller Whisky (shadcn `Button`, `aria-pressed`, 44 px), Kopf „#n Name · Ø x ·
+  k von m bewertet“, je Teilnehmer „Nase · Gaumen = Summe“ oder „noch offen“, Notiz darunter (ab
+  140 Zeichen auf 3 Zeilen gekürzt, „mehr“/„weniger“), aufklappbar „Sieger-Tipps (k von m)“
+  (shadcn `Collapsible`). Untertitel „Nur du siehst das — bis zum Abschluss.“
+- **Einbindung:** `RunPanel` zeigt die Karte zwischen „Läuft gerade“ und „Reihenfolge“, mit
+  `key={currentPosition}`: beim Weiterschalten springt die Auswahl auf den neuen Whisky, beim
+  Live-Neuladen bleibt sie. `getHostControlData(eventId, userId)` lädt den Einblick nur, wenn der
+  Nutzer der Steward ist und das Tasting läuft; Admin/Gastgeber fragen gar nicht erst
+- **Hinweise** (Wortlaut zentral in `src/lib/steward-insight.ts`, mit Unit-Tests):
+  - Notizfeld: „Whisky-Steward {Name} sieht deine Punkte und Notizen bis zum Abschluss.“ (Auge-Icon,
+    per `aria-describedby` am Feld). Der Platzhalter verliert dann „Sieht sonst niemand.“
+  - Tipp-Feld: „Whisky-Steward {Name} sieht deinen Tipp.“
+  - Ohne lesbaren Namen „Der Whisky-Steward …“. Nur im laufenden Tasting mit Steward
+  - `getRatingViewData` liefert dafür `steward: { name } | null`
+- **Live-Signal beim Tipp:** `WinnerTipProvider` bietet `registerPing`; die Bewertungsansicht hängt
+  ihr `ping` ein, ein gespeicherter Tipp sendet danach dasselbe Signal wie eine Wertung. Kein zweiter
+  Live-Kanal
+- **Sichtprüfung** (Production-Build, 360 px, temporäres Skript): kein horizontales Scrollen,
+  Tipp-Änderung erscheint ohne Neuladen beim Steward, die Whisky-Auswahl bleibt erhalten
+- **Offene Frage „Notizen ausblenden“-Schalter für den Steward:** nicht gebaut. Die Karte steht unten
+  auf der Seite und ist nur bei Bedarf im Blick. Bei Bedarf als kleiner Nachzug
 
 ## QA Test Results
 _To be added by /qa_

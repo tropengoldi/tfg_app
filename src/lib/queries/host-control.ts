@@ -34,6 +34,8 @@ export interface HostControlData {
   whiskies: OrderedWhisky[]
   /** Nur im laufenden Event gesetzt, sonst null. */
   progress: RatingProgress | null
+  /** PROJ-20: Live-Einblick — nur für den Whisky-Steward im laufenden Event. */
+  stewardInsight: StewardInsight | null
 }
 
 export interface EventBasics {
@@ -93,13 +95,14 @@ export async function getEventBasics(eventId: string): Promise<EventBasics | nul
  */
 export async function getHostControlData(
   eventId: string,
+  userId: string,
 ): Promise<HostControlData | null> {
   const supabase = await createClient()
 
   const { data: event } = await supabase
     .from('tasting_events')
     .select(
-      'id, event_date, location, status, current_position, theme, food_info, host_notes',
+      'id, event_date, location, status, current_position, theme, food_info, host_notes, helper_id',
     )
     .eq('id', eventId)
     .maybeSingle()
@@ -139,6 +142,12 @@ export async function getHostControlData(
     }
   }
 
+  // Nur der Steward selbst fragt — Admin/Gastgeber bekämen ohnehin TS004.
+  const stewardInsight =
+    event.status === 'active' && event.helper_id === userId
+      ? await getStewardInsight(eventId)
+      : null
+
   return {
     event: {
       id: event.id,
@@ -152,6 +161,7 @@ export async function getHostControlData(
     },
     whiskies,
     progress,
+    stewardInsight,
   }
 }
 

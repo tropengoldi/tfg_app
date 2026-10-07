@@ -17,6 +17,13 @@ export interface RatingViewData {
   myRatings: MyRating[]
   /** PROJ-24: Whisky-Namen je ID — nur im abgeschlossenen Tasting, sonst leer. */
   whiskyNames: Record<string, string>
+  /** PROJ-20: gesetzt, wenn ein Whisky-Steward mitliest (nur im laufenden Tasting). */
+  steward: StewardNotice | null
+}
+
+export interface StewardNotice {
+  /** `null`, falls der Name nicht lesbar ist — dann „Der Whisky-Steward". */
+  name: string | null
 }
 
 /**
@@ -42,7 +49,7 @@ export async function getRatingViewData(
 
   const { data: event } = await supabase
     .from('tasting_events')
-    .select('id, event_date, location, status, current_position, rating_step')
+    .select('id, event_date, location, status, current_position, rating_step, helper_id')
     .eq('id', eventId)
     .maybeSingle()
   if (!event) return null
@@ -72,6 +79,18 @@ export async function getRatingViewData(
     }
   }
 
+  // PROJ-20: Der Whisky-Steward sieht Punkte, Notizen und Tipps, solange der
+  // Abend läuft — die Bewertungsansicht weist mit seinem Namen darauf hin.
+  let steward: StewardNotice | null = null
+  if (event.status === 'active' && event.helper_id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', event.helper_id)
+      .maybeSingle()
+    steward = { name: profile?.display_name ?? null }
+  }
+
   const whiskies: WhiskyPosition[] = (rows ?? []).map((r) => ({
     position: r.position,
     whisky_id: r.id,
@@ -95,5 +114,6 @@ export async function getRatingViewData(
       notes: r.notes,
     })),
     whiskyNames,
+    steward,
   }
 }
