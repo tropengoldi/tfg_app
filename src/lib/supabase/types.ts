@@ -1127,6 +1127,31 @@ export type Database = {
         Returns: undefined
       }
       start_event: { Args: { p_event: string }; Returns: undefined }
+      steward_can_view_insight: { Args: { p_event: string }; Returns: boolean }
+      steward_ratings: {
+        Args: { p_event: string }
+        Returns: {
+          nose_points: number
+          notes: string
+          rater_id: string
+          rater_name: string
+          taste_points: number
+          total_points: number
+          whisky_id: string
+          whisky_name: string
+          whisky_position: number
+        }[]
+      }
+      steward_winner_tips: {
+        Args: { p_event: string }
+        Returns: {
+          rater_id: string
+          rater_name: string
+          whisky_id: string
+          whisky_name: string
+          whisky_position: number
+        }[]
+      }
       test_account_impact_internal: {
         Args: { p_target: string; p_value: boolean }
         Returns: number

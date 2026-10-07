@@ -1,6 +1,6 @@
 # PROJ-20: Whisky-Steward: Live-Einblick in Wertungen
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-07
 **Last Updated:** 2026-10-07
 
@@ -258,6 +258,30 @@ Keine neuen Pakete.
 ### G) Reihenfolge der Umsetzung
 `/backend` zuerst (Migration + Integrationstests, Nutzer spielt sie per `db:push` ein), dann
 `/frontend`. Die Migration ändert nichts Bestehendes, die alte App läuft mit ihr unverändert weiter.
+
+### Umsetzung Backend (2026-10-07)
+- **Migration** `supabase/migrations/20261010120000_steward_insight.sql`:
+  - `steward_can_view_insight(event)`: die eine Prüfung „aktives Mitglied ∧ `helper_id` = Aufrufer ∧
+    Status `active` ∧ `event_visible` (PROJ-26)“
+  - `steward_ratings(event)`: je ausgeschenktem Whisky (Position ≤ aktuelle) × Teilnehmer eine Zeile
+    mit Whisky-Name, Teilnehmer-Name, Punkten, Summe, Notiz. Left-Join auf `ratings`, also ohne
+    Wertung leere Punkte
+  - `steward_winner_tips(event)`: je Teilnehmer der getippte Whisky (Nummer + Name) oder leer
+  - SECURITY DEFINER, STABLE, `search_path = ''`, nur `authenticated`. Ablehnung mit `TS004`, kein
+    neuer Fehlercode. Zugriffsregeln auf `ratings` / `winner_tips` unverändert
+- **Typen:** die drei Funktionen vorab in `src/lib/supabase/types.ts` eingetragen (Form des
+  Generators). Nach `db:push` mit `npm run db:types` neu erzeugen. Die Left-Join-Spalten sind dort
+  als „nie leer“ typisiert, `src/lib/steward-insight.ts` behandelt sie ausdrücklich als leer-fähig
+- **Server-Abfrage:** `getStewardInsight(eventId)` in `src/lib/queries/host-control.ts`. Bei Fehler
+  (z. B. TS004) `null`, die Karte entfällt dann, die Seite bricht nicht
+- **Aufbereitung:** `src/lib/steward-insight.ts` (`groupStewardRatings`, `mapStewardTips`):
+  Gruppierung nach Whisky, Sortierung, Durchschnitt nur über abgegebene Wertungen. 6 Unit-Tests
+- **Integrationstest:** `src/lib/supabase/__tests__/steward-insight.integration.test.ts` (10 Fälle:
+  Entwurf/Abschluss abgelehnt, Umfang nur ausgeschenkte Whiskies, 0 Punkte ≠ offen, Änderung früherer
+  Wertung, Tipps, Abweisung für Gastgeber/Teilnehmer/Admin/Außenstehenden/anderen Steward,
+  Zugriffsregeln unverändert, Testkonten-Fall)
+- **Für `/frontend` offen:** Karte „Wertungen“, Hinweise in der Bewertungsansicht, Live-Signal beim
+  Speichern eines Sieger-Tipps (`winner-tip-context.tsx` sendet bisher keins)
 
 ## QA Test Results
 _To be added by /qa_

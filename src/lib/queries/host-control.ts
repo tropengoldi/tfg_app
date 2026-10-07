@@ -1,5 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import type { EventStatus } from '@/lib/supabase/aliases'
+import {
+  groupStewardRatings,
+  mapStewardTips,
+  type StewardTip,
+  type StewardWhisky,
+} from '@/lib/steward-insight'
 
 export interface OrderedWhisky {
   whisky_id: string
@@ -146,5 +152,28 @@ export async function getHostControlData(
     },
     whiskies,
     progress,
+  }
+}
+
+export interface StewardInsight {
+  whiskies: StewardWhisky[]
+  tips: StewardTip[]
+}
+
+/**
+ * Live-Einblick des Whisky-Stewards (PROJ-20): Einzelwertungen mit Notizen und
+ * Sieger-Tipps aller Teilnehmer. Die Datenbank liefert nur dem Steward eines
+ * laufenden Events etwas (sonst TS004) — dann hier `null`, die Karte entfällt.
+ */
+export async function getStewardInsight(eventId: string): Promise<StewardInsight | null> {
+  const supabase = await createClient()
+  const [ratings, tips] = await Promise.all([
+    supabase.rpc('steward_ratings', { p_event: eventId }),
+    supabase.rpc('steward_winner_tips', { p_event: eventId }),
+  ])
+  if (ratings.error || tips.error) return null
+  return {
+    whiskies: groupStewardRatings(ratings.data ?? []),
+    tips: mapStewardTips(tips.data ?? []),
   }
 }
