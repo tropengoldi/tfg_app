@@ -1,6 +1,6 @@
 # PROJ-20: Whisky-Steward: Live-Einblick in Wertungen
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-07
 **Last Updated:** 2026-10-07
 
@@ -164,11 +164,100 @@ mehr als bisher.
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| **Zwei neue Lese-Funktionen in der Datenbank** (Wertungen, Tipps) statt zusätzlicher Zweige in den Zugriffsregeln von `ratings` / `winner_tips` | Die Zugriffsregeln auf `ratings` sind der Kern der Blindheit. Eine eigene Funktion lässt sie unangetastet, prüft „Steward dieses Events ∧ Event läuft“ an genau einer Stelle und kann nur lesen. Muster wie der bestehende Zähler `rating_progress` | 2026-10-07 |
+| Die Funktionen liefern nur **bereits ausgeschenkte** Whiskies (Position ≤ aktuelle) und **jeden Teilnehmer**, auch ohne Wertung | Die Datenbank erzwingt den Umfang; „noch offen“ muss die Oberfläche nicht selbst zusammensetzen | 2026-10-07 |
+| Prüfung strikt auf **Steward** (`helper_id`), nicht auf „darf steuern“ | `can_run_host_control` schließt den Admin ein; der verkostet meist mit und darf den Einblick nicht bekommen | 2026-10-07 |
+| Nach dem Abschluss lehnen die Funktionen ab | Das Ende des Einblicks ist so in der Datenbank verankert, nicht nur in der Oberfläche | 2026-10-07 |
+| Testkonten-Regel (PROJ-26) gilt auch in den neuen Funktionen | Sie umgehen die Zugriffsregeln (SECURITY DEFINER) und müssen die Sichtbarkeit deshalb selbst beachten, wie die übrigen Funktionen | 2026-10-07 |
+| Live-Aktualisierung über den bestehenden Kanal; **neu: das Speichern eines Sieger-Tipps sendet dasselbe inhaltslose Signal** wie das Speichern einer Wertung | Die Steuerungsseite hängt schon am Live-Kanal. Wertungen senden das Signal bereits, Tipps bisher nicht. Keine neue Realtime-Freigabe für `ratings` (würde Punkte über den Kanal verteilen) | 2026-10-07 |
+| Whisky-Auswahl als Zustand im Browser (Karte ist eine Client-Komponente) | Bleibt beim Live-Neuladen erhalten; springt nur mit, wenn sich der aktuelle Whisky ändert | 2026-10-07 |
+| Hinweis-Daten (Steward-Name) lädt die Bewertungsansicht mit; kein neuer Datenbankweg | Der Steward-Name ist für Teilnehmer schon lesbar (Event + Profil) | 2026-10-07 |
+| Keine neuen Pakete; shadcn `Card`, `Collapsible`, `Button` vorhanden | — | 2026-10-07 |
 
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Backend **und** Frontend. Eine Datenbank-Migration (zwei Lese-Funktionen), sonst keine Änderung am
+Datenmodell. Keine neue Tabelle, keine neue Spalte.
+
+### A) Komponenten-Struktur
+
+```
+Steuerungsseite /tastings/[eventId]/gastgeber   (bestehend)
++-- „Läuft gerade“-Karte                        (unverändert, Zähler „5 von 7 haben bewertet“)
++-- NEU: Karte „Wertungen“                      (nur Steward, nur solange das Tasting läuft)
+|   +-- Whisky-Auswahl: Knopfleiste 1 … aktueller Whisky (aktueller vorausgewählt)
+|   +-- Kopf: „#3 Talisker 10 · Ø 11,5“
+|   +-- Je Teilnehmer eine Zeile: Name · Nase · Gaumen = Summe   oder „noch offen“
+|   |   +-- Notiz darunter (lange Notizen eingekürzt, „mehr“ klappt auf)
+|   +-- Aufklappbar „Sieger-Tipps“: Name → „#5 Lagavulin 16“ oder „kein Tipp“
++-- „Reihenfolge“-Karte                         (unverändert)
+
+Bewertungsansicht /tastings/[eventId]/bewerten  (bestehend)
++-- Bewertungskarte
+|   +-- Notizfeld
+|       +-- NEU: Hinweis „Whisky-Steward {Name} sieht deine Punkte und Notizen bis zum Abschluss.“
++-- Sieger-Tipp-Feld
+    +-- NEU: kurzer Hinweis „Auch dein Tipp ist für {Name} sichtbar.“
+```
+
+Beide Hinweise erscheinen nur, wenn das Tasting einen Steward hat und läuft.
+
+### B) Datenmodell (in Worten)
+Nichts Neues wird gespeichert. Neu sind zwei **Lese-Funktionen**:
+
+**„Wertungen für den Steward“**, bekommt die Event-ID und liefert je ausgeschenktem Whisky und je
+Teilnehmer eine Zeile:
+- Ausschank-Nummer und Name des Whiskys
+- Teilnehmer: ID und Anzeigename
+- Nasenpunkte, Gaumenpunkte, Summe, Notiz (leer, wenn noch nicht bewertet)
+
+**„Sieger-Tipps für den Steward“**, liefert je Teilnehmer:
+- Teilnehmer: ID und Anzeigename
+- getippter Whisky: Ausschank-Nummer und Name (leer = kein Tipp)
+
+Beide Funktionen
+- liefern nur etwas, wenn der Aufrufer **der Steward dieses Events** ist **und** das Event **läuft**,
+  sonst Ablehnung mit dem bestehenden Berechtigungs-Fehlercode
+- können nur lesen
+- beachten die Testkonten-Sichtbarkeit (PROJ-26)
+
+Der Durchschnitt pro Whisky wird in der Oberfläche aus den gelieferten Zeilen berechnet (reine
+Funktion, mit Unit-Tests).
+
+### C) Ablauf und Live-Aktualisierung
+1. Der Steward öffnet die Steuerungsseite. Der Server prüft „Nutzer = Steward ∧ Event läuft“, ruft
+   die beiden Funktionen auf und gibt die Daten an die Karte.
+2. Ein Teilnehmer speichert eine Wertung oder (neu) einen Tipp. Sein Gerät sendet das inhaltslose
+   Signal „da hat sich was geändert“ auf den Kanal des Events.
+3. Die Steuerungsseite hängt schon am Kanal und lädt neu (seit PROJ-26 mit Nachlade-Absicherung). Die
+   Karte bekommt frische Daten, die gewählte Whisky-Nummer bleibt.
+4. Schaltet der Steward weiter, springt die Auswahl auf den neuen aktuellen Whisky.
+5. Nach dem Abschluss erscheint die Karte nicht mehr. Die Funktionen würden ohnehin ablehnen.
+
+### D) Was sich nicht ändert
+- Zugriffsregeln auf `ratings`, `winner_tips` und alle Ranglisten-Sichten: unverändert
+- Die Ergebnis-Aufschlüsselung bleibt ohne Notizen
+- Gastgeber und Admin sehen auf der Steuerungsseite weiterhin nur den Zähler. Hinweis: Der Admin
+  darf `ratings` schon seit PROJ-1 auf Datenbankebene lesen. Das bleibt so, PROJ-20 zeigt es ihm aber
+  nirgends an
+
+### E) Tests
+- **Integration (Datenbank):** Steward bekommt Wertungen/Notizen/Tipps im laufenden Event. Abgelehnt
+  werden: nach dem Abschluss, im Entwurf, Steward eines anderen Events, Teilnehmer, Gastgeber, Admin.
+  Nur ausgeschenkte Whiskies, Teilnehmer ohne Wertung erscheinen. Bestehende Blindheits-Tests grün
+- **Unit:** Durchschnitt und Zeilenaufbau (0 Punkte ≠ „noch offen“, halbe Punkte)
+- **E2E:** Steward sieht Karte und Live-Aktualisierung nach Speichern (Wertung und Tipp), Auswahl
+  bleibt, Teilnehmer sieht Hinweise, nach dem Abschluss keine Karte, 360 px ohne Scrollen
+
+### F) Abhängigkeiten
+Keine neuen Pakete.
+
+### G) Reihenfolge der Umsetzung
+`/backend` zuerst (Migration + Integrationstests, Nutzer spielt sie per `db:push` ein), dann
+`/frontend`. Die Migration ändert nichts Bestehendes, die alte App läuft mit ihr unverändert weiter.
 
 ## QA Test Results
 _To be added by /qa_
