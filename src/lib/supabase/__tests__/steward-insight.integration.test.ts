@@ -71,7 +71,7 @@ async function closeAllActive() {
     .eq('status', 'active')
 }
 
-/** Entwurf mit Steward, Teilnehmer host/pa/pb (+ extra), `n` Whiskies vom Gastgeber. */
+/** Entwurf mit Steward (0,5er-Schritte), Teilnehmer host/pa/pb (+ extra), `n` Whiskies vom Gastgeber. */
 async function draftEvent(
   location: string,
   stewardId: string,
@@ -83,6 +83,7 @@ async function draftEvent(
     p_location: location,
     p_host_id: host.id,
     p_helper_id: stewardId,
+    p_rating_step: 0.5, // halbe Punkte, damit 7,5 gültig ist (PROJ-19)
   })
   if (error) throw error
   const evId = data as string
