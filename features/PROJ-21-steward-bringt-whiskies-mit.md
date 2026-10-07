@@ -230,7 +230,8 @@ App bemerkt davon nichts, bis das Frontend die neuen Einstiege zeigt.
   Wechsel frei (alter Steward dann TS004), ohne Limit nur Obergrenze 10 (TS016)
 - **Nebenbei behoben:** `tests/PROJ-20-steward-einblick.spec.ts` übergab `beforeAll` einen Timeout als
   zweites Argument (Vitest-Form); jetzt `test.setTimeout` im Hook. Fiel im Typecheck auf
-- **Offen:** `db:push` durch den Nutzer, dann `npm run test:rls`. Typen ändern sich nicht (gleiche
+- **Eingespielt + verifiziert (2026-10-07):** Nutzer hat `db:push` ausgeführt. Neuer Test 9/9, gesamte
+  RLS-Suite 207/207 (in zwei Hälften mit Pause gegen das Auth-Ratenlimit). Typen unverändert (gleiche
   Signaturen)
 
 ## QA Test Results
