@@ -89,6 +89,7 @@ function raterRow(page: Page, name: string) {
 
 test.beforeAll(async () => {
   if (!hasServiceClient) return
+  test.setTimeout(180_000)
   admin = await createDisposableAdmin(`a20${STAMP}`)
   host = await createDisposableUser(`h20${STAMP}`)
   anna = await createDisposableUser(`n20${STAMP}`)
@@ -107,7 +108,7 @@ test.beforeAll(async () => {
     .eq('id', ev)
   for (const u of [anna, bernd, ...silent]) await addParticipant(ev, u.id)
   whiskyIds = await addWhiskies(ev, host.id, ['Talisker 10', 'Lagavulin 16', 'Ardbeg Uigeadail'])
-}, 180_000)
+})
 
 test.afterAll(async () => {
   if (!hasServiceClient) return

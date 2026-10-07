@@ -1,6 +1,6 @@
 # PROJ-21: Whisky-Steward bringt Whiskies mit
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-07
 **Last Updated:** 2026-10-07
 
@@ -213,6 +213,25 @@ Keine neuen Pakete.
 `/backend` (Migration + Integrationstests, du spielst sie per `db:push` ein), dann `/frontend`. Die
 Migration lockert nur das Eintragen für den Steward und verschärft den Steward-Wechsel. Die laufende
 App bemerkt davon nichts, bis das Frontend die neuen Einstiege zeigt.
+
+### Umsetzung Backend (2026-10-07)
+- **Migration** `supabase/migrations/20261011120000_steward_brings_whiskies.sql` (Rümpfe byte-genau
+  die zuletzt gültigen Fassungen, Signaturen unverändert → Rechte bleiben):
+  - `add_whisky`: Berechtigung `is_event_participant ∨ is_event_helper`. Meldung „Nur Teilnehmer und
+    der Whisky-Steward dürfen Whiskies eintragen.“ (TS004). Limit/Bonus/Obergrenze/Entwurf unverändert
+  - `update_event`: liest den bisherigen `helper_id` mit; wechselt oder entfernt der Admin den
+    Steward und hat der bisherige Whiskies in diesem Abend → TS009 „Der bisherige Whisky-Steward hat
+    schon Whiskies eingetragen. Er muss sie zuerst entfernen, dann lässt sich der Steward wechseln.“
+    Die App zeigt bei TS-Codes den Text der Datenbank (`messageForDbError`), `errors.ts` bleibt
+- **Integrationstest** `src/lib/supabase/__tests__/steward-whiskies.integration.test.ts` (9 Fälle):
+  Limit 1 ohne Bonus, Gastgeber-Bonus bleibt, Bringer = Steward, Außenstehender TS004, Blindheit für
+  Gastgeber-mit-Steward und Teilnehmer, Ändern im Entwurf, Wechsel/Entfernen mit Whiskies TS009,
+  gleicher Steward erlaubt, nach Start TS005, Rangliste mit Steward als Bringer, nach dem Entfernen
+  Wechsel frei (alter Steward dann TS004), ohne Limit nur Obergrenze 10 (TS016)
+- **Nebenbei behoben:** `tests/PROJ-20-steward-einblick.spec.ts` übergab `beforeAll` einen Timeout als
+  zweites Argument (Vitest-Form); jetzt `test.setTimeout` im Hook. Fiel im Typecheck auf
+- **Offen:** `db:push` durch den Nutzer, dann `npm run test:rls`. Typen ändern sich nicht (gleiche
+  Signaturen)
 
 ## QA Test Results
 _To be added by /qa_
