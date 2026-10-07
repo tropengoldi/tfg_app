@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { formatEventDate } from '@/lib/dates'
 import { requireUser } from '@/lib/auth'
 import { getWhiskyEntryData } from '@/lib/queries/tastings'
+import { whoElseSeesWhiskies } from '@/lib/whisky-privacy'
 import { computeQuota } from '@/lib/whisky-quota'
 
 export const metadata: Metadata = { title: 'Meine Whiskys' }
@@ -60,6 +61,7 @@ export default async function WhiskyEntryPage({
         editable={editable}
         whiskies={data.whiskies}
         quota={quota}
+        whoElseSees={whoElseSeesWhiskies(data)}
       />
     </>
   )

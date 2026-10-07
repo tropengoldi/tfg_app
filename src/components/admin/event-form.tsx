@@ -236,7 +236,7 @@ export function EventForm({ members, mode, eventId, defaultValues }: EventFormPr
                 />
               </FormControl>
               <FormDescription>
-                Leer lassen = keine Begrenzung. Der Gastgeber darf einen mehr.
+                Leer lassen = keine Begrenzung. Gilt auch für den Whisky-Steward; der Gastgeber darf einen mehr.
               </FormDescription>
               <FormMessage />
             </FormItem>

@@ -146,9 +146,19 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
       status: EventStatus
     } | null
   }
+  // PROJ-21: auch Abende, bei denen der Nutzer Whisky-Steward ist (er steht
+  // nicht in event_participants, darf aber eigene Whiskies eintragen).
+  const { data: asSteward } = await supabase
+    .from('tasting_events')
+    .select('id, event_date, location, status')
+    .eq('helper_id', userId)
+    .eq('status', 'draft')
+
   const today = todayISO()
-  const upcoming = (mine as Row[] | null ?? [])
-    .map((r) => r.tasting_events)
+  const upcoming = [
+    ...(mine as Row[] | null ?? []).map((r) => r.tasting_events),
+    ...(asSteward ?? []),
+  ]
     .filter((e): e is NonNullable<Row['tasting_events']> =>
       e !== null && e.status === 'draft' && e.event_date >= today,
     )

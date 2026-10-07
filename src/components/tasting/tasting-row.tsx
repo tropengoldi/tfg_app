@@ -12,39 +12,16 @@ import { EventStatusBadge } from '@/components/common/event-status-badge'
 import { TestBadge } from '@/components/common/test-badge'
 import { formatEventDate } from '@/lib/dates'
 import type { MyTastingRow } from '@/lib/queries/tastings'
+import { tastingRowTargets, type RowActionKind } from '@/lib/tasting-row'
+
+const ACTION_ICON: Record<RowActionKind, typeof Wine> = {
+  whiskies: Wine,
+  control: SlidersHorizontal,
+  basics: NotebookPen,
+}
 
 export function TastingRow({ row }: { row: MyTastingRow }) {
-  const running = row.status === 'active'
-  // Steuern darf: der Helfer, oder der Gastgeber solange kein Helfer benannt ist
-  // (mit Helfer verkostet der Gastgeber blind mit — PROJ-11).
-  const canControl = row.is_helper || (row.is_host && !row.has_helper)
-  // Der Helfer verkostet nicht mit — seine Startseite ist der Steuern-Bereich.
-  const primaryHref = row.is_helper
-    ? `/tastings/${row.id}/gastgeber`
-    : running
-      ? `/tastings/${row.id}/bewerten`
-      : `/tastings/${row.id}/whiskies`
-
-  const secondary: { href: string; label: string; icon: typeof Wine }[] = []
-  if (running && !row.is_helper) {
-    secondary.push({ href: `/tastings/${row.id}/whiskies`, label: 'Whiskys', icon: Wine })
-  }
-  if (canControl) {
-    secondary.push({
-      href: `/tastings/${row.id}/gastgeber`,
-      label: 'Steuern',
-      icon: SlidersHorizontal,
-    })
-  }
-  // Gastgeber-mit-Helfer: steuert nicht, pflegt aber weiter die Eckdaten
-  // (Thema / Essen / Anmerkungen) — PROJ-11-Verfeinerung.
-  if (row.is_host && row.has_helper && !row.is_helper) {
-    secondary.push({
-      href: `/tastings/${row.id}/gastgeber`,
-      label: 'Eckdaten',
-      icon: NotebookPen,
-    })
-  }
+  const { primaryHref, secondary } = tastingRowTargets(row)
 
   return (
     <li className="flex items-stretch">
@@ -75,7 +52,7 @@ export function TastingRow({ row }: { row: MyTastingRow }) {
       {secondary.length > 0 ? (
         <div className="flex shrink-0 flex-col divide-y divide-border border-l border-border">
           {secondary.map((s) => {
-            const Icon = s.icon
+            const Icon = ACTION_ICON[s.kind]
             return (
               <Link
                 key={s.href}

@@ -25,9 +25,17 @@ interface WhiskySectionProps {
   editable: boolean
   whiskies: MyWhisky[]
   quota: Quota
+  /** Wer sieht die Angaben außer dir, z. B. „nur der Gastgeber" (PROJ-21). */
+  whoElseSees: string
 }
 
-export function WhiskySection({ eventId, editable, whiskies, quota }: WhiskySectionProps) {
+export function WhiskySection({
+  eventId,
+  editable,
+  whiskies,
+  quota,
+  whoElseSees,
+}: WhiskySectionProps) {
   const router = useRouter()
   const [removing, startRemoving] = useTransition()
   const [formOpen, setFormOpen] = useState(false)
@@ -88,7 +96,7 @@ export function WhiskySection({ eventId, editable, whiskies, quota }: WhiskySect
             <Wine className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
               {editable
-                ? 'Trag ein, was du mitbringst — sieht außer dir nur der Gastgeber.'
+                ? `Trag ein, was du mitbringst — sieht außer dir ${whoElseSees}.`
                 : 'Du hast für diesen Abend nichts eingetragen.'}
             </p>
           </CardContent>
@@ -170,6 +178,7 @@ export function WhiskySection({ eventId, editable, whiskies, quota }: WhiskySect
             eventId={eventId}
             whiskyId={editTarget?.whisky_id}
             defaultValues={editDefaults}
+            whoElseSees={whoElseSees}
             onSaved={() => router.refresh()}
           />
           <ConfirmDialog

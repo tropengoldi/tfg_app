@@ -234,6 +234,25 @@ App bemerkt davon nichts, bis das Frontend die neuen Einstiege zeigt.
   RLS-Suite 207/207 (in zwei Hälften mit Pause gegen das Auth-Ratenlimit). Typen unverändert (gleiche
   Signaturen)
 
+### Umsetzung Frontend (2026-10-07)
+- **„Meine Whiskys“-Daten** (`getWhiskyEntryData`): Zugang für Teilnehmer **oder** Steward; liefert
+  zusätzlich `isSteward` / `hasSteward`. Das Kontingent rechnet für den Steward ohne Bonus (er ist nie
+  Gastgeber), `computeQuota` bleibt unverändert
+- **Hinweis „Wer sieht das außer dir“** (`src/lib/whisky-privacy.ts`, 3 Unit-Tests) im leeren Zustand
+  und im Eintrage-Dialog: ohne Steward „nur der Gastgeber“, mit Steward „nur der Whisky-Steward“, für
+  den Steward selbst „niemand“. **Nebenbei behoben:** Der Text sagte seit PROJ-11 auch bei Abenden
+  mit Steward „nur der Gastgeber“, was nicht stimmte
+- **„Meine Tastings“:** Zeilen-Logik in eine reine Funktion `src/lib/tasting-row.ts` verschoben
+  (6 Unit-Tests, Verhalten für alle bisherigen Rollen unverändert). Neu: Steward im Entwurf bekommt
+  „Meine Whiskys“ über „Steuern“
+- **Dashboard-Vorschau:** findet zusätzlich Entwürfe mit `helper_id` = Nutzer
+- **Admin-Formular:** Hinweis „Leer lassen = keine Begrenzung. Gilt auch für den Whisky-Steward; der
+  Gastgeber darf einen mehr.“
+- **Sichtprüfung** (Production-Build, 360 px, temporäres Skript): Dashboard-Vorschau mit „Meine
+  Whiskys“, Zeile mit „Meine Whiskys“ + „Steuern“, Dialog „Außer dir sieht das niemand“, Eintragen
+  über die Oberfläche, Limit-Hinweis „Dein Limit für diesen Abend ist erreicht (1 Whisky)“; kein
+  horizontales Scrollen
+
 ## QA Test Results
 _To be added by /qa_
 

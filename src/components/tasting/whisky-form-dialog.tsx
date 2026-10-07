@@ -44,6 +44,8 @@ export interface WhiskyFormDialogProps {
   eventId: string
   /** Bearbeiten-Modus: die ID des Whiskys. Fehlt = Anlegen. */
   whiskyId?: string
+  /** Wer sieht die Angaben außer dir, z. B. „nur der Gastgeber" (PROJ-21). */
+  whoElseSees: string
   /** Startwerte im Bearbeiten-Modus. */
   defaultValues?: WhiskyFormInput
   onSaved: () => void
@@ -60,6 +62,7 @@ export function WhiskyFormDialog({
   eventId,
   whiskyId,
   defaultValues,
+  whoElseSees,
   onSaved,
 }: WhiskyFormDialogProps) {
   const isEdit = Boolean(whiskyId)
@@ -91,7 +94,7 @@ export function WhiskyFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Whisky bearbeiten' : 'Whisky hinzufügen'}</DialogTitle>
           <DialogDescription>
-            Außer dir sieht das nur der Gastgeber — bis der Abend abgeschlossen ist.
+            Außer dir sieht das {whoElseSees} — bis der Abend abgeschlossen ist.
           </DialogDescription>
         </DialogHeader>
 

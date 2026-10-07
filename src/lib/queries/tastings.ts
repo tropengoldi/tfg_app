@@ -113,6 +113,10 @@ export interface WhiskyEntryData {
     status: EventStatus
   }
   isHost: boolean
+  /** PROJ-21: Der Nutzer ist der Whisky-Steward dieses Abends (Limit wie Teilnehmer). */
+  isSteward: boolean
+  /** Hat der Abend einen Whisky-Steward? (für den Hinweis, wer die Angaben sieht) */
+  hasSteward: boolean
   limit: number | null
   whiskies: MyWhisky[]
   eventWhiskyCount: number
@@ -123,8 +127,9 @@ export interface WhiskyEntryData {
  * Gastgeber ist, das Limit, seine eigenen Whisky-Einträge und die Gesamtzahl der
  * Whiskys im Event (für die 10er-Obergrenze).
  *
- * Gibt `null` zurück, wenn der Nutzer bei diesem Event kein Teilnehmer ist oder
- * die Event-ID nicht existiert → die Seite antwortet dann mit „nicht gefunden".
+ * Gibt `null` zurück, wenn der Nutzer bei diesem Event weder Teilnehmer noch
+ * Whisky-Steward ist (PROJ-21) oder die Event-ID nicht existiert → die Seite
+ * antwortet dann mit „nicht gefunden".
  */
 export async function getWhiskyEntryData(
   eventId: string,
@@ -132,20 +137,23 @@ export async function getWhiskyEntryData(
 ): Promise<WhiskyEntryData | null> {
   const supabase = await createClient()
 
-  const { data: membership } = await supabase
-    .from('event_participants')
-    .select('profile_id')
-    .eq('event_id', eventId)
-    .eq('profile_id', userId)
-    .maybeSingle()
-  if (!membership) return null
-
   const { data: event } = await supabase
     .from('tasting_events')
-    .select('id, event_date, location, status, host_id, max_whiskies_per_participant')
+    .select('id, event_date, location, status, host_id, helper_id, max_whiskies_per_participant')
     .eq('id', eventId)
     .maybeSingle()
   if (!event) return null
+
+  const isSteward = event.helper_id === userId
+  if (!isSteward) {
+    const { data: membership } = await supabase
+      .from('event_participants')
+      .select('profile_id')
+      .eq('event_id', eventId)
+      .eq('profile_id', userId)
+      .maybeSingle()
+    if (!membership) return null
+  }
 
   const { data: details } = await supabase
     .from('whisky_details')
@@ -167,6 +175,8 @@ export async function getWhiskyEntryData(
       status: event.status,
     },
     isHost: event.host_id === userId,
+    isSteward,
+    hasSteward: event.helper_id !== null,
     limit: event.max_whiskies_per_participant,
     whiskies: (details ?? []).map((d) => ({
       whisky_id: d.whisky_id,
