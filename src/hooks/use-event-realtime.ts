@@ -9,6 +9,10 @@ import { createClient } from '@/lib/supabase/client'
 
 /** ms, die die Neu-Berechnung bei schnellen Mehrfach-Ereignissen gebündelt wird. */
 const REFRESH_DEBOUNCE = 400
+/** ms nach dem ersten Neuladen, nach denen noch einmal nachgeladen wird. Der
+ * Router verwirft gelegentlich eine Neulade-Antwort, wenn sie sich mit einem
+ * Prefetch überschneidet (PROJ-26 BUG-2) — der zweite Durchlauf fängt das ab. */
+const FOLLOW_UP_REFRESH = 1_500
 /** ms ohne Verbindung, bevor der „Nicht live"-Hinweis erscheint. */
 const OFFLINE_HINT_DELAY = 5_000
 
@@ -27,8 +31,8 @@ export function useEventRealtime(eventId: string | null) {
   const [isLive, setIsLive] = useState(true)
 
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const followUpTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const wasLiveRef = useRef(true)
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   const doRefresh = useCallback(() => {
@@ -37,7 +41,11 @@ export function useEventRealtime(eventId: string | null) {
 
   const scheduleRefresh = useCallback(() => {
     clearTimeout(refreshTimer.current)
-    refreshTimer.current = setTimeout(doRefresh, REFRESH_DEBOUNCE)
+    clearTimeout(followUpTimer.current)
+    refreshTimer.current = setTimeout(() => {
+      doRefresh()
+      followUpTimer.current = setTimeout(doRefresh, FOLLOW_UP_REFRESH)
+    }, REFRESH_DEBOUNCE)
   }, [doRefresh])
 
   useEffect(() => {
@@ -81,8 +89,9 @@ export function useEventRealtime(eventId: string | null) {
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             clearTimeout(hintTimer.current)
-            if (!wasLiveRef.current) doRefresh() // Reconnect → einmal nachziehen
-            wasLiveRef.current = true
+            // Erstes Verbinden oder Reconnect → einmal nachziehen. Auch beim ersten
+            // Mal: Änderungen zwischen Seitenaufbau und Abo-Start kämen sonst nie an.
+            doRefresh()
             setIsLive(true)
           } else if (
             status === 'CHANNEL_ERROR' ||
@@ -91,7 +100,6 @@ export function useEventRealtime(eventId: string | null) {
           ) {
             clearTimeout(hintTimer.current)
             hintTimer.current = setTimeout(() => {
-              wasLiveRef.current = false
               setIsLive(false)
             }, OFFLINE_HINT_DELAY)
           }
@@ -101,6 +109,7 @@ export function useEventRealtime(eventId: string | null) {
     return () => {
       cancelled = true
       clearTimeout(refreshTimer.current)
+      clearTimeout(followUpTimer.current)
       clearTimeout(hintTimer.current)
       document.removeEventListener('visibilitychange', onVisible)
       channelRef.current = null

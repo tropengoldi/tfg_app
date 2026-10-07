@@ -7,8 +7,6 @@ export interface DashboardParticipant {
   id: string
   name: string
   isHost: boolean
-  /** PROJ-26 */
-  isTest: boolean
 }
 
 export interface ActiveDashboard {
@@ -34,8 +32,6 @@ export interface ActiveDashboard {
   /** PROJ-22: Ausschank-Nummer des eigenen Sieger-Tipps; `null` = noch keiner
    * (nur für Mitverkoster im laufenden Tasting ermittelt). */
   myTipPosition: number | null
-  /** PROJ-26: Test-Tasting (nur für Admin/Testkonten überhaupt sichtbar). */
-  isTest: boolean
 }
 
 export interface PreviewDashboard {
@@ -89,25 +85,17 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
     ])
 
     const ids = (partRows ?? []).map((p) => p.profile_id)
-    // Den Whisky-Steward mitladen: er steht nicht in event_participants, macht
-    // ein Tasting aber ebenso zum Test-Tasting (PROJ-26).
-    const profileIds = active.helper_id ? [...ids, active.helper_id] : ids
+    // PROJ-26 BUG-2: bewusst KEINE „Test"-Kennzeichnung auf dem Dashboard — mit
+    // den Abzeichen übernahm der Router das Live-Neuladen nicht (Ursache offen,
+    // siehe Backlog). Kennzeichnung gibt es in allen anderen Listen.
     const names = new Map<string, string>()
-    const testIds = new Set<string>()
-    if (profileIds.length > 0) {
+    if (ids.length > 0) {
       const { data: profs } = await supabase
         .from('profiles')
-        .select('id, display_name, is_test')
-        .in('id', profileIds)
-      for (const p of profs ?? []) {
-        names.set(p.id, p.display_name)
-        if (p.is_test) testIds.add(p.id)
-      }
+        .select('id, display_name')
+        .in('id', ids)
+      for (const p of profs ?? []) names.set(p.id, p.display_name)
     }
-    // Test-Tasting direkt aus den geladenen Profilen ableiten — keine zusätzlichen
-    // Abfragen, die das Live-Neuladen verlangsamen (Gastgeber ist immer Teilnehmer).
-    // Normale Mitglieder bekommen Test-Tastings ohnehin nicht → für sie stets false.
-    const isTest = testIds.size > 0
 
     const isParticipant = ids.includes(userId)
     const myTipPosition =
@@ -134,7 +122,6 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
           id,
           name: names.get(id) ?? 'Unbekannt',
           isHost: id === active.host_id,
-          isTest: testIds.has(id),
         }))
         .sort((a, b) => Number(b.isHost) - Number(a.isHost) || a.name.localeCompare(b.name)),
       whiskyCount: count ?? 0,
@@ -142,7 +129,6 @@ export async function getDashboard(userId: string): Promise<DashboardState> {
       isHost: active.host_id === userId,
       isHelper: active.helper_id === userId,
       myTipPosition,
-      isTest,
     }
   }
 
