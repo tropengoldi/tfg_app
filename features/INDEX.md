@@ -40,7 +40,7 @@
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
 | PROJ-24 | Eigene Live-Rangliste | Deployed | [PROJ-24-eigene-live-rangliste.md](PROJ-24-eigene-live-rangliste.md) | 2026-10-05 |
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
-| PROJ-26 | Testkonten für normale Nutzer unsichtbar | Approved | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
+| PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
 
 <!-- Add features above this line -->
 
@@ -111,6 +111,11 @@ eigenen gespeicherten Wertungen, Zeile springt zum Whisky, Pokal-Knopf setzt den
 Sieger-Tipp, nach dem Abschluss mit Namen) am 2026-10-06 als `v1.11.0` live — ohne
 DB-Migration; gemeinsame Platzierungsregel mit „Dein Platz" (PROJ-25); 25/25 AC,
 2 Low-Bugs gefunden und behoben (davon 1 vorbestehend aus PROJ-7).
+PROJ-26 (Testkonten für normale Nutzer unsichtbar: Admin markiert Konten als Testkonto, normale
+Mitglieder sehen weder Testkonten noch Tastings mit Testkonten-Beteiligung, Durchsetzung per RLS;
+E2E-Wegwerfkonten automatisch Testkonten, Wegwerf-Admin statt Seed-Admin) am 2026-10-07 als
+`v1.12.0` live (mit DB-Migration `20261009120000_test_accounts.sql`; 26/26 AC, 2 High-Bugs während
+der QA: BUG-1 behoben, BUG-2 umgangen — Dashboard ohne „Test“-Abzeichen, Live-Neuladen robuster).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
@@ -137,7 +142,9 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       für `whisky_rankings` / `past_tastings` / `whisky_score_breakdown` ist
       gewollt (PROJ-9).
 - [ ] **Alten Supabase Personal Access Token widerrufen** (steckte in `.mcp.json`)
-- [ ] **E2E-Suite hängt an den Seed-Konten** (`tests/helpers/auth.ts`): der
+- [x] **E2E-Suite hängt an den Seed-Konten** — erledigt mit PROJ-26 (`v1.12.0`): Wegwerf-Konten
+      sind automatisch Testkonten, Admin-Pfad über einen Wegwerf-Admin, kein Seed-Passwort mehr nötig.
+      Ursprünglich: (`tests/helpers/auth.ts`): der
       „normaler Teilnehmer"-Pfad meldet sich als `test.teilnehmer@example.com`
       an, der Admin-Pfad als `hermann.hoppen@gmail.com` — beide mit
       `SEED_PASSWORD`. Post-Deploy stört das:

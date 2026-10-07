@@ -1,6 +1,6 @@
 # PROJ-26: Testkonten für normale Nutzer unsichtbar
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-07
 
@@ -554,4 +554,10 @@ Lauf geprüft: kein aktives Tasting)
 - **Recommendation:** `/deploy`
 
 ## Deployment
-_To be added by /deploy_
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-07 als `v1.12.0` (Commit `b7b4107`, Vercel „Deployment has completed“)
+- **DB-Migration:** `20261009120000_test_accounts.sql` war vorab eingespielt (geprüft: Spalte
+  `profiles.is_test` vorhanden, 22 Testkonten / 8 echte Konten; kein aktives Tasting zum Zeitpunkt
+  des Deployments)
+- **Pre-Deploy-Checks:** Build + Lint grün, keine Secrets im Repo, Regression siehe QA
+- **Abweichung zur Spec:** Dashboard ohne „Test“-Abzeichen (BUG-2), sonst alles wie spezifiziert
