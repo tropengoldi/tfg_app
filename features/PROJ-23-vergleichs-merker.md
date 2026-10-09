@@ -1,6 +1,6 @@
 # PROJ-23: Vergleichs-Merker
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-09
 **Last Updated:** 2026-10-09
 
@@ -338,4 +338,8 @@ Keine.
 - **Recommendation:** `/deploy` (Migration `20261012120000_compare_marks.sql` ist bereits live)
 
 ## Deployment
-_To be added by /deploy_
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-09 als `v1.15.0` (Commit `c5e53c4`, Vercel „Deployment has completed“)
+- **DB-Migration:** `20261012120000_compare_marks.sql` war vorab per `db:push` eingespielt (im Backend
+  verifiziert); kein aktives Tasting zum Zeitpunkt des Deployments
+- **Pre-Deploy-Checks:** Lint, Typecheck, Build grün; keine Secrets im Repo; QA ohne Bugs
