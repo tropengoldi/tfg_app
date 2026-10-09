@@ -142,10 +142,11 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       Pfad, den `src/app/auth/confirm/route.ts` + die PROJ-2-E2E-Tests abdecken.
       Voraussetzung: Supabase **Site URL** = `https://tfg-app-self.vercel.app`
       (ohne Slash). Siehe [[auth-email-tokenhash-template-fix]].
-- [ ] **`siteUrl()` aus Request-Headern ableiten** statt aus
-      `NEXT_PUBLIC_SITE_URL` (`src/lib/actions/auth.ts` + `admin.ts`) — kleiner
-      `/refine PROJ-2`-Nachzug, damit eine falsch gesetzte Env-Var diese Links
-      nicht mehr brechen kann.
+- [x] ~~**`siteUrl()` aus Request-Headern ableiten**~~ — **verworfen 2026-10-09.** Die
+      Mail-Vorlagen bauen den Link aus `{{ .SiteURL }}` (Supabase-Einstellung) und nutzen das
+      `redirectTo` aus `siteUrl()` gar nicht mehr; eine falsche `NEXT_PUBLIC_SITE_URL` bricht
+      die Links also nicht. Den Ursprung aus `Host`-Headern abzuleiten, wäre zudem anfällig für
+      Host-Header-Poisoning. Kein Code geändert.
 - [ ] **Sentry / Error-Tracking** — siehe `docs/production/error-tracking.md`
 - [ ] **Supabase Advisors** (Security + Performance) im Dashboard prüfen;
       Leaked-Password-Protection einschalten. Die „Security Definer View"-Warnung
@@ -167,7 +168,7 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       einen Wegwerf-Admin) umstellen, damit die Suite unabhängig von den
       Seed-Konten läuft. Danach kann das Test-Konto endgültig weg und das
       Admin-Passwort bleibt geändert.
-- [ ] **PROJ-25 BUG-1 (Low): Diagramme ohne Textalternative** — Balken- und Punktdiagramm
+- [x] **PROJ-25 BUG-1 (Low): Diagramme ohne Textalternative** — behoben 2026-10-09 (`role="img"` + Wert-Zusammenfassung als Label). — Balken- und Punktdiagramm
       auf der Ergebnisseite tragen ihr `aria-label` auf einem `div` ohne Rolle; Screenreader
       ignorieren es. Fix: `role="img"` + kurze Textzusammenfassung je Diagramm
       (`metric-bar-chart.tsx`, `metric-scatter-chart.tsx`).
@@ -177,6 +178,14 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       `hard` darauf hinweisen (`scripts/delete-user.mjs`). Aufgefallen bei PROJ-26 (2026-10-06).
 - [ ] **E2E-Specs in CI sharden / `--workers=1`** (BUG-2) plus der projektweite
       transiente Hydration-Doppelrender
+- [ ] **Integrationstests am Auth-Ratenlimit** — die komplette `npm run test:rls` meldet ab ca. 60
+      Anmeldungen „Request rate limit reached“ (Supabase-Auth); seit PROJ-20/21 nur in zwei Hälften
+      mit Pause grün. Fix-Ideen: Testpersonen dateiübergreifend wiederverwenden oder die Dateien
+      seriell mit Pause ausführen. Aufgefallen 2026-10-07
+- [ ] **PROJ-26 BUG-2 Ursache offen** — mit „Test“-Abzeichen übernimmt der Next-Router die
+      Neulade-Antwort des Dashboards nicht (6/12 rot). Umgangen: Dashboard ohne Abzeichen
+      (`src/lib/queries/dashboard.ts`) + robusteres Live-Neuladen. Nur angehen, wenn das Dashboard
+      wieder Abzeichen zeigen soll. Details im QA-Abschnitt von PROJ-26
 
 ### Wartungsskripte (Service-Role, kein UI)
 

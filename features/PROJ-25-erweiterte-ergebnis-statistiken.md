@@ -488,7 +488,11 @@ Migration `20261007120000_results_stats.sql` (vorher geprüft: kein echtes Tasti
 
 ### Bugs Found
 
-#### BUG-1: Diagramme haben keine Textalternative für Screenreader
+#### BUG-1: Diagramme haben keine Textalternative für Screenreader — BEHOBEN 2026-10-09
+- **Fix:** `role="img"` am Diagramm-Container und als `aria-label` eine Zusammenfassung der
+  angezeigten Werte (`chartSummary` in `src/lib/result-stats.ts`, Unit-getestet), z. B.
+  „Balkendiagramm Alkohol (%): #3 Talisker 10: 54,2 %; …“. E2E prüft beide Diagramme per
+  `getByRole('img', …)`; PROJ-25-Suite 26/26
 - **Severity:** Low
 - **Steps to Reproduce:**
   1. Abgeschlossenes Tasting → Ergebnisseite → Abschnitt „Statistiken"
@@ -516,6 +520,6 @@ Migration `20261007120000_results_stats.sql` (vorher geprüft: kein echtes Tasti
 - **Post-Deploy-Verifikation:** `tests/PROJ-25-statistiken.spec.ts` + `tests/PROJ-19-punkteskala.spec.ts`
   gegen die Produktions-URL — **46/46 grün** (Chromium + Mobile Safari)
 - **Behoben mit diesem Release:** PROJ-19 BUG-1 (TS022) und BUG-2 (Historie-Sieger bei 0-Punkten)
-- **Offen (Low):** BUG-1 — Diagramme ohne Textalternative für Screenreader (im Post-Deploy-Backlog)
+- **Offen (Low):** BUG-1 — Diagramme ohne Textalternative für Screenreader (im Post-Deploy-Backlog) → **behoben 2026-10-09**
 - **Rollback:** Vercel → vorherige Version „Promote to Production". Die alte App ignoriert die
   neuen Sicht-Spalten; die Migration muss nicht zurückgedreht werden.

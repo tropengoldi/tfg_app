@@ -10,6 +10,7 @@ import {
   spread,
   spreadCards,
   type StatsWhisky,
+  chartSummary,
 } from './result-stats'
 
 function w(p: Partial<StatsWhisky> & { whiskyId: string; rank: number }): StatsWhisky {
@@ -211,5 +212,20 @@ describe('formatMetric / detailsLine', () => {
     expect(formatMetric('abv', null)).toBe('keine Angabe')
     expect(detailsLine({ abv: 46, ageYears: null, price: 129 })).toBe('46 % · 129 €')
     expect(detailsLine({ abv: null, ageYears: null, price: null })).toBeNull()
+  })
+})
+
+describe('chartSummary', () => {
+  it('reiht Einträge in Anzeigereihenfolge auf', () => {
+    expect(
+      chartSummary('Balkendiagramm Platzierung', [
+        { name: '#3 Talisker 10', text: '1.' },
+        { name: '#1 Oban 14', text: '2.' },
+      ]),
+    ).toBe('Balkendiagramm Platzierung: #3 Talisker 10: 1.; #1 Oban 14: 2.')
+  })
+
+  it('ohne Einträge nur der Titel', () => {
+    expect(chartSummary('Punktdiagramm', [])).toBe('Punktdiagramm')
   })
 })

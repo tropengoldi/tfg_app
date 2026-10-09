@@ -7,6 +7,7 @@ import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   METRIC_LABELS,
+  chartSummary,
   formatMetric,
   metricValue,
   type MetricKey,
@@ -87,7 +88,11 @@ export function MetricBarChart({ whiskies }: { whiskies: StatsWhisky[] }) {
         config={config}
         className="aspect-auto w-full"
         style={{ height: Math.max(120, rows.length * 34 + 16) }}
-        aria-label={`Balkendiagramm: ${METRIC_LABELS[metric]}`}
+        role="img"
+        aria-label={chartSummary(
+          `Balkendiagramm ${METRIC_LABELS[metric]}`,
+          rows.map((r) => ({ name: r.fullName, text: r.text })),
+        )}
       >
         <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 96, top: 4, bottom: 4 }}>
           <XAxis type="number" hide domain={[0, 'dataMax']} />

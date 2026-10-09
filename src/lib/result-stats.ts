@@ -271,3 +271,16 @@ export function detailsLine(w: {
   ].filter(Boolean)
   return parts.length > 0 ? parts.join(' · ') : null
 }
+
+/**
+ * Textalternative für ein Diagramm (Screenreader, PROJ-25 BUG-1):
+ * „Balkendiagramm Platzierung: #3 Talisker 10: 1.; #1 Oban 14: 2." — Einträge in
+ * Anzeigereihenfolge, ohne Einträge nur der Titel.
+ */
+export function chartSummary(
+  title: string,
+  items: { name: string; text: string }[],
+): string {
+  if (items.length === 0) return title
+  return `${title}: ${items.map((i) => `${i.name}: ${i.text}`).join('; ')}`
+}

@@ -240,6 +240,10 @@ test('Balkendiagramm: Umschalter, „keine Angabe" und „angenommen"', async ({
   await stats.getByRole('tab', { name: 'Alkohol (%)' }).click()
   await expect(stats.getByText('54,2 %')).toBeVisible()
   await expect(stats.getByText('keine Angabe')).toBeVisible()
+  // BUG-1: Textalternative für Screenreader (role="img" + Zusammenfassung der Werte)
+  await expect(
+    stats.getByRole('img', { name: /^Balkendiagramm Alkohol \(%\): .*54,2 %/ }),
+  ).toBeVisible()
 
   await stats.getByRole('tab', { name: 'Alter (Jahre)' }).click()
   await expect(stats.getByText('3 J. (angenommen)')).toBeVisible()
@@ -255,6 +259,9 @@ test('Punktdiagramm: Start Alter × Gesamtpunkte; Preis-Achse lässt Whisky ohne
   await expect(page.getByLabel('Waagerecht')).toContainText('Alter (Jahre)')
   await expect(page.getByLabel('Senkrecht')).toContainText('Gesamtpunkte')
   await expect(page.getByText('Blasse Punkte: Alter nicht angegeben')).toBeVisible()
+  await expect(
+    page.getByRole('img', { name: /^Punktdiagramm Alter \(Jahre\) gegen Gesamtpunkte: #/ }),
+  ).toBeVisible()
 
   await page.getByLabel('Waagerecht').click()
   await page.getByRole('option', { name: 'Preis (€)' }).click()

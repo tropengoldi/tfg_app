@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import {
   METRIC_LABELS,
+  chartSummary,
   formatMetric,
   metricValue,
   type MetricKey,
@@ -79,7 +80,11 @@ export function MetricScatterChart({ whiskies }: { whiskies: StatsWhisky[] }) {
         <ChartContainer
           config={config}
           className="aspect-auto h-64 w-full"
-          aria-label={`Punktdiagramm: ${METRIC_LABELS[xMetric]} gegen ${METRIC_LABELS[yMetric]}`}
+          role="img"
+          aria-label={chartSummary(
+            `Punktdiagramm ${METRIC_LABELS[xMetric]} gegen ${METRIC_LABELS[yMetric]}`,
+            points.map((p) => ({ name: p.name, text: `${p.xText}, ${p.yText}` })),
+          )}
         >
           <ScatterChart margin={{ left: 0, right: 12, top: 8, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" />
