@@ -246,6 +246,23 @@ Migration ist rein additiv; die laufende App merkt nichts davon.
   RLS-Suite 216/216 (in zwei Hälften gegen das Auth-Ratenlimit). `npm run db:types` ergänzt nur die
   Fremdschlüssel-Liste der Tabelle
 
+### Umsetzung Frontend (2026-10-09)
+- **Regeln** `src/lib/compare-groups.ts` (`toggleCompare`, `groupMates`, `groupLabel`): dieselben
+  Regeln wie `toggle_compare_mark`, 9 Unit-Tests
+- **Server-Aktion** `toggleCompareMarkAction` (`src/lib/actions/compare.ts`, Zod-Schema
+  `src/lib/schemas/compare.ts`): liefert den neuen Stand aller eigenen Merker; bewusst ohne
+  `revalidatePath` und ohne Live-Signal
+- **Daten:** `getRatingViewData` liefert `compareMarks` (nur im laufenden Tasting)
+- **Komponente** `src/components/rating/compare-marker.tsx` in der Bewertungskarte, **unter
+  „Speichern“** und durch eine Linie abgesetzt (statt direkt unter der Notiz), damit klar ist, dass
+  der Merker nicht über „Speichern“ läuft. Überschrift „Vergleichen mit“, Zeile „In Gruppe mit …“
+  bzw. Hinweis „Nur du siehst das“, Knöpfe 44 px (`aria-pressed`, `aria-label="Whisky n"`).
+  Tippen zeigt sofort den neuen Stand, speichert im Hintergrund, bei Fehler zurück + Toast.
+  `key` aus dem Serverstand → Neuladen ersetzt den lokalen Zustand
+- **Sichtprüfung** (Production-Build, 360 px, 8 Whiskies, temporäres Skript): Gruppe 2·5·7 über
+  die Oberfläche gebildet, bei Whisky 2 „In Gruppe mit 5 und 7“, nach Neuladen unverändert; kein
+  horizontales Scrollen
+
 ## QA Test Results
 _To be added by /qa_
 

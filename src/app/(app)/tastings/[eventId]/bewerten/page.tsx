@@ -27,7 +27,7 @@ export default async function BewertenPage({
   const data = await getRatingViewData(eventId, userId)
   if (!data) notFound()
 
-  const { event, total, whiskies, myRatings, whiskyNames, steward } = data
+  const { event, total, whiskies, myRatings, whiskyNames, steward, compareMarks } = data
   // PROJ-22: nur Teilnehmer erreichen diese Seite (der Steward ist keiner).
   const tipPosition =
     event.status === 'draft' ? null : await getOwnTipPosition(eventId, userId)
@@ -85,6 +85,7 @@ export default async function BewertenPage({
               ratingStep={event.rating_step}
               editable
               steward={steward}
+              compareMarks={compareMarks}
             />
           )}
         </WinnerTipProvider>

@@ -1,3 +1,4 @@
+import type { CompareMark } from '@/lib/compare-groups'
 import { createClient } from '@/lib/supabase/server'
 import type { EventStatus } from '@/lib/supabase/aliases'
 import { toRatingStep, type RatingStep } from '@/lib/points'
@@ -19,6 +20,8 @@ export interface RatingViewData {
   whiskyNames: Record<string, string>
   /** PROJ-20: gesetzt, wenn ein Whisky-Steward mitliest (nur im laufenden Tasting). */
   steward: StewardNotice | null
+  /** PROJ-23: eigene Vergleichs-Merker (nur im laufenden Tasting, sonst leer). */
+  compareMarks: CompareMark[]
 }
 
 export interface StewardNotice {
@@ -91,6 +94,22 @@ export async function getRatingViewData(
     steward = { name: profile?.display_name ?? null }
   }
 
+  // PROJ-23: eigene Vergleichs-Merker — die Zugriffsregel liefert ohnehin nur
+  // Eigenes und nur im laufenden Tasting.
+  const compareMarks: CompareMark[] = []
+  if (event.status === 'active') {
+    const positionById = new Map((rows ?? []).map((r) => [r.id, r.position]))
+    const { data: marks } = await supabase
+      .from('compare_marks')
+      .select('whisky_id, group_no')
+      .eq('event_id', eventId)
+      .eq('profile_id', userId)
+    for (const m of marks ?? []) {
+      const position = positionById.get(m.whisky_id)
+      if (position !== undefined) compareMarks.push({ position, group: m.group_no })
+    }
+  }
+
   const whiskies: WhiskyPosition[] = (rows ?? []).map((r) => ({
     position: r.position,
     whisky_id: r.id,
@@ -115,5 +134,6 @@ export async function getRatingViewData(
     })),
     whiskyNames,
     steward,
+    compareMarks,
   }
 }

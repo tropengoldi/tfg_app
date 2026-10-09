@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { CompareMarker } from '@/components/rating/compare-marker'
 import { OwnRanking } from '@/components/rating/own-ranking'
 import { PositionBar } from '@/components/rating/position-bar'
 import { ScoreField } from '@/components/rating/score-field'
@@ -15,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { useEventRealtime } from '@/hooks/use-event-realtime'
 import { saveRatingAction } from '@/lib/actions/ratings'
+import type { CompareMark } from '@/lib/compare-groups'
 import { rankOwnRatings } from '@/lib/own-ranking'
 import type { RatingStep } from '@/lib/points'
 import type { StewardNotice } from '@/lib/queries/ratings'
@@ -43,6 +45,8 @@ interface RatingViewProps {
   whiskyNames?: Record<string, string>
   /** PROJ-20: Ein Whisky-Steward liest mit (nur im laufenden Tasting). */
   steward?: StewardNotice | null
+  /** PROJ-23: eigene Vergleichs-Merker; nur im laufenden Tasting gesetzt. */
+  compareMarks?: CompareMark[]
 }
 
 export function RatingView({
@@ -55,6 +59,7 @@ export function RatingView({
   editable,
   whiskyNames,
   steward = null,
+  compareMarks,
 }: RatingViewProps) {
   const router = useRouter()
   const { isLive, refresh, ping } = useEventRealtime(editable ? eventId : null)
@@ -311,6 +316,17 @@ export function RatingView({
             <Button onClick={onSave} disabled={pending} className="w-full sm:w-auto">
               {pending ? 'Wird gespeichert…' : 'Speichern'}
             </Button>
+          ) : null}
+
+          {editable && compareMarks ? (
+            <CompareMarker
+              // Neuer Serverstand (Neuladen) ersetzt den lokalen Zustand.
+              key={JSON.stringify(compareMarks)}
+              eventId={eventId}
+              focus={focus}
+              currentPosition={currentPosition}
+              initialMarks={compareMarks}
+            />
           ) : null}
         </CardContent>
       </Card>
