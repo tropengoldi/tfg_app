@@ -41,7 +41,7 @@
 | PROJ-24 | Eigene Live-Rangliste | Deployed | [PROJ-24-eigene-live-rangliste.md](PROJ-24-eigene-live-rangliste.md) | 2026-10-05 |
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
-| PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Approved | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
+| PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Deployed | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
 
 <!-- Add features above this line -->
 
@@ -135,6 +135,9 @@ Nummern-Knöpfe, Gruppen verschmelzen, nur ausgeschenkte Whiskies, nach dem Absc
 2026-10-09 als `v1.15.0` live (mit DB-Migration `20261012120000_compare_marks.sql` — Tabelle
 `compare_marks`, RPC `toggle_compare_mark` (TS026), Aufräum-Auslöser beim Abschluss; 19/19 AC,
 0 Bugs). Damit ist von der Roadmap nur noch PROJ-17 (Web-Push) offen.
+PROJ-27 (Release-Notes-Seite „Neuigkeiten“: öffentliche Seite `/neuigkeiten` ohne Login, `noindex`,
+Release Notes zu PROJ-18..26 auf dem Marken-Hintergrund) am 2026-10-09 als `v1.16.0` live, ohne
+DB-Migration.
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)

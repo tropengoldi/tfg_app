@@ -1,6 +1,6 @@
 # PROJ-27: Release-Notes-Seite „Neuigkeiten“
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-09
 **Last Updated:** 2026-10-09
 
@@ -87,4 +87,7 @@ Schlanker Ablauf: siehe Technical Decisions.
 - **Bugs:** keine. **Production Ready:** YES
 
 ## Deployment
-_To be added by /deploy_
+- **Production URL:** https://tfg-app-self.vercel.app/neuigkeiten (öffentlich, ohne Login)
+- **Deployed:** 2026-10-09 als `v1.16.0` (Commit `54796c0`, Vercel „Deployment has completed“)
+- **Live geprüft:** ohne Anmeldung HTTP 200, keine Umleitung, Titel vorhanden
+- Keine DB-Migration
