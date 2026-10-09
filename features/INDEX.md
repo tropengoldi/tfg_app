@@ -172,7 +172,7 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       auf der Ergebnisseite tragen ihr `aria-label` auf einem `div` ohne Rolle; Screenreader
       ignorieren es. Fix: `role="img"` + kurze Textzusammenfassung je Diagramm
       (`metric-bar-chart.tsx`, `metric-scatter-chart.tsx`).
-- [ ] **`user:delete`-Bericht kennt keine Nachrichten** — `MODE=report` meldet „hard ist sicher“,
+- [x] **`user:delete`-Bericht kennt keine Nachrichten** — behoben 2026-10-09: Fußabdruck, `hard` und `cascade` kennen jetzt auch gesendete Nachrichten **und** die Rolle Whisky-Steward (`helper_id`, ebenfalls `on delete restrict`, war auch unbekannt). `cascade` nimmt den Steward aus Events und löscht gesendete Nachrichten. Mit Wegwerf-Konten geprüft. — `MODE=report` meldet „hard ist sicher“,
       obwohl gesendete Nachrichten (`messages.sender_id … on delete restrict`, PROJ-16) das
       Löschen blockieren („Database error deleting user“). Fix: im Bericht mitzählen und bei
       `hard` darauf hinweisen (`scripts/delete-user.mjs`). Aufgefallen bei PROJ-26 (2026-10-06).
@@ -197,8 +197,9 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
 - `npm run user:delete` — Nutzer verwalten (`EMAIL=…`, `MODE=report|soft|
   reactivate|hard|cascade`, `CONFIRM=yes` für alles Destruktive). `report` zeigt
   den Fußabdruck; `soft` = `is_active=false` (versteckt, Historie bleibt);
-  `hard` nur ohne geschützte Verweise; `cascade` löscht auch die Historie und
-  ist für Admin-/`created_by`-Konten gesperrt.
+  `hard` nur ohne geschützte Verweise (Gastgeber, Ersteller, Whisky-Steward,
+  mitgebrachte Whiskys, Bewertungen, gesendete Nachrichten); `cascade` löscht auch
+  die Historie und ist für Admin-/`created_by`-Konten gesperrt.
 - Details in den Datei-Köpfen von `scripts/delete-tasting.mjs` /
   `scripts/delete-user.mjs`.
 

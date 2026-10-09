@@ -11,13 +11,16 @@
  *   soft        — profiles.is_active = false. Reversibel, versteckt aus Auswahllisten.
  *                 Bleibt in der Historie sichtbar (Name-Erhalt, gewollt).
  *   reactivate  — macht `soft` rückgängig (is_active = true).
- *   hard        — löscht Auth-User + Profil (+ Teilnahmen per CASCADE). Nur wenn der
- *                 Nutzer NICHTS Geschütztes referenziert (kein host_id / created_by /
- *                 mitgebrachter Whisky / abgegebene Bewertung). Sonst Abbruch mit Liste.
+ *   hard        — löscht Auth-User + Profil (+ Teilnahmen, Tipps, Sammlung, empfangene
+ *                 Nachrichten per CASCADE). Nur wenn der Nutzer NICHTS Geschütztes
+ *                 referenziert (kein host_id / created_by / helper_id (Whisky-Steward) /
+ *                 mitgebrachter Whisky / abgegebene Bewertung / gesendete Nachricht).
+ *                 Sonst Abbruch mit Liste.
  *   cascade     — die harte Tour: löscht zuerst alle Events, in denen der Nutzer
- *                 Gastgeber ist, dann seine Whiskys und Bewertungen in FREMDEN Events,
- *                 dann den Nutzer. ÄNDERT damit die Historie anderer Mitglieder.
- *                 Verboten für Admins und für `created_by`-Konten.
+ *                 Gastgeber ist, nimmt ihn als Whisky-Steward aus fremden Events, löscht
+ *                 seine Whiskys und Bewertungen in FREMDEN Events und seine gesendeten
+ *                 Nachrichten, dann den Nutzer. ÄNDERT damit die Historie anderer
+ *                 Mitglieder. Verboten für Admins und für `created_by`-Konten.
  *
  * Alles außer report/reactivate verlangt zusätzlich CONFIRM=yes.
  */
@@ -40,14 +43,16 @@ async function footprint(profileId) {
     supabase.from(t).select('id', { count: 'exact', head: true }).eq(col, profileId)
   const qe = (col) =>
     supabase.from('tasting_events').select('id', { count: 'exact', head: true }).eq(col, profileId)
-  const [hosted, created, brought, rated, part] = await Promise.all([
+  const [hosted, created, stewarded, brought, rated, sent, part] = await Promise.all([
     qe('host_id'),
     qe('created_by'),
+    qe('helper_id'),
     supabase
       .from('whisky_details')
       .select('whisky_id', { count: 'exact', head: true })
       .eq('brought_by', profileId),
     q('ratings', 'profile_id'),
+    q('messages', 'sender_id'),
     supabase
       .from('event_participants')
       .select('profile_id', { count: 'exact', head: true })
@@ -56,8 +61,10 @@ async function footprint(profileId) {
   return {
     hosted: hosted.count ?? 0,
     created: created.count ?? 0,
+    stewarded: stewarded.count ?? 0,
     brought: brought.count ?? 0,
     rated: rated.count ?? 0,
+    sent: sent.count ?? 0,
     participations: part.count ?? 0,
   }
 }
@@ -82,11 +89,15 @@ async function main() {
   console.log(`  Rolle   : ${profile?.role ?? '?'}  ·  aktiv: ${profile?.is_active ?? '?'}`)
   console.log(
     `  Fußabdruck: ${fp.hosted} Events als Gastgeber · ${fp.created} als Ersteller · ` +
-      `${fp.brought} mitgebrachte Whiskys · ${fp.rated} Bewertungen · ${fp.participations} Teilnahmen`,
+      `${fp.stewarded} als Whisky-Steward · ${fp.brought} mitgebrachte Whiskys · ` +
+      `${fp.rated} Bewertungen · ${fp.sent} gesendete Nachrichten · ${fp.participations} Teilnahmen`,
   )
 
   const isAdmin = profile?.role === 'admin'
-  const hasProtected = fp.hosted + fp.created + fp.brought + fp.rated > 0
+  // Alles, was per `on delete restrict` an profiles hängt — sonst scheitert das Löschen
+  // mit „Database error deleting user".
+  const hasProtected =
+    fp.hosted + fp.created + fp.stewarded + fp.brought + fp.rated + fp.sent > 0
 
   if (mode === 'report') {
     console.log('\n  Empfehlung:')
@@ -123,9 +134,12 @@ async function main() {
       const { data: hostedEv } = await supabase
         .from('tasting_events')
         .select('id, event_date, location')
-        .or(`host_id.eq.${user.id},created_by.eq.${user.id}`)
+        .or(`host_id.eq.${user.id},created_by.eq.${user.id},helper_id.eq.${user.id}`)
       console.error('\n  Abbruch: geschützte Verweise vorhanden.')
-      console.error(`    ${fp.brought} mitgebrachte Whiskys, ${fp.rated} Bewertungen — die hängen in Events.`)
+      console.error(
+        `    ${fp.brought} mitgebrachte Whiskys, ${fp.rated} Bewertungen, ` +
+          `${fp.stewarded} Events als Whisky-Steward, ${fp.sent} gesendete Nachrichten.`,
+      )
       for (const e of hostedEv ?? [])
         console.error(`    Event ${e.id}  ${e.event_date} · ${e.location}`)
       console.error('  → erst diese Events mit scripts/delete-tasting.mjs löschen, oder MODE=cascade nutzen.\n')
@@ -157,7 +171,15 @@ async function main() {
       console.log(`  – ${hostIds.length} Gastgeber-Events gelöscht`)
     }
 
-    // 2) In fremden Events verbliebene Whiskys des Nutzers → über whiskies löschen
+    // 2) Als Whisky-Steward aus fremden Events nehmen (Ergebnis-Kopf verliert den Namen)
+    const unSteward = must(
+      await supabase.from('tasting_events').update({ helper_id: null }).eq('helper_id', user.id).select('id'),
+      'clear helper_id',
+    )
+    if ((unSteward.data ?? []).length > 0)
+      console.log(`  – aus ${unSteward.data.length} Events als Whisky-Steward entfernt`)
+
+    // 3) In fremden Events verbliebene Whiskys des Nutzers → über whiskies löschen
     //    (CASCADE räumt whisky_details + ratings darauf)
     const { data: wd } = await supabase
       .from('whisky_details')
@@ -169,11 +191,15 @@ async function main() {
       console.log(`  – ${wIds.length} mitgebrachte Whiskys (in fremden Events) gelöscht`)
     }
 
-    // 3) Verbliebene eigene Bewertungen
+    // 4) Verbliebene eigene Bewertungen
     const del = must(await supabase.from('ratings').delete().eq('profile_id', user.id).select('id'), 'delete ratings')
     if ((del.data ?? []).length > 0) console.log(`  – ${del.data.length} Bewertungen gelöscht`)
 
-    // 4) Nutzer selbst
+    // 5) Gesendete Nachrichten (Empfänger-Zeilen gehen per CASCADE mit)
+    const msgs = must(await supabase.from('messages').delete().eq('sender_id', user.id).select('id'), 'delete messages')
+    if ((msgs.data ?? []).length > 0) console.log(`  – ${msgs.data.length} gesendete Nachrichten gelöscht`)
+
+    // 6) Nutzer selbst
     must(await supabase.auth.admin.deleteUser(user.id), 'deleteUser')
     console.log('\n  ✓ Nutzer vollständig entfernt.\n')
     return
