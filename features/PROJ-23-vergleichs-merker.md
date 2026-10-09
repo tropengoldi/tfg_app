@@ -1,6 +1,6 @@
 # PROJ-23: Vergleichs-Merker
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-09
 **Last Updated:** 2026-10-09
 
@@ -226,6 +226,23 @@ Keine neuen Pakete.
 ### H) Reihenfolge
 `/backend` (Migration + Integrationstests, du spielst sie per `db:push` ein), dann `/frontend`. Die
 Migration ist rein additiv; die laufende App merkt nichts davon.
+
+### Umsetzung Backend (2026-10-09)
+- **Migration** `supabase/migrations/20261012120000_compare_marks.sql`:
+  - Tabelle `compare_marks` (PK Tasting + Person + Whisky, `group_no > 0`, FK auf `whiskies` mit
+    CASCADE). RLS: lesen nur eigene Zeilen und nur bei laufendem Tasting, keine Admin-Ausnahme;
+    kein Insert/Update/Delete für Mitglieder
+  - `toggle_compare_mark(event, from, to)` (SECURITY DEFINER): prüft aktives Mitglied (TS004),
+    laufendes Tasting, Mitverkoster, verschiedene und ausgeschenkte Positionen (TS026); serialisiert
+    Klicks derselben Person per Advisory-Lock; herausnehmen/auflösen bzw. zusammenführen wie im
+    Design; liefert alle eigenen Merker (Position, Gruppennummer)
+  - Auslöser `trg_compare_marks_clear_on_close`: Statuswechsel auf `closed` löscht alle Merker des
+    Tastings
+- **Fehlercode** TS026 „Merken ist gerade nicht möglich.“ in `src/lib/errors.ts`
+- **Typen:** Tabelle und Funktion vorab in `src/lib/supabase/types.ts` eingetragen; nach `db:push`
+  mit `npm run db:types` neu erzeugen
+- **Integrationstest** `src/lib/supabase/__tests__/compare-marks.integration.test.ts` (9 Fälle)
+- **Offen:** `db:push` durch den Nutzer, dann Integrationstests
 
 ## QA Test Results
 _To be added by /qa_

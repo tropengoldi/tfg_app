@@ -97,6 +97,30 @@ export type Database = {
           },
         ]
       }
+      compare_marks: {
+        Row: {
+          event_id: string
+          group_no: number
+          profile_id: string
+          updated_at: string
+          whisky_id: string
+        }
+        Insert: {
+          event_id: string
+          group_no: number
+          profile_id: string
+          updated_at?: string
+          whisky_id: string
+        }
+        Update: {
+          event_id?: string
+          group_no?: number
+          profile_id?: string
+          updated_at?: string
+          whisky_id?: string
+        }
+        Relationships: []
+      }
       event_participants: {
         Row: {
           created_at: string
@@ -1155,6 +1179,13 @@ export type Database = {
       test_account_impact_internal: {
         Args: { p_target: string; p_value: boolean }
         Returns: number
+      }
+      toggle_compare_mark: {
+        Args: { p_event: string; p_from: number; p_to: number }
+        Returns: {
+          group_no: number
+          whisky_position: number
+        }[]
       }
       update_event: {
         Args: {
