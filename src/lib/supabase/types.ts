@@ -119,7 +119,50 @@ export type Database = {
           updated_at?: string
           whisky_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "compare_marks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "compare_marks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compare_marks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compare_marks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compare_marks_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whiskies"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "compare_marks_whisky_id_event_id_fkey"
+            columns: ["whisky_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "whisky_rankings"
+            referencedColumns: ["whisky_id", "event_id"]
+          },
+        ]
       }
       event_participants: {
         Row: {

@@ -242,7 +242,9 @@ Migration ist rein additiv; die laufende App merkt nichts davon.
 - **Typen:** Tabelle und Funktion vorab in `src/lib/supabase/types.ts` eingetragen; nach `db:push`
   mit `npm run db:types` neu erzeugen
 - **Integrationstest** `src/lib/supabase/__tests__/compare-marks.integration.test.ts` (9 Fälle)
-- **Offen:** `db:push` durch den Nutzer, dann Integrationstests
+- **Eingespielt + verifiziert (2026-10-09):** Nutzer hat `db:push` ausgeführt. Neuer Test 9/9, gesamte
+  RLS-Suite 216/216 (in zwei Hälften gegen das Auth-Ratenlimit). `npm run db:types` ergänzt nur die
+  Fremdschlüssel-Liste der Tabelle
 
 ## QA Test Results
 _To be added by /qa_
