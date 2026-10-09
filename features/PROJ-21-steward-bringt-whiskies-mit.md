@@ -1,6 +1,6 @@
 # PROJ-21: Whisky-Steward bringt Whiskies mit
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-07
 **Last Updated:** 2026-10-07
 
@@ -53,55 +53,55 @@ mitverkostet.
 **Format:** Angenommen [Vorbedingung] / Wenn [Aktion] / Dann [Ergebnis]
 
 ### Zugang
-- [ ] Angenommen ein Abend im Entwurf hat einen Steward, wenn der Steward „Meine Tastings“ öffnet, dann
+- [x] Angenommen ein Abend im Entwurf hat einen Steward, wenn der Steward „Meine Tastings“ öffnet, dann
   zeigt die Zeile dieses Abends neben „Steuern“ auch „Meine Whiskys“.
-- [ ] Angenommen der Steward ist für den nächsten Abend im Entwurf benannt, wenn er das Dashboard
+- [x] Angenommen der Steward ist für den nächsten Abend im Entwurf benannt, wenn er das Dashboard
   öffnet, dann sieht er die Vorschau-Karte „Nächster Abend“ mit dem Absprung „Meine Whiskys“.
-- [ ] Angenommen der Steward öffnet „Meine Whiskys“ seines Abends, dann sieht er dieselbe Seite wie
+- [x] Angenommen der Steward öffnet „Meine Whiskys“ seines Abends, dann sieht er dieselbe Seite wie
   ein Teilnehmer: seine eingetragenen Whiskies und das Formular zum Eintragen.
-- [ ] Angenommen der Abend ist gestartet oder abgeschlossen, wenn der Steward „Meine Whiskys“ öffnet,
+- [x] Angenommen der Abend ist gestartet oder abgeschlossen, wenn der Steward „Meine Whiskys“ öffnet,
   dann kann er nichts mehr eintragen, ändern oder entfernen, wie jeder Teilnehmer.
 
 ### Eintragen und Limit
-- [ ] Angenommen das Limit pro Person ist 1, wenn der Steward einen Whisky einträgt, dann wird er
+- [x] Angenommen das Limit pro Person ist 1, wenn der Steward einen Whisky einträgt, dann wird er
   gespeichert; ein zweiter wird mit „Dein Limit an Whiskies für dieses Tasting ist erreicht.“
   abgelehnt.
-- [ ] Angenommen das Limit pro Person ist 1 und der Steward ist gesetzt, dann darf der Gastgeber
+- [x] Angenommen das Limit pro Person ist 1 und der Steward ist gesetzt, dann darf der Gastgeber
   weiterhin 2 eintragen. Der Steward bekommt keinen Bonus.
-- [ ] Angenommen es ist kein Limit gesetzt, dann darf der Steward eintragen, solange der Abend
+- [x] Angenommen es ist kein Limit gesetzt, dann darf der Steward eintragen, solange der Abend
   insgesamt unter 10 Whiskies liegt.
-- [ ] Angenommen der Abend hat schon 10 Whiskies, wenn der Steward einen weiteren einträgt, dann wird
+- [x] Angenommen der Abend hat schon 10 Whiskies, wenn der Steward einen weiteren einträgt, dann wird
   er mit der bestehenden Meldung zur Obergrenze abgelehnt.
-- [ ] Angenommen der Steward hat einen Whisky eingetragen, dann kann er ihn im Entwurf bearbeiten und
+- [x] Angenommen der Steward hat einen Whisky eingetragen, dann kann er ihn im Entwurf bearbeiten und
   entfernen, wie ein Teilnehmer.
-- [ ] Angenommen jemand ist weder Teilnehmer noch Steward des Abends, wenn er einen Whisky eintragen
+- [x] Angenommen jemand ist weder Teilnehmer noch Steward des Abends, wenn er einen Whisky eintragen
   will, dann wird das abgelehnt, wie bisher.
 
 ### Blindheit
-- [ ] Angenommen ein Abend hat Steward und Gastgeber, wenn der Gastgeber die Whiskies vor dem Abschluss
+- [x] Angenommen ein Abend hat Steward und Gastgeber, wenn der Gastgeber die Whiskies vor dem Abschluss
   ansehen will, dann sieht er nur seine eigenen, nicht den des Stewards.
-- [ ] Angenommen ein Teilnehmer bewertet den Whisky des Stewards, dann sieht er nur „Whisky n von m“,
+- [x] Angenommen ein Teilnehmer bewertet den Whisky des Stewards, dann sieht er nur „Whisky n von m“,
   wie bei jedem anderen.
 
 ### Ergebnis und Bilanz
-- [ ] Angenommen der Abend ist abgeschlossen, dann steht der Whisky des Stewards in der Rangliste mit
+- [x] Angenommen der Abend ist abgeschlossen, dann steht der Whisky des Stewards in der Rangliste mit
   „mitgebracht von {Steward}“ und Link auf sein Profil.
-- [ ] Angenommen der Steward hat an einem abgeschlossenen Abend einen Whisky mitgebracht, wenn er seine
+- [x] Angenommen der Steward hat an einem abgeschlossenen Abend einen Whisky mitgebracht, wenn er seine
   Bilanz öffnet, dann zählt er bei „mitgebrachte Whiskies“, und seine Platzierung zählt für „beste
   Platzierung“.
-- [ ] Angenommen derselbe Abend, dann zählt er bei „Tastings“ für den Steward **nicht**.
-- [ ] Angenommen ein anderes Mitglied öffnet das Profil des Stewards (PROJ-14), dann gilt für diese
+- [x] Angenommen derselbe Abend, dann zählt er bei „Tastings“ für den Steward **nicht**.
+- [x] Angenommen ein anderes Mitglied öffnet das Profil des Stewards (PROJ-14), dann gilt für diese
   Zahlen dieselbe Sichtbarkeits-Einstellung wie bisher.
 
 ### Steward-Wechsel
-- [ ] Angenommen der Steward hat im Entwurf einen Whisky eingetragen, wenn der Admin einen anderen
+- [x] Angenommen der Steward hat im Entwurf einen Whisky eingetragen, wenn der Admin einen anderen
   Steward wählt oder den Steward entfernt, dann wird das abgelehnt mit dem Hinweis, dass zuerst die
   Whiskies des Stewards entfernt werden müssen.
-- [ ] Angenommen der Steward hat keine Whiskies eingetragen, dann lässt sich der Steward im Entwurf
+- [x] Angenommen der Steward hat keine Whiskies eingetragen, dann lässt sich der Steward im Entwurf
   wie bisher wechseln oder entfernen.
 
 ### Hinweise für den Admin
-- [ ] Angenommen der Admin legt einen Abend an oder bearbeitet ihn, dann erklärt der Hinweis zum Limit,
+- [x] Angenommen der Admin legt einen Abend an oder bearbeitet ihn, dann erklärt der Hinweis zum Limit,
   dass es auch für den Whisky-Steward gilt (der Gastgeber darf einen mehr).
 
 ## Edge Cases
@@ -254,7 +254,83 @@ App bemerkt davon nichts, bis das Frontend die neuen Einstiege zeigt.
   horizontales Scrollen
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-09
+**App URL:** http://localhost:3000 (Production-Build) gegen die Live-DB; vorher geprüft: kein aktives
+Tasting
+**Tester:** QA Engineer (AI)
+**Automatisiert:** `tests/PROJ-21-steward-whiskies.spec.ts` (7 Tests) — Chromium 7/7, Mobile Safari
+7/7, Chromium 3× wiederholt 21/21 ohne Retry. Integration `steward-whiskies` 9/9, RLS-Suite 207/207.
+Unit 216/216 (neu: `tasting-row.test.ts` 6, `whisky-privacy.test.ts` 3)
+
+### Acceptance Criteria Status
+
+#### Zugang
+- [x] „Meine Tastings“: Steward-Zeile im Entwurf mit „Meine Whiskys“ und „Steuern“ (E2E + Unit)
+- [x] Dashboard-Vorschau „Nächster Abend“ mit „Meine Whiskys“ für den Steward (E2E)
+- [x] „Meine Whiskys“ für den Steward: dieselbe Seite wie für Teilnehmer (E2E)
+- [x] Gestartet/abgeschlossen: Eintragen geschlossen (Integration TS005; Zeile zeigt dann nur
+  „Steuern“, Unit)
+
+#### Eintragen und Limit
+- [x] Limit 1: einer geht, Hinweis „Limit erreicht (1 Whisky)“, Knopf aus (E2E); zweiter → TS003
+  (Integration)
+- [x] Gastgeber behält seinen Bonus (2), Steward ohne Bonus (Integration)
+- [x] Ohne Limit nur die Obergrenze 10 (Integration TS016)
+- [x] Obergrenze-Meldung beim 11. (Integration)
+- [x] Bearbeiten und Entfernen durch den Steward im Entwurf (Integration)
+- [x] Außenstehender abgewiesen (Integration TS004; E2E: Seite „nicht gefunden“)
+
+#### Blindheit
+- [x] Gastgeber-mit-Steward sieht den Steward-Whisky vor dem Abschluss nicht (Integration)
+- [x] Teilnehmer sieht ihn nicht; bewertet blind (Integration; Bewertungsansicht unverändert)
+
+#### Ergebnis und Bilanz
+- [x] Rangliste „mitgebracht von Stewart“ (E2E; Integration: `brought_by` in `whisky_rankings`)
+- [x] Bilanz: „Mitgebrachte Whiskys“ 1, „Beste Platzierung“ 1. (E2E)
+- [x] Bilanz: „Tastings“ 0 (E2E)
+- [x] Fremdes Profil: gleiche Sichtbarkeits-Einstellungen (unverändert, Code-Review: gleiche Abfrage
+  über `brought_by`)
+
+#### Steward-Wechsel
+- [x] Mit eingetragenen Whiskies: Wechsel/Entfernen abgelehnt, Meldung im Formular, Steward bleibt
+  (E2E + Integration TS009)
+- [x] Ohne Whiskies: Wechsel frei (Integration)
+
+#### Hinweise für den Admin
+- [x] Limit-Hinweis im Formular nennt den Steward (E2E)
+
+### Edge Cases Status
+- [x] Steward zugleich Teilnehmer: weiter TS017 (unverändert, PROJ-11)
+- [x] Steward deaktivieren: weiter TS013 bei offenem Abend (unverändert)
+- [x] Limit nachträglich gesenkt: bestehende Einträge bleiben, neue abgelehnt (gleicher Code-Pfad wie
+  Teilnehmer)
+- [x] PROJ-20-Karte zeigt auch den Steward-Whisky (unverändert, alle ausgeschenkten Whiskies)
+- [x] Hinweis „wer sieht das“: ohne Steward „nur der Gastgeber“, mit Steward „nur der Whisky-Steward“,
+  für den Steward „niemand“ (E2E + Unit)
+- [x] Rollentausch „alter Steward wird Gastgeber, Steward-Feld leer“ mit Whiskies → ebenfalls TS009
+  (Code-Review)
+
+### Security Audit Results
+- [x] Nur der Steward **dieses** Abends darf eintragen (`is_event_helper`); ein abgelöster Steward
+  bekommt TS004 (Integration)
+- [x] Lese-Regeln unverändert, Blindheit für Gastgeber-mit-Steward und Teilnehmer bestätigt
+- [x] Zuordnung nicht kaperbar: kein Schreibrecht auf `tasting_events` für Mitglieder
+- [x] Seite „Meine Whiskys“ für Außenstehende „nicht gefunden“
+
+### Regression
+- PROJ-4/5/8/10/11 auf Chromium + Mobile Safari: 83 passed, 5 skipped, 0 failed
+
+### Bugs Found
+Keine. (Im Testlauf zwei eigene Testfehler korrigiert: `notFound()` liefert wegen `loading.tsx`
+Status 200, und Formularfehler erscheinen absichtlich zweimal — Formular + Toast.)
+
+### Summary
+- **Acceptance Criteria:** 19/19 passed
+- **Bugs Found:** 0
+- **Security:** Pass
+- **Production Ready:** YES
+- **Recommendation:** `/deploy` (Migration `20261011120000_steward_brings_whiskies.sql` ist bereits live)
 
 ## Deployment
 _To be added by /deploy_
