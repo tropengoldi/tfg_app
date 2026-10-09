@@ -1,6 +1,6 @@
 # PROJ-21: Whisky-Steward bringt Whiskies mit
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-07
 **Last Updated:** 2026-10-07
 
@@ -333,4 +333,8 @@ Status 200, und Formularfehler erscheinen absichtlich zweimal — Formular + Toa
 - **Recommendation:** `/deploy` (Migration `20261011120000_steward_brings_whiskies.sql` ist bereits live)
 
 ## Deployment
-_To be added by /deploy_
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-10-09 als `v1.14.0` (Commit `040c77d`, Vercel „Deployment has completed“)
+- **DB-Migration:** `20261011120000_steward_brings_whiskies.sql` war vorab per `db:push` eingespielt
+  (im Backend verifiziert); kein aktives Tasting zum Zeitpunkt des Deployments
+- **Pre-Deploy-Checks:** Lint, Typecheck, Build grün; keine Secrets im Repo; QA ohne Bugs

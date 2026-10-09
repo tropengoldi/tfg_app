@@ -35,7 +35,7 @@
 | PROJ-18 | Begriffe: Gaumenpunkte & Whisky-Steward | Deployed | [PROJ-18-begriffe-gaumenpunkte-whisky-steward.md](PROJ-18-begriffe-gaumenpunkte-whisky-steward.md) | 2026-10-05 |
 | PROJ-19 | Flexible Punkteskala (0 Punkte, 0,5er-Schritte) | Deployed | [PROJ-19-flexible-punkteskala.md](PROJ-19-flexible-punkteskala.md) | 2026-10-05 |
 | PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Deployed | [PROJ-20-steward-live-einblick.md](PROJ-20-steward-live-einblick.md) | 2026-10-05 |
-| PROJ-21 | Whisky-Steward bringt Whiskies mit | Approved | [PROJ-21-steward-bringt-whiskies-mit.md](PROJ-21-steward-bringt-whiskies-mit.md) | 2026-10-05 |
+| PROJ-21 | Whisky-Steward bringt Whiskies mit | Deployed | [PROJ-21-steward-bringt-whiskies-mit.md](PROJ-21-steward-bringt-whiskies-mit.md) | 2026-10-05 |
 | PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Deployed | [PROJ-22-sieger-tipp-kenner-der-woche.md](PROJ-22-sieger-tipp-kenner-der-woche.md) | 2026-10-05 |
 | PROJ-23 | Vergleichs-Merker | Roadmap | – | 2026-10-05 |
 | PROJ-24 | Eigene Live-Rangliste | Deployed | [PROJ-24-eigene-live-rangliste.md](PROJ-24-eigene-live-rangliste.md) | 2026-10-05 |
@@ -121,6 +121,11 @@ Einzelwertungen, Notizen und Sieger-Tipps aller Teilnehmer, nur solange das Tast
 für die Teilnehmer am Notiz- und Tipp-Feld) am 2026-10-07 als `v1.13.0` live (mit DB-Migration
 `20261010120000_steward_insight.sql` — zwei lesende Funktionen, Zugriffsregeln unverändert; 27/27 AC,
 0 Bugs).
+PROJ-21 (Whisky-Steward bringt Whiskies mit — Eintragen auf „Meine Whiskys“ mit Teilnehmer-Limit,
+Zugang über „Meine Tastings“ und die Dashboard-Vorschau, Steward-Wechsel mit Whiskies blockiert, Bilanz
+zählt mitgebracht, nicht Tastings) am 2026-10-09 als `v1.14.0` live (mit DB-Migration
+`20261011120000_steward_brings_whiskies.sql` — `add_whisky` + `update_event` angepasst, Lese-Regeln
+unverändert; 19/19 AC, 0 Bugs).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
