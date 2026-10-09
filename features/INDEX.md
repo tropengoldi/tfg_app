@@ -126,6 +126,9 @@ Zugang über „Meine Tastings“ und die Dashboard-Vorschau, Steward-Wechsel mi
 zählt mitgebracht, nicht Tastings) am 2026-10-09 als `v1.14.0` live (mit DB-Migration
 `20261011120000_steward_brings_whiskies.sql` — `add_whisky` + `update_event` angepasst, Lese-Regeln
 unverändert; 19/19 AC, 0 Bugs).
+Am 2026-10-09 als `v1.14.1` nachgezogen (ohne DB-Migration): PROJ-25 BUG-1 behoben (Diagramme mit
+`role="img"` und Wert-Zusammenfassung für Screenreader); dazu Wartungsskript `user:delete` kennt
+gesendete Nachrichten und die Steward-Rolle.
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
