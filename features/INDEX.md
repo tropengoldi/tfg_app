@@ -37,7 +37,7 @@
 | PROJ-20 | Whisky-Steward: Live-Einblick in Wertungen | Deployed | [PROJ-20-steward-live-einblick.md](PROJ-20-steward-live-einblick.md) | 2026-10-05 |
 | PROJ-21 | Whisky-Steward bringt Whiskies mit | Deployed | [PROJ-21-steward-bringt-whiskies-mit.md](PROJ-21-steward-bringt-whiskies-mit.md) | 2026-10-05 |
 | PROJ-22 | Sieger-Tipp & „Kenner der Woche" | Deployed | [PROJ-22-sieger-tipp-kenner-der-woche.md](PROJ-22-sieger-tipp-kenner-der-woche.md) | 2026-10-05 |
-| PROJ-23 | Vergleichs-Merker | In Progress | [PROJ-23-vergleichs-merker.md](PROJ-23-vergleichs-merker.md) | 2026-10-05 |
+| PROJ-23 | Vergleichs-Merker | Approved | [PROJ-23-vergleichs-merker.md](PROJ-23-vergleichs-merker.md) | 2026-10-05 |
 | PROJ-24 | Eigene Live-Rangliste | Deployed | [PROJ-24-eigene-live-rangliste.md](PROJ-24-eigene-live-rangliste.md) | 2026-10-05 |
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |

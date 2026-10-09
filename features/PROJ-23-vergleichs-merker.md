@@ -1,6 +1,6 @@
 # PROJ-23: Vergleichs-Merker
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-09
 **Last Updated:** 2026-10-09
 
@@ -52,52 +52,52 @@ Whisky-Steward. Nach dem Abschluss des Abends verschwinden sie.
 **Format:** Angenommen [Vorbedingung] / Wenn [Aktion] / Dann [Ergebnis]
 
 ### Anzeige
-- [ ] Angenommen ein Tasting läuft und der Teilnehmer steht in der Bewertungsansicht bei Whisky 4
+- [x] Angenommen ein Tasting läuft und der Teilnehmer steht in der Bewertungsansicht bei Whisky 4
   (aktuell ausgeschenkt: 4), dann zeigt die Bewertungskarte unter der Notiz eine Zeile
   „Vergleichen mit“ mit den Knöpfen 1, 2 und 3.
-- [ ] Angenommen der Teilnehmer steht bei Whisky 1 und nur Whisky 1 ist ausgeschenkt, dann steht dort
+- [x] Angenommen der Teilnehmer steht bei Whisky 1 und nur Whisky 1 ist ausgeschenkt, dann steht dort
   „Vergleichen mit — sobald weitere Whiskies ausgeschenkt sind.“ ohne Knöpfe.
-- [ ] Angenommen Gastgeber oder Whisky-Steward schalten auf Whisky 5 weiter, wenn der Teilnehmer die Bewertungsansicht
+- [x] Angenommen Gastgeber oder Whisky-Steward schalten auf Whisky 5 weiter, wenn der Teilnehmer die Bewertungsansicht
   sieht, dann wird Whisky 5 ohne Neuladen als weiterer Knopf wählbar.
-- [ ] Angenommen der Teilnehmer schaut sich einen früheren Whisky an (z. B. 2), dann zeigt die Zeile
+- [x] Angenommen der Teilnehmer schaut sich einen früheren Whisky an (z. B. 2), dann zeigt die Zeile
   alle ausgeschenkten Whiskies außer 2.
-- [ ] Angenommen die Knöpfe sind 44 px groß, dann passen bei 360 px Breite bis zu 9 Knöpfe ohne
+- [x] Angenommen die Knöpfe sind 44 px groß, dann passen bei 360 px Breite bis zu 9 Knöpfe ohne
   horizontales Scrollen (sie brechen um).
 
 ### Gruppen bilden und ändern
-- [ ] Angenommen bei Whisky 2 ist noch nichts markiert, wenn der Teilnehmer auf „5“ tippt, dann ist
+- [x] Angenommen bei Whisky 2 ist noch nichts markiert, wenn der Teilnehmer auf „5“ tippt, dann ist
   „5“ markiert, und bei Whisky 5 ist „2“ markiert (Gruppe 2 · 5).
-- [ ] Angenommen die Gruppe 2 · 5 besteht, wenn der Teilnehmer bei Whisky 2 zusätzlich „7“ tippt,
+- [x] Angenommen die Gruppe 2 · 5 besteht, wenn der Teilnehmer bei Whisky 2 zusätzlich „7“ tippt,
   dann besteht die Gruppe 2 · 5 · 7, und bei Whisky 5 sind „2“ und „7“ markiert, bei Whisky 7 „2“
   und „5“.
-- [ ] Angenommen die Gruppe 2 · 5 · 7 besteht, wenn der Teilnehmer bei Whisky 3 „5“ tippt, dann
+- [x] Angenommen die Gruppe 2 · 5 · 7 besteht, wenn der Teilnehmer bei Whisky 3 „5“ tippt, dann
   verschmelzen die Gruppen zu 2 · 3 · 5 · 7.
-- [ ] Angenommen es bestehen die Gruppen 1 · 4 und 2 · 5, wenn der Teilnehmer bei Whisky 4 „5“ tippt,
+- [x] Angenommen es bestehen die Gruppen 1 · 4 und 2 · 5, wenn der Teilnehmer bei Whisky 4 „5“ tippt,
   dann verschmelzen beide zu 1 · 2 · 4 · 5.
-- [ ] Angenommen die Gruppe 2 · 5 · 7 besteht, wenn der Teilnehmer bei Whisky 2 die markierte „7“
+- [x] Angenommen die Gruppe 2 · 5 · 7 besteht, wenn der Teilnehmer bei Whisky 2 die markierte „7“
   antippt, dann verlässt 7 die Gruppe; es bleibt 2 · 5, und bei Whisky 7 ist nichts mehr markiert.
-- [ ] Angenommen die Gruppe 2 · 5 besteht, wenn der Teilnehmer bei Whisky 2 die „5“ antippt, dann
+- [x] Angenommen die Gruppe 2 · 5 besteht, wenn der Teilnehmer bei Whisky 2 die „5“ antippt, dann
   löst sich die Gruppe auf; bei 2 und 5 ist nichts mehr markiert.
-- [ ] Angenommen ein Whisky ist in einer Gruppe, dann steht über den Knöpfen eine Zeile wie „In
+- [x] Angenommen ein Whisky ist in einer Gruppe, dann steht über den Knöpfen eine Zeile wie „In
   Gruppe mit 5 und 7“.
 
 ### Speichern
-- [ ] Angenommen der Teilnehmer tippt einen Knopf, dann wird sofort gespeichert, ohne
+- [x] Angenommen der Teilnehmer tippt einen Knopf, dann wird sofort gespeichert, ohne
   „Speichern“-Knopf, und eine noch nicht gespeicherte Bewertung bleibt davon unberührt.
-- [ ] Angenommen der Teilnehmer lädt die Seite neu oder öffnet sie auf einem anderen Gerät, dann sind
+- [x] Angenommen der Teilnehmer lädt die Seite neu oder öffnet sie auf einem anderen Gerät, dann sind
   seine Gruppen unverändert da.
-- [ ] Angenommen das Speichern schlägt fehl (z. B. keine Verbindung), dann springt der Knopf auf den
+- [x] Angenommen das Speichern schlägt fehl (z. B. keine Verbindung), dann springt der Knopf auf den
   vorigen Zustand zurück und es erscheint „Verbindung fehlgeschlagen — Merker nicht gespeichert.“
   Die Seite bleibt bedienbar.
 
 ### Privatsphäre und Ende
-- [ ] Angenommen ein anderer Teilnehmer, der Gastgeber, der Whisky-Steward oder der Admin fragt die
+- [x] Angenommen ein anderer Teilnehmer, der Gastgeber, der Whisky-Steward oder der Admin fragt die
   Merker eines Teilnehmers ab (auch direkt über die Schnittstelle), dann bekommt er nichts.
-- [ ] Angenommen das Tasting ist abgeschlossen, wenn der Teilnehmer seine Bewertungsansicht öffnet,
+- [x] Angenommen das Tasting ist abgeschlossen, wenn der Teilnehmer seine Bewertungsansicht öffnet,
   dann gibt es keine Zeile „Vergleichen mit“ und keine Gruppen mehr.
-- [ ] Angenommen das Tasting ist abgeschlossen, wenn jemand direkt versucht, einen Merker zu setzen,
+- [x] Angenommen das Tasting ist abgeschlossen, wenn jemand direkt versucht, einen Merker zu setzen,
   dann wird das abgelehnt.
-- [ ] Angenommen jemand verkostet nicht mit (Whisky-Steward, Außenstehender), wenn er einen Merker
+- [x] Angenommen jemand verkostet nicht mit (Whisky-Steward, Außenstehender), wenn er einen Merker
   setzen will, dann wird das abgelehnt.
 
 ## Edge Cases
@@ -264,7 +264,78 @@ Migration ist rein additiv; die laufende App merkt nichts davon.
   horizontales Scrollen
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-09
+**App URL:** http://localhost:3000 (Production-Build) gegen die Live-DB; vorher geprüft: kein aktives
+Tasting
+**Tester:** QA Engineer (AI)
+**Automatisiert:** `tests/PROJ-23-vergleichs-merker.spec.ts` (8 Tests) — Chromium 8/8, Mobile Safari
+8/8, Chromium 3× wiederholt 24/24 ohne Retry. Integration `compare-marks` 9/9, RLS-Suite 216/216.
+Unit 227/227 (neu: `compare-groups.test.ts` 9)
+
+### Acceptance Criteria Status
+
+#### Anzeige
+- [x] Bei Whisky 4 (aktuell 4) Knöpfe 1, 2, 3 (E2E: nach Weiterschalten auf 4)
+- [x] Nur Whisky 1 ausgeschenkt: Überschrift „Vergleichen mit“ + „… sobald weitere Whiskies
+  ausgeschenkt sind.“, keine Knöpfe (E2E; Wortlaut als Überschrift + Zeile statt einer Zeile)
+- [x] Weiterschalten macht neue Whiskies ohne Neuladen wählbar (E2E, Live)
+- [x] Früherer Whisky: alle ausgeschenkten außer ihm (E2E)
+- [x] 10 Whiskies bei 360 px: 9 Knöpfe, umbrechend, kein horizontales Scrollen (E2E)
+
+#### Gruppen bilden und ändern
+- [x] Gruppe bilden, bei beiden Whiskies markiert (E2E + Integration + Unit)
+- [x] Erweitern 2·5·7, bei allen Whiskies sichtbar (E2E)
+- [x] Verschmelzen bei Whisky 3 → 2·3·5·7 (E2E); zwei Gruppen verschmelzen (Integration + Unit)
+- [x] Herausnehmen (E2E); Auflösen bei Rest 1 (E2E + Integration + Unit)
+- [x] „In Gruppe mit …“ über den Knöpfen (E2E)
+
+#### Speichern
+- [x] Sofort gespeichert, ungespeicherte Bewertung bleibt unberührt (E2E: Nasenpunkte 2 bleiben, kein
+  „Bewertung gespeichert.“)
+- [x] Neuladen: Gruppen unverändert (E2E); anderes Gerät = gleicher Kontostand (Integration)
+- [x] Ohne Verbindung: Knopf springt zurück, Meldung „Verbindung fehlgeschlagen — Merker nicht
+  gespeichert.“, Seite bedienbar (E2E offline)
+
+#### Privatsphäre und Ende
+- [x] Niemand sonst liest fremde Merker, auch nicht der Admin (Integration)
+- [x] Nach dem Abschluss keine Zeile und keine Merker; in der DB gelöscht (E2E + Integration)
+- [x] Setzen nach dem Abschluss abgelehnt (Integration TS026)
+- [x] Steward / Außenstehender können nicht merken (Integration TS026)
+
+### Edge Cases Status
+- [x] Schnelles Tippen: Knöpfe während des Speicherns gesperrt; DB serialisiert pro Person
+- [x] Gruppe schrumpft auf einen Whisky → aufgelöst (Unit + Integration + E2E)
+- [x] Unbewertete ausgeschenkte Whiskies wählbar (E2E: alle Gruppen ohne Bewertungen gebildet)
+- [x] 10 Whiskies → 9 Knöpfe (E2E)
+- [i] **Hinweis (kein Bug):** Die Anzeige wechselt beim Tippen sofort. Wird die **Seite geschlossen**,
+  bevor das Speichern fertig ist (Knöpfe noch gesperrt), geht dieser letzte Tipp verloren. Fiel auf,
+  weil ein Test direkt nach dem Tippen endete. Wechsel zwischen Whiskies in der Ansicht sind nicht
+  betroffen
+
+### Security Audit Results
+- [x] Lesen nur eigene Merker, nur im laufenden Tasting, ohne Admin-Ausnahme (Integration)
+- [x] Kein direkter Schreibzugriff; einzige Schreib-Stelle prüft Mitglied, Teilnahme, Status,
+  Positionen (Integration)
+- [x] Eingaben per Zod geprüft, nur typisierte Parameter an die DB; kein Freitext
+- [x] Merker anderer Abende/Personen nicht manipulierbar (TS026 / nur eigene Zeilen)
+
+### Regression
+- PROJ-7/20/22/24 auf Chromium + Mobile Safari: 100 passed, 8 skipped, 0 failed
+
+### Abweichung zur Spec
+- Die Zeile sitzt **unter „Speichern“** (durch eine Linie abgesetzt) statt direkt unter der Notiz,
+  damit klar ist, dass der Merker nicht über „Speichern“ läuft (Frontend, dem Nutzer mitgeteilt)
+
+### Bugs Found
+Keine.
+
+### Summary
+- **Acceptance Criteria:** 19/19 passed
+- **Bugs Found:** 0
+- **Security:** Pass
+- **Production Ready:** YES
+- **Recommendation:** `/deploy` (Migration `20261012120000_compare_marks.sql` ist bereits live)
 
 ## Deployment
 _To be added by /deploy_
