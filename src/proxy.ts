@@ -14,7 +14,8 @@ import { updateSession } from '@/lib/supabase/middleware'
  */
 
 // Ohne Anmeldung erreichbar:
-const PUBLIC_PATHS = new Set(['/login', '/passwort-vergessen', '/passwort-setzen'])
+// /neuigkeiten = öffentliche Release Notes (PROJ-27), auch für Angemeldete.
+const PUBLIC_PATHS = new Set(['/login', '/passwort-vergessen', '/passwort-setzen', '/neuigkeiten'])
 // Von angemeldeten Nutzern nicht mehr sinnvoll (passwort-setzen bleibt erlaubt):
 const AUTHED_AWAY_FROM = new Set(['/login', '/passwort-vergessen'])
 

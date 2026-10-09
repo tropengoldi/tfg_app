@@ -41,10 +41,11 @@
 | PROJ-24 | Eigene Live-Rangliste | Deployed | [PROJ-24-eigene-live-rangliste.md](PROJ-24-eigene-live-rangliste.md) | 2026-10-05 |
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
+| PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Approved | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-27
+## Next Available ID: PROJ-28
 
 ## Stand der Roadmap
 
@@ -277,6 +278,7 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-24** | **Eigene Live-Rangliste** | Während des Tastings sieht jeder Teilnehmer seine **persönliche** Rangliste, berechnet nur aus den eigenen bisherigen Wertungen (blinde Nummern, keine Namen, keine fremden Punkte). | P2 | PROJ-19 |
 | **PROJ-25** | **Erweiterte Ergebnis-Statistiken** | Nach dem Abschluss: (1) Rangliste zeigt die **Ausschank-Nummer** jedes Whiskys; (2) Rangliste zeigt je Whisky die **eigene Platzierung** des Betrachters; (3) **Vergleichsdiagramm** der Tasting-Whiskies über Gesamtplatzierung, Nasenpunkte, Gaumenpunkte, Alkoholgehalt und Alter (ohne Altersangabe: 3 Jahre angenommen, im Diagramm als „angenommen" markiert). Zusatzvorschläge für die Spec: **Preis-Leistungs-Sieger** (Punkte je Euro, nur wenn Preise erfasst sind — `price_eur` existiert bereits), **Konsens- vs. umstrittenster Whisky** (Streuung der Bewertungen), **Nase-/Gaumen-Diskrepanz** (größte Abweichung zwischen Nasen- und Gaumenrang), **persönliche Übereinstimmung** mit der Gesamtrangliste. Alles pro Tasting, keine Auswertung über die Runde hinweg. **Mit erledigen:** PROJ-19 BUG-2 (Historie zeigt „kein Sieger", wenn nur 0-Punkte vergeben wurden — Logik `winner_points > 0`) und BUG-1 (TS021-Meldung bei manipulierten Nachkommastellen). | P1 | PROJ-19 |
 | **PROJ-26** | **Testkonten für normale Nutzer unsichtbar** | Der Admin markiert Konten als **Testkonto**. Normale Mitglieder sehen markierte Konten nirgends (Teilnehmerauswahl, Nachrichten-Empfänger, Teilnehmerlisten, Profile, „mitgebracht von"); **Tastings mit Testkonten-Beteiligung** werden für normale Nutzer komplett ausgeblendet (Dashboard, Historie, Ergebnisse, Bilanz). Testkonten sehen sich gegenseitig, damit Testläufe funktionieren; der Admin sieht alle, Testkonten mit Kennzeichen. Durchsetzung auf **Datenbankebene (RLS/Views)**, nicht nur im Frontend. Gilt auf Staging und Produktion. Für die Spec offen: Wegwerf-Konten der E2E-Suite automatisch markieren; Zusammenspiel mit dem Backlog-Punkt „E2E-Suite hängt an den Seed-Konten". | P2 | PROJ-3, PROJ-14 |
+| **PROJ-27** | **Release-Notes-Seite „Neuigkeiten“** | Öffentliche Seite `/neuigkeiten` (ohne Login, `noindex`) mit den Release Notes zu PROJ-18..26 auf dezentem Marken-Hintergrund. Schlanker Ablauf, reiner Inhalt. | P2 | PROJ-13 |
 
 ### Anmerkungen zur Aufteilung
 
