@@ -1,6 +1,6 @@
 # PROJ-23: Vergleichs-Merker
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-09
 **Last Updated:** 2026-10-09
 
@@ -138,12 +138,94 @@ Whisky-Steward. Nach dem Abschluss des Abends verschwinden sie.
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| **Neue Tabelle „Vergleichs-Merker“: eine Zeile je (Tasting, Person, Whisky) mit einer Gruppennummer** | „Ein Whisky in höchstens einer Gruppe“ ist damit schon durch den Schlüssel garantiert; eine Gruppe = alle Zeilen mit derselben Nummer | 2026-10-09 |
+| **Lesen nur die eigenen Zeilen** — auch der Admin nicht (anders als bei `ratings`) | Merker sind privat, ohne Ausnahme; Muster wie `winner_tips` | 2026-10-09 |
+| **Schreiben nur über eine Datenbank-Funktion „Merker umschalten“** (kein direkter Schreibzugriff) | Verschmelzen, Herausnehmen und Auflösen betreffen mehrere Zeilen und müssen immer zusammen gelingen; die Funktion prüft dabei Teilnehmer, laufendes Tasting und „beide Whiskies ausgeschenkt“ | 2026-10-09 |
+| Nach dem Abschluss: **Merker werden gelöscht** (automatisch beim Statuswechsel auf „abgeschlossen“) und sind ab dann ohnehin nicht mehr lesbar | „Verschwinden“ heißt wirklich weg; der Auslöser hängt am Status und greift daher bei jedem Weg des Abschließens, ohne die Abschluss-Funktion selbst anzufassen | 2026-10-09 |
+| Neuer Fehlercode **TS026** „Merken ist gerade nicht möglich.“ | Eigene, verständliche Meldung für Entwurf/Abschluss/nicht ausgeschenkt/kein Teilnehmer | 2026-10-09 |
+| Die Regeln (umschalten, verschmelzen, auflösen) zusätzlich als **reine Funktion in der App** | Für die sofortige Anzeige beim Tippen (optimistisch) und für Unit-Tests; die Datenbank bleibt maßgeblich | 2026-10-09 |
+| **Kein Live-Signal** beim Setzen eines Merkers | Merker sind privat; ein Signal würde alle Geräte des Abends neu laden lassen. Ein zweites eigenes Gerät sieht den Stand beim nächsten Neuladen | 2026-10-09 |
+| Knöpfe: shadcn `Button` mit `aria-pressed` (wie die Steward-Karte, PROJ-20); keine neuen Pakete | Toggle-Komponente ist nicht installiert und wird nicht gebraucht | 2026-10-09 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Backend **und** Frontend. Eine Migration: neue Tabelle, eine Funktion zum Umschalten, ein
+Aufräum-Auslöser beim Abschluss. In der App eine neue Zeile in der Bewertungskarte.
+
+### A) Komponenten-Struktur
+
+```
+Bewertungsansicht /tastings/[eventId]/bewerten       (bestehend)
++-- Sieger-Tipp-Feld                                 (unverändert)
++-- Whisky-Leiste 1 … n                              (unverändert)
++-- Bewertungskarte „Whisky 4 von 8“
+|   +-- Nasenpunkte, Gaumenpunkte, Notiz             (unverändert)
+|   +-- NEU: Vergleichs-Merker
+|   |   +-- „In Gruppe mit 5 und 7“                  (nur wenn in einer Gruppe)
+|   |   +-- „Vergleichen mit“  [1] [2] [3] …         (ausgeschenkte außer dem gewählten;
+|   |                                                 markierte hervorgehoben, aria-pressed)
+|   |   +-- leer: „… sobald weitere Whiskies ausgeschenkt sind.“
+|   +-- Speichern                                    (unverändert, nur für die Bewertung)
++-- Meine Rangliste                                  (unverändert)
+```
+
+Nur im laufenden Tasting, nur für Mitverkoster. Nach dem Abschluss fehlt die Zeile ganz.
+
+### B) Datenmodell (in Worten)
+**Neue Tabelle „Vergleichs-Merker“**, eine Zeile je markiertem Whisky einer Person:
+- Tasting
+- Person (Eigentümer)
+- Whisky
+- Gruppennummer (alle Whiskies einer Person mit derselben Nummer bilden eine Gruppe)
+- Zeitpunkt der letzten Änderung
+
+Regeln, die die Datenbank garantiert:
+- je Person und Whisky höchstens eine Zeile → höchstens eine Gruppe
+- eine Gruppe hat immer mindestens 2 Whiskies (Reste werden entfernt)
+- lesbar nur für den Eigentümer; kein direkter Schreibzugriff
+- beim Löschen eines Tastings, Whiskys oder Kontos gehen die Merker mit
+
+### C) „Merker umschalten“ (Datenbank-Funktion)
+Aufruf mit: Tasting, Nummer des gewählten Whiskys, Nummer des angetippten Whiskys.
+1. Prüfen: Aufrufer verkostet mit, Tasting läuft, beide Whiskies ausgeschenkt und verschieden →
+   sonst TS026.
+2. **Beide schon in derselben Gruppe:** den angetippten Whisky herausnehmen; bleibt nur einer übrig,
+   die Gruppe auflösen.
+3. **Sonst:** zusammenführen — beide (samt ihrer bisherigen Gruppen) bekommen eine gemeinsame
+   Gruppennummer.
+4. Alles in einem Schritt; gleichzeitige Klicks derselben Person werden nacheinander abgearbeitet.
+
+### D) Abschluss
+Beim Statuswechsel eines Tastings auf „abgeschlossen“ löscht ein Auslöser alle Merker dieses
+Tastings. Zusätzlich liefert die App die Merker nur im laufenden Tasting.
+
+### E) Änderungen in der App
+- **Daten der Bewertungsansicht:** lädt im laufenden Tasting die eigenen Merker mit
+- **Reine Regel-Funktion** (`compare-groups`): „wer ist mit Whisky x in einer Gruppe“ und „was
+  passiert beim Antippen“ — dieselben Regeln wie die Datenbank, mit Unit-Tests
+- **Neue Komponente** in der Bewertungskarte; Tippen zeigt den neuen Stand sofort, speichert im
+  Hintergrund, setzt bei Fehler zurück und meldet „Verbindung fehlgeschlagen — Merker nicht
+  gespeichert.“ (Netzwerkfehler abgefangen wie bei PROJ-22, damit die Seite bedienbar bleibt)
+- Eine ungespeicherte Bewertung bleibt beim Tippen unberührt
+
+### F) Tests
+- **Integration:** umschalten, verschmelzen (auch zwei Gruppen), herausnehmen, auflösen; nur
+  ausgeschenkte; TS026 im Entwurf/abgeschlossen/für Steward und Außenstehende; niemand liest fremde
+  Merker (Teilnehmer, Gastgeber, Steward, Admin); Löschen beim Abschluss; kein direkter Schreibzugriff
+- **Unit:** Regel-Funktion inkl. Verschmelzen zweier Gruppen und Auflösen
+- **E2E:** Gruppe bilden über die Oberfläche, Anzeige bei allen Whiskies der Gruppe, Neuladen, nach
+  dem Abschluss weg, 360 px
+
+### G) Abhängigkeiten
+Keine neuen Pakete.
+
+### H) Reihenfolge
+`/backend` (Migration + Integrationstests, du spielst sie per `db:push` ein), dann `/frontend`. Die
+Migration ist rein additiv; die laufende App merkt nichts davon.
 
 ## QA Test Results
 _To be added by /qa_
