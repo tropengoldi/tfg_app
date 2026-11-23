@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
@@ -1127,8 +1127,10 @@ export type Database = {
         Args: { p_target: string; p_value: boolean }
         Returns: number
       }
+      can_edit_whisky_photo: { Args: { p_whisky: string }; Returns: boolean }
       can_rate_whisky: { Args: { p_whisky: string }; Returns: boolean }
       can_run_host_control: { Args: { p_event: string }; Returns: boolean }
+      can_view_whisky_details: { Args: { p_whisky: string }; Returns: boolean }
       close_event: { Args: { p_event: string }; Returns: undefined }
       close_round: {
         Args: { p_event: string; p_expected_position: number }
@@ -1275,6 +1277,10 @@ export type Database = {
         Returns: undefined
       }
       viewer_sees_tests: { Args: never; Returns: boolean }
+      whisky_photo_object_ok: {
+        Args: { p_name: string; p_op: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "teilnehmer"

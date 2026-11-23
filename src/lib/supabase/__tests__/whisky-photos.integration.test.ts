@@ -257,10 +257,12 @@ describe.skipIf(!RUN)('Whisky-Fotos', () => {
   })
 
   it('nach dem Abschluss: jedes aktive Mitglied sieht das Foto, Rangliste führt die Pfade', async () => {
-    await service
+    const now = new Date().toISOString()
+    const closed = await service
       .from('tasting_events')
-      .update({ status: 'closed', closed_at: new Date().toISOString() })
+      .update({ status: 'closed', started_at: now, closed_at: now })
       .eq('id', ev)
+    expect(closed.error).toBeNull()
 
     expect(await canRead(pb, current.photo)).toBe(true)
     expect(await canRead(outsider, current.thumb)).toBe(true)

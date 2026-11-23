@@ -323,8 +323,12 @@ nach dem Start (wenn der Bearbeiten-Dialog gesperrt ist) am selben Ort erreichba
 
 ## Implementation Notes (Backend)
 
-**Migration `supabase/migrations/20261123120000_whisky_photos.sql`** — noch **nicht
-eingespielt** (`db:push` durch den Nutzer, danach `npm run db:types` und `npm run test:rls`).
+**Migration `supabase/migrations/20261123120000_whisky_photos.sql`** — am 2026-11-23 vom
+Nutzer per `db:push` eingespielt. `npm run db:types` danach: die von Hand ergänzten Typen
+stimmten, neu kamen nur die drei Prüf-Funktionen hinzu. Integrationstests: 12/12 Foto-Tests
+grün; Regression collection-entries, results-stats, whisky-entry-rpcs, rls,
+steward-whiskies, test-accounts: 104/104 grün (in zwei Läufen wegen Auth-Ratenlimit).
+`photos:cleanup` danach: 0 Dateien im Bucket (Tests räumen auf).
 - Spalten `photo_path` / `photo_thumb_path` an `whisky_details` und `collection_entries`
   (≤ 300 Zeichen, nur paarweise gesetzt). Sammlung: Update-Grant erweitert plus
   CHECK, dass die Pfade im eigenen Ordner `collection/<profil>/<eintrag>/` liegen.
@@ -351,7 +355,7 @@ eingespielt** (`db:push` durch den Nutzer, danach `npm run db:types` und `npm ru
   Trockenlauf ohne `CONFIRM=yes`. Vor der Migration meldet es „Bucket existiert nicht".
 
 **Integrationstests** `src/lib/supabase/__tests__/whisky-photos.integration.test.ts`
-(13 Fälle): Schreibrechte (Bringer, Admin, Gastgeber/Steward/Teilnehmer/Fremde abgelehnt),
+(12 Fälle): Schreibrechte (Bringer, Admin, Gastgeber/Steward/Teilnehmer/Fremde abgelehnt),
 TS027-Pfadprüfung, kein Direkt-Update, Blindheit im Entwurf (mit und ohne Steward),
 Archiv-Sichtbarkeit nach dem Abschluss, Rangliste mit Pfaden, Ersetzen/Entfernen mit
 alten Pfaden, Sammlung (Ordner-CHECK, Sichtbarkeits-Schalter, Kopie aus dem Tasting).
