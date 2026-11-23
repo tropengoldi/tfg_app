@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 }
 
 /**
- * Release Notes zu PROJ-18 … PROJ-26 (PROJ-27). Öffentlich ohne Anmeldung
+ * Release Notes zu PROJ-18 … PROJ-26 (PROJ-27), ergänzt um PROJ-28 (Whisky-Fotos). Öffentlich ohne Anmeldung
  * (`PUBLIC_PATHS` in `src/proxy.ts`), reiner Inhalt. Hintergrund = der dezente
  * Marken-Hintergrund aus PROJ-13; der Text liegt auf einer ruhigen Karte.
  */
@@ -32,17 +32,45 @@ export default function NeuigkeitenPage() {
               <h1 className="font-display text-3xl leading-tight sm:text-4xl">
                 Was gibt&apos;s Neues im Glas?
               </h1>
-              <p className="text-sm text-muted-foreground">Stand 9. Oktober 2026</p>
+              <p className="text-sm text-muted-foreground">Stand 23. November 2026</p>
               <p className="leading-relaxed">
-                Whizzky hat seit dem letzten Abend ordentlich nachgeschenkt: neun Neuerungen, von
-                halben Punkten bis zum Sieger-Tipp. Hier der Überblick in einem Schluck – ohne
-                Abgang, aber mit viel Nachhall.
+                Ganz frisch im Glas: <b>Whisky-Fotos</b>. Darunter weiterhin alles aus dem Oktober –
+                neun Neuerungen, von halben Punkten bis zum Sieger-Tipp. Hier der Überblick in einem
+                Schluck – ohne Abgang, aber mit viel Nachhall.
               </p>
               <p className="leading-relaxed">
                 Kurz vorweg: Ihr müsst nichts installieren und nichts einstellen. Die App
                 aktualisiert sich von selbst, beim nächsten Öffnen ist alles da.
               </p>
             </header>
+
+            <Section title="Neu im November: Fotos von der Flasche">
+              <p>
+                Ab sofort darf jeder Whisky ein <b>Foto</b> bekommen – ein Bild pro Flasche. Auf
+                „Meine Whiskys“ hängt ihr es direkt beim Eintragen an oder später über{' '}
+                <b>„Foto hinzufügen“</b> an der Whisky-Zeile. Das Handy fragt, ob ihr die Kamera
+                nehmt oder ein Bild aus der Galerie. Den Rest erledigt die App: Sie verkleinert das
+                Foto und entfernt den Aufnahmeort, damit niemand erfährt, in welchem Keller die
+                Flasche stand.
+              </p>
+              <p>
+                <b>Die Blindheit hält.</b> Ein Etikett verrät den Whisky sofort – deshalb sieht das
+                Foto vor dem Abschluss nur, wer auch eure übrigen Angaben sieht: der Gastgeber oder,
+                falls es einen gibt, der Steward. Erst nach dem Abschluss ist es für die ganze Runde
+                da.
+              </p>
+              <p>
+                <b>Nach dem Abend</b> zeigt die Rangliste neben jedem Whisky ein kleines Bild,
+                Antippen macht es groß. Fotos lassen sich auch nachträglich ergänzen, ersetzen oder
+                entfernen – das gilt für die eigenen Whiskies, sogar wenn der Abend längst vorbei
+                ist.
+              </p>
+              <p>
+                <b>Auch in der Sammlung.</b> Eure private Whisky-Sammlung im Profil kann ebenfalls
+                Fotos. Und wer einen Tasting-Whisky mit „Zur Sammlung hinzufügen“ übernimmt,
+                bekommt das Foto gleich als eigene Kopie mit dazu.
+              </p>
+            </Section>
 
             <Section title="Neue Begriffe: Nase, Gaumen, Steward">
               <p>
