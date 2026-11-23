@@ -1,6 +1,6 @@
 # PROJ-28: Whisky-Fotos
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -362,7 +362,132 @@ alten Pfaden, Sammlung (Ordner-CHECK, Sichtbarkeits-Schalter, Kopie aus dem Tast
 Bewusst ohne Event im Status „aktiv" (Live-DB; ein Start könnte ein echtes Tasting stören).
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-11-23
+**App URL:** http://localhost:3000 (Produktions-Build, Live-Supabase; vorher geprüft: kein aktives Tasting)
+**Tester:** QA Engineer (AI)
+
+**Automatisierte Prüfung**
+- Unit-Tests `npm test`: 26 Dateien / 242 Tests grün (inkl. 15 neue für Pfade, Verkleinerung, Dateiprüfung)
+- Integrationstests: `whisky-photos` 12/12; Regression collection-entries, results-stats,
+  whisky-entry-rpcs, rls, steward-whiskies, test-accounts 104/104
+- Neue E2E-Suite `tests/PROJ-28-whisky-fotos.spec.ts` (12 Fälle) mit Fixture
+  3000×2000 JPEG, EXIF-Drehung 6 und GPS-Daten (`tests/fixtures/`):
+  **Chromium 12/12**, **Mobile Safari 11/12** — der 12. Fall scheitert an BUG-1
+- E2E-Regression Chromium (PROJ-5, 6, 9, 15, 21): 61 grün, 1 instabil (bekannter Hydration-
+  Doppelrender aus dem Backlog, im Retry grün), 1 rot wegen **veralteter Erwartung** in PROJ-5
+  („reine Anzeige" = gar keine Knöpfe; seit PROJ-28 gibt es dort bewusst „Foto hinzufügen") →
+  Test angepasst (prüft jetzt: kein Bearbeiten/Entfernen, nur „Foto hinzufügen"), danach grün
+- E2E-Regression Mobile Safari PROJ-5: **rot** („Name ist Pflicht" — „Eintragen" nicht
+  erreichbar) → BUG-1
+
+### Acceptance Criteria Status
+
+#### Hochladen bei der Vorbereitung
+- [x] Kamera oder Galerie: natives Datei-Feld `accept="image/*"` ohne `capture` (Auswahlmenü des Handys; im Test per Datei)
+- [x] Verkleinert hochgeladen, Mini-Bild erscheint — geprüft: 1067×1600 / 160×240, hochkant (Drehung umgesetzt)
+- [x] Ersetzen: altes Paar ist im Bucket gelöscht
+- [x] Entfernen mit Bestätigung: Spalten leer, Dateien weg
+- [ ] **BUG-1:** Eintragen ohne Foto „wie bisher" — auf iPhone-Größe ist „Eintragen" im Dialog nicht erreichbar (Chromium/Desktop ok)
+
+#### Hochladen nach dem Start bzw. nach dem Abschluss
+- [x] „Meine Whiskys" nach dem Abschluss: Hinweis, kein Hinzufügen/Bearbeiten/Entfernen, Foto-Knopf aktiv („gestartet" nutzt denselben Pfad `editable=false`, nicht separat getestet — kein aktives Event in der Live-DB)
+- [x] Ergebnisseite, eigener Whisky: „Foto hinzufügen" bzw. „Foto ersetzen"/„Entfernen"
+- [x] Ergebnisseite, fremder Whisky: keine Foto-Aktionen
+- [x] Admin auf der Ergebnisseite: Foto bei fremdem Whisky hinzugefügt
+- [ ] **BUG-2:** Admin im Entwurf / während des Tastings: die Datenbank erlaubt es, aber die Oberfläche bietet keinen Weg (Ausschankliste zeigt nur Mini-Bilder, „Meine Whiskys" nur eigene)
+- [x] Gastgeber/Steward/fremde Teilnehmer: Upload und `set_whisky_photo` abgelehnt (TS004) — Integrationstest
+
+#### Sichtbarkeit (Blindheit)
+- [x] Normaler Teilnehmer vor dem Abschluss: weder signierter Link noch Download (E2E + Integration), auch keine Pfade aus `whisky_details`
+- [x] Bringer, Gastgeber ohne Steward, Steward, Admin sehen es (Integration; Gastgeber zusätzlich E2E in der Ausschankliste)
+- [x] Mit Steward: Gastgeber bekommt das Foto nicht
+- [x] Nach dem Abschluss: jedes aktive Mitglied, auch Nicht-Teilnehmer (Integration „outsider")
+- [x] Nicht angemeldet: keine Regel für `anon` → kein Zugriff. Testkonten-Regel steckt in `can_view_whisky_details` (Code-Review; nicht eigens automatisiert)
+- [x] Geteilter Link verfällt nach 1 h (Design: signierte Links, Bucket privat)
+
+#### Anzeige
+- [x] Mini-Bild bzw. Platzhalter in jeder Ranglisten-Zeile (bis 10 Whiskys nicht mit 10 Einträgen getestet; die Rangliste bestand schon vorher aus scrollenden Karten)
+- [x] Antippen → Vollbild mit Whisky-Name, Bild geladen, Escape schließt
+- [x] Ausschankliste mit Mini-Bild bzw. Platzhalter
+- [x] Bewertungsansicht/Dashboard unverändert — kein Foto, kein Hinweis (Code-Review: dort keine Foto-Abfrage)
+
+#### Sammlung
+- [x] Foto am Eintrag hinzufügen/ersetzen/entfernen — gleicher Baustein wie bei Tasting-Whiskys; Ordner-CHECK der DB getestet
+- [x] Fremde Sammlung mit „Sammlung sichtbar": Foto lesbar (Integration)
+- [x] Schalter aus: auch direkte Datei nicht lesbar (Integration)
+- [x] „Zur Sammlung hinzufügen" kopiert das Foto in den eigenen Ordner (E2E, inkl. Hinweistext)
+- [x] Bringer entfernt das Tasting-Foto → Kopie in der Sammlung bleibt (E2E)
+
+#### Validierung & Fehler
+- [x] Nicht-Bild: Meldung „Das ist kein Bild…", Foto bleibt unverändert (E2E)
+- [x] Große Fotos werden verkleinert (Fixture 3000×2000; ein echtes 20-MB-Foto nicht getestet)
+- [x] Zu groß / nicht lesbar: verständliche Meldung, Zustand bleibt (Unit-Test der Prüfung; Code-Review der Lesefehler-Meldung)
+- [x] Verbindungsabbruch: Fehlermeldung + „Erneut versuchen" (Code-Review; nicht automatisiert simuliert)
+- [x] Ladeanzeige, Knöpfe während des Uploads gesperrt (Code-Review)
+
+#### Aufräumen
+- [x] Whisky entfernen / `tasting:delete`: Foto-Dateien werden mitgelöscht (Code-Review; nicht automatisiert)
+- [x] Sammlungs-Eintrag löschen: Dateien weg (E2E)
+- [x] `user:delete` hard/cascade räumt Foto-Ordner (Code-Review; Skript nicht gegen echte Konten ausgeführt)
+
+### Edge Cases Status
+- [x] Foto während des laufenden Tastings: gleiche Regeln wie im Entwurf (Integration im Entwurf; „aktiv" bewusst nicht geschaltet)
+- [x] Steward nachträglich benannt/entfernt: Regel wertet `event_has_helper` live aus
+- [x] Gleichzeitiges Ersetzen (Bringer + Admin): `set_whisky_photo` sperrt die Zeile (`for update`) und liefert jedem seine alten Pfade → kein verwaistes Bild (Code-Review)
+- [x] Drehung: EXIF-Drehung 6 wird zu hochkant (E2E-Messung)
+- [x] GPS/Metadaten: gespeicherte Dateien haben keine EXIF-Daten (E2E-Messung)
+- [x] Whisky ohne Foto: Platzhalter, keine Fehlermeldung
+- [x] Testkonten-Tastings: Regel in der Prüf-Funktion (Code-Review)
+- [x] Bringer deaktiviert: nur noch Admin darf pflegen (`can_edit_whisky_photo` verlangt aktives Mitglied)
+- [ ] Offen: HEIC aus der Galerie auf Android — braucht ein echtes Gerät
+
+### Security Audit Results
+- [x] Authentifizierung: Bucket privat, keine Regeln für `anon`; Server-Aktionen prüfen die Sitzung
+- [x] Autorisierung: Schreiben nur Bringer/Admin (Tasting) bzw. Besitzer (Sammlung) — in RPC **und** Bucket; Steward/Gastgeber/Teilnehmer/Fremde abgelehnt (Integration)
+- [x] Blindheit: eine gemeinsame Prüf-Funktion für Tabelle und Bucket; erratene Pfade liefern nichts
+- [x] Pfad-Manipulation: Unterordner, `../`, falsche Endung, fremder Event-/Whisky-Ordner, ungleiche Zeitstempel → abgelehnt (Bucket + TS027 + Server-Prüfung + DB-CHECK für die Sammlung)
+- [x] Direkt-Update der Foto-Spalten an `whisky_details` ohne Grant → abgelehnt
+- [x] Kopieren: nur aus sichtbaren Quellen in den eigenen Ordner (Integration)
+- [x] Dateiinhalt: nur `image/jpeg`, max. 2 MB → kein SVG/HTML-Upload für XSS
+- [x] Privatsphäre: GPS wird entfernt (gemessen)
+- Hinweis (kein Bug): Ein angemeldeter Bringer kann über die API beliebig viele Dateien (je ≤ 2 MB) in den Ordner seines Whiskys legen, ohne sie einzutragen. Folge wäre nur Speicherverbrauch; `photos:cleanup` findet solche Dateien. Bei 6–10 vertrauten Mitgliedern akzeptabel.
+
+### Bugs Found
+
+#### BUG-1: „Whisky hinzufügen"-Dialog auf dem Handy nicht abschließbar
+- **Severity:** High (Regression von PROJ-5, betrifft das Eintragen generell)
+- **Steps to Reproduce:**
+  1. iPhone-Größe (Playwright „iPhone 13", 390×664), „Meine Whiskys" eines Tastings im Entwurf
+  2. „Whisky hinzufügen" antippen
+  3. Expected: „Eintragen" erreichbar (Dialog scrollt)
+  4. Actual: Durch das neue Foto-Feld ist der Dialog höher als der Bildschirm; „Eintragen" liegt außerhalb und der Dialog scrollt nicht („element is outside of the viewport"). Auch ohne Foto-Auswahl, da das Feld immer angezeigt wird. PROJ-5-E2E „Name ist Pflicht" auf Mobile Safari rot.
+- **Hinweis für den Fix:** Der Sammlungs-Dialog hat bereits `max-h-[90dvh] overflow-y-auto` am `DialogContent`; der Whisky-Dialog nicht.
+- **Priority:** Fix before deployment
+
+#### BUG-2: Admin kann vor dem Abschluss keine Fotos fremder Whiskys pflegen
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Als Admin ein Tasting im Entwurf öffnen (Steuerungsseite bzw. „Meine Whiskys")
+  2. Expected (Prüfpunkt): Foto eines fremden Whiskys hinzufügen/ändern
+  3. Actual: Die Ausschankliste zeigt nur Mini-Bilder ohne Aktionen, „Meine Whiskys" nur die eigenen. Nach dem Abschluss geht es über die Ergebnisseite (Umweg).
+- **Priority:** Fix in next sprint — oder Prüfpunkt auf „nach dem Abschluss" einschränken
+
+#### BUG-3: Whisky entfernen kann das Foto verlieren, wenn das Entfernen scheitert
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Bringer entfernt seinen Whisky (mit Foto), während der Gastgeber gleichzeitig das Tasting startet
+  2. `removeWhiskyAction` löst und löscht zuerst das Foto, dann scheitert `remove_whisky` (Status nicht mehr Entwurf)
+  3. Expected: Whisky bleibt samt Foto
+  4. Actual: Whisky bleibt, Foto ist weg (kein Verweis ins Leere, nur Datenverlust des Fotos)
+- **Priority:** Nice to have (nur bei genauem Zusammentreffen; Foto lässt sich neu hochladen)
+
+### Summary
+- **Acceptance Criteria:** 32/34 passed (BUG-1, BUG-2), mehrere davon per Code-Review statt automatisiert (oben markiert)
+- **Bugs Found:** 3 total (0 critical, 1 high, 1 medium, 1 low)
+- **Security:** Pass (ein akzeptiertes Restrisiko: Speicherverbrauch durch nicht eingetragene Uploads)
+- **Production Ready:** NO
+- **Recommendation:** BUG-1 vor dem Deployment beheben; BUG-2 beheben oder den Prüfpunkt bewusst einschränken; danach `/qa` erneut (Mobile Safari PROJ-5 + PROJ-28)
 
 ## Deployment
 _To be added by /deploy_

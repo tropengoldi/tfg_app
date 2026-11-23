@@ -290,5 +290,7 @@ test('Abgeschlossenes Event: eigene Einträge bleiben als reine Anzeige', async 
   await openWhiskies(page, evId)
   const row = page.getByRole('listitem').filter({ hasText: `RO-${STAMP}` })
   await expect(row).toBeVisible()
-  await expect(row.getByRole('button')).toHaveCount(0)
+  // Angaben gesperrt: kein Bearbeiten/Entfernen. Seit PROJ-28 bleibt nur das Foto pflegbar.
+  await expect(row.getByRole('button', { name: /bearbeiten|entfernen/ })).toHaveCount(0)
+  await expect(row.getByRole('button')).toHaveText(['Foto hinzufügen'])
 })
