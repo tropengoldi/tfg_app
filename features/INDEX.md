@@ -42,7 +42,7 @@
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
 | PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Deployed | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
-| PROJ-28 | Whisky-Fotos | In Review | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
+| PROJ-28 | Whisky-Fotos | Approved | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
 | PROJ-29 | Steward-Bewertung durch Teilnehmer | Roadmap | – | 2026-11-23 |
 
 <!-- Add features above this line -->
@@ -200,6 +200,12 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
       Neulade-Antwort des Dashboards nicht (6/12 rot). Umgangen: Dashboard ohne Abzeichen
       (`src/lib/queries/dashboard.ts`) + robusteres Live-Neuladen. Nur angehen, wenn das Dashboard
       wieder Abzeichen zeigen soll. Details im QA-Abschnitt von PROJ-26
+- [ ] **PROJ-28: HEIC aus der Android-Galerie prüfen** — auf einem echten Android-Handy ein
+      iPhone-HEIC-Foto aus der Galerie hochladen: wird es gelesen oder kommt die Meldung „Bitte als
+      JPEG aufnehmen"? Bewusst nachgelagert (2026-11-23)
+- [ ] **PROJ-28 BUG-3 (Low)** — Whisky entfernen löst das Foto vor `remove_whisky`; scheitert das
+      Entfernen (Tasting genau dann gestartet), ist das Foto weg. Fix-Idee: Foto erst nach
+      erfolgreichem `remove_whisky` per Service-Aufräumen bzw. `photos:cleanup` entfernen
 
 ### Wartungsskripte (Service-Role, kein UI)
 

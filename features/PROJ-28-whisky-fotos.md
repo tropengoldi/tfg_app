@@ -1,6 +1,6 @@
 # PROJ-28: Whisky-Fotos
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -57,7 +57,7 @@ eingefroren; die Ausnahme gilt ausschließlich für das Foto.
 - [ ] Angenommen ein Tasting ist abgeschlossen, wenn der Bringer die Ergebnisseite öffnet, dann zeigt die Ranglisten-Zeile seines Whiskys ohne Foto „Foto hinzufügen", mit Foto die Aktionen „Ersetzen" und „Entfernen"
 - [ ] Angenommen ein Tasting ist abgeschlossen, wenn ein Teilnehmer die Ergebnisseite öffnet, dann sieht er bei fremden Whiskys keine Foto-Aktionen
 - [ ] Angenommen der Admin öffnet die Ergebnisseite eines abgeschlossenen Tastings, wenn er bei einem beliebigen Whisky „Foto hinzufügen", „Ersetzen" oder „Entfernen" wählt, dann wird die Änderung gespeichert, unabhängig davon, wer den Whisky mitgebracht hat
-- [ ] Angenommen der Admin, wenn er bei einem Tasting im Entwurf oder während es läuft das Foto eines fremden Whiskys ändern will, dann ist das möglich (Admin darf immer)
+- [ ] Angenommen der Admin, wenn er bei einem Tasting im Entwurf oder während es läuft das Foto eines fremden Whiskys ändern will, dann erlaubt die Datenbank das; in der Oberfläche geschieht es über die Ergebnisseite nach dem Abschluss *(eingeschränkt 2026-11-23, QA BUG-2 akzeptiert)*
 - [ ] Angenommen ein Gastgeber oder Steward, der den Whisky nicht mitgebracht hat und kein Admin ist, wenn er versucht, dessen Foto zu ändern, dann wird das abgelehnt — auch bei direktem Aufruf ohne Oberfläche
 
 ### Sichtbarkeit (Blindheit)
@@ -115,7 +115,7 @@ eingefroren; die Ausnahme gilt ausschließlich für das Foto.
 ## Open Questions
 - [ ] Soll die Historien-Liste später das Foto des Sieger-Whiskys zeigen? (bewusst nicht in PROJ-28)
 - [ ] Gesamt-Speicherbedarf im Blick behalten: reicht das kostenlose Supabase-Storage-Kontingent langfristig? (bei ~10 Fotos je Abend unkritisch, Bewertung in `/architecture`) — **Architektur:** ca. 0,3–0,5 MB je Foto (beide Fassungen) → das kostenlose 1-GB-Kontingent reicht für über 2.000 Fotos; offen bleibt nur das Beobachten im Betrieb
-- [ ] HEIC-Bilder aus der Galerie auf Android-Browsern: werden sie gelesen oder greift die Fehlermeldung? (in `/qa` auf einem echten Android-Handy prüfen)
+- [ ] HEIC-Bilder aus der Galerie auf Android-Browsern: werden sie gelesen oder greift die Fehlermeldung? (auf einem echten Android-Handy prüfen — **vom Nutzer am 2026-11-23 bewusst nach hinten gestellt**, kein Deploy-Blocker)
 
 ## Decision Log
 
@@ -128,6 +128,7 @@ eingefroren; die Ausnahme gilt ausschließlich für das Foto.
 | Foto ist die einzige Ausnahme von der Sperre nach dem Start | Ein Foto verändert keine Bewertungsgrundlage; Name/Details nachträglich zu ändern wäre ein eigenes Thema | 2026-11-23 |
 | Sichtbarkeit wie die Whisky-Details (vor Abschluss Bringer, Gastgeber bzw. Steward, Admin; danach alle Teilnehmer) | Ein Etikettfoto verrät den Whisky genauso wie der Name — eine einzige, schon bewährte Regel | 2026-11-23 |
 | **Korrektur:** nach dem Abschluss sieht **jedes aktive Mitglied** die Fotos, nicht nur die Teilnehmer | Abgeschlossene Tastings sind seit PROJ-9 ein gemeinsames Archiv (Namen + Rangliste für alle); ein Platzhalter nur für Nicht-Teilnehmer wäre widersprüchlich. Entschieden vom Nutzer in `/backend` | 2026-11-23 |
+| Admin pflegt fremde Fotos in der Oberfläche nur nach dem Abschluss (Ergebnisseite), nicht in der Ausschankliste | QA BUG-2 vom Nutzer als „passt so" akzeptiert; die DB erlaubt es weiterhin in jedem Status | 2026-11-23 |
 | Anzeige als Mini-Bild in der Rangliste, Antippen = groß | Rangliste bleibt bis 10 Whiskys ohne Scrollen lesbar (PRD-Constraint) | 2026-11-23 |
 | Nachträgliches Hochladen sowohl auf der Ergebnisseite als auch auf „Meine Whiskys" | Ergebnisseite ist der natürliche Ort nach dem Abend; „Meine Whiskys" ist der bekannte Ort für die eigenen Whiskys | 2026-11-23 |
 | Kamera oder Galerie, automatische Verkleinerung, Originale bis ca. 20 MB | Bedienung in Sekunden, auch bei schwachem WLAN; iPhone-Fotos funktionieren ohne Vorarbeit | 2026-11-23 |
@@ -464,6 +465,9 @@ Bewusst ohne Event im Status „aktiv" (Live-DB; ein Start könnte ein echtes Ta
   4. Actual: Durch das neue Foto-Feld ist der Dialog höher als der Bildschirm; „Eintragen" liegt außerhalb und der Dialog scrollt nicht („element is outside of the viewport"). Auch ohne Foto-Auswahl, da das Feld immer angezeigt wird. PROJ-5-E2E „Name ist Pflicht" auf Mobile Safari rot.
 - **Hinweis für den Fix:** Der Sammlungs-Dialog hat bereits `max-h-[90dvh] overflow-y-auto` am `DialogContent`; der Whisky-Dialog nicht.
 - **Priority:** Fix before deployment
+- **Status:** ✅ **Behoben 2026-11-23** — `DialogContent` des Whisky-Dialogs scrollt jetzt
+  (`max-h-[90dvh] overflow-y-auto`). Re-Test: PROJ-28 + PROJ-5 auf Mobile Safari 22/22 und
+  Chromium 22/22 (je 1 instabiler Test, im Retry grün — bekannter Hydration-Doppelrender)
 
 #### BUG-2: Admin kann vor dem Abschluss keine Fotos fremder Whiskys pflegen
 - **Severity:** Medium
@@ -472,6 +476,8 @@ Bewusst ohne Event im Status „aktiv" (Live-DB; ein Start könnte ein echtes Ta
   2. Expected (Prüfpunkt): Foto eines fremden Whiskys hinzufügen/ändern
   3. Actual: Die Ausschankliste zeigt nur Mini-Bilder ohne Aktionen, „Meine Whiskys" nur die eigenen. Nach dem Abschluss geht es über die Ergebnisseite (Umweg).
 - **Priority:** Fix in next sprint — oder Prüfpunkt auf „nach dem Abschluss" einschränken
+- **Status:** ✅ **Akzeptiert 2026-11-23** (Nutzer-Entscheidung „passt so") — Prüfpunkt
+  angepasst: der Admin pflegt fremde Fotos über die Ergebnisseite nach dem Abschluss
 
 #### BUG-3: Whisky entfernen kann das Foto verlieren, wenn das Entfernen scheitert
 - **Severity:** Low
@@ -483,11 +489,13 @@ Bewusst ohne Event im Status „aktiv" (Live-DB; ein Start könnte ein echtes Ta
 - **Priority:** Nice to have (nur bei genauem Zusammentreffen; Foto lässt sich neu hochladen)
 
 ### Summary
-- **Acceptance Criteria:** 32/34 passed (BUG-1, BUG-2), mehrere davon per Code-Review statt automatisiert (oben markiert)
-- **Bugs Found:** 3 total (0 critical, 1 high, 1 medium, 1 low)
+- **Acceptance Criteria (erster Lauf):** 32/34 passed (BUG-1, BUG-2), mehrere davon per Code-Review statt automatisiert (oben markiert)
+- **Nach Re-Test 2026-11-23:** 34/34 — BUG-1 behoben, BUG-2 akzeptiert (Prüfpunkt angepasst)
+- **Bugs Found:** 3 total (0 critical, 1 high, 1 medium, 1 low) — offen nur BUG-3 (Low)
 - **Security:** Pass (ein akzeptiertes Restrisiko: Speicherverbrauch durch nicht eingetragene Uploads)
-- **Production Ready:** NO
-- **Recommendation:** BUG-1 vor dem Deployment beheben; BUG-2 beheben oder den Prüfpunkt bewusst einschränken; danach `/qa` erneut (Mobile Safari PROJ-5 + PROJ-28)
+- **Offen, bewusst nachgelagert:** HEIC aus der Android-Galerie auf echtem Gerät prüfen
+- **Production Ready:** YES
+- **Recommendation:** Deploy (Reihenfolge: Migration ist bereits live → Code-Push)
 
 ## Deployment
 _To be added by /deploy_

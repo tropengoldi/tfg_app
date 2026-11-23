@@ -111,7 +111,8 @@ export function WhiskyFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent>
+      {/* PROJ-28 BUG-1: mit Foto-Feld höher als ein Handy-Bildschirm → scrollbar wie der Sammlungs-Dialog */}
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Whisky bearbeiten' : 'Whisky hinzufügen'}</DialogTitle>
           <DialogDescription>
