@@ -1,6 +1,6 @@
 # PROJ-29: Steward-Bewertung durch Teilnehmer
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -169,12 +169,135 @@ mit eigenem Sichtbarkeits-Schalter. Eine Steward-Rangliste über alle Tastings g
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Eigene Tabelle „Steward-Noten" (`steward_scores`) statt Erweiterung von `ratings` | Bewertungen hängen an einem Whisky und fließen in die Rangliste; die Steward-Note hat damit nichts zu tun | 2026-11-23 |
+| Name `steward_scores`, nicht `steward_ratings` | `steward_ratings` ist schon die Live-Einblick-Funktion aus PROJ-20 | 2026-11-23 |
+| Steward nicht in der Zeile speichern, sondern aus dem Tasting ableiten | Keine Note für die falsche Person möglich; Steward ist nach dem Start ohnehin fest | 2026-11-23 |
+| Schreiben nur über zwei SECURITY-DEFINER-Funktionen (setzen / zurückziehen), Fehler TS028 | Gleiches Muster wie PROJ-22/23; alle Regeln an einer Stelle, Sperre gegen gleichzeitiges Abschließen | 2026-11-23 |
+| Aufdecken über eine Sicht nur für abgeschlossene Tastings | Geheimhaltung auf DB-Ebene wie bei Tipps und Ranglisten; Frontend kann nichts versehentlich verraten | 2026-11-23 |
+| Live-Einblick (PROJ-20) bleibt unverändert | Spec: der Steward sieht vor dem Abschluss nichts von seinen Noten | 2026-11-23 |
+| Bilanz-Ø über alle Einzelnoten statt über Abend-Durchschnitte | Jede Stimme zählt gleich; einfacher zu erklären | 2026-11-23 |
+| Profil-Schalter `show_steward_balance`, Standard an, wie `show_kenner_count` | Bewährtes Muster aus PROJ-14/22 inkl. Spalten-Rechten und Profil-Sicht | 2026-11-23 |
+| Kein neues Paket | Alle Bausteine vorhanden (ScoreField, Collapsible, AlertDialog) | 2026-11-23 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Gleiches Muster wie der Sieger-Tipp (PROJ-22): eine kleine neue Tabelle für die Steward-Noten,
+zwei Funktionen zum Speichern bzw. Zurückziehen, eine Sicht, die die Noten erst nach dem
+Abschluss aufdeckt, und ein neuer Profil-Schalter. Dazu drei Stellen in der Oberfläche
+(Bewertungsansicht, Ergebnisseite, Profil). Kein neues Paket, keine neue Seite, keine neue Route.
+
+Der Name `steward_ratings` ist bereits für den Live-Einblick des Stewards (PROJ-20) vergeben —
+die neuen Bausteine heißen deshalb durchgehend **„Steward-Noten"** (englisch `steward_scores`).
+
+### A) Bausteine
+
+```
+Bewertungsansicht (PROJ-7) — nur Mitverkoster, nur laufendes Tasting mit Steward
++-- (bestehend) Sieger-Tipp
++-- NEU: Karte „Den Steward bewerten" (shadcn Collapsible + Card), zugeklappt Standard
+|   +-- Kopfzeile: „Den Steward bewerten · <Name>" bzw. „Deine Note: 8,5"
+|   |   bzw. dezent „Noch nicht bewertet", sobald der letzte Whisky läuft
+|   +-- Regler 0–10 mit −/+ (bestehender Baustein ScoreField, Schrittweite des Tastings)
+|   +-- Kommentar (shadcn Textarea, max. 500 Zeichen, Zähler)
+|   +-- Hinweis mit Auge: „Nach dem Abschluss mit deinem Namen für alle sichtbar —
+|   |   bis dahin sieht es niemand, auch nicht <Name>."
+|   +-- „Speichern" (bei 0 Punkten Rückfrage per AlertDialog)
+|   +-- „Bewertung zurückziehen" (nur wenn bewertet; Rückfrage per AlertDialog)
++-- (bestehend) Positionen, Punktefelder, Notiz, Vergleichs-Merker, Meine Rangliste
+
+Ergebnisseite (PROJ-9) — nur abgeschlossen und mindestens eine Note
++-- (bestehend) Rangliste, Kenner, Alle Tipps, Statistiken
++-- NEU: Abschnitt „Whisky-Steward"
+    +-- Name des Stewards, „8,5 von 10 · 6 Stimmen"
+    +-- Liste: Name · Note · Kommentar (nach Note absteigend, bei Gleichstand nach Name)
+
+Profil – Bilanz (PROJ-10 / PROJ-14)
++-- NEU: Kennzahl „Als Whisky-Steward: 3 Abende · Ø 8,7" bzw. „… · noch keine Note"
+|   (nur wenn mindestens ein abgeschlossener Steward-Abend)
++-- Sichtbarkeits-Einstellungen: NEU Schalter „Steward-Bilanz"
++-- Fremdes Profil: Kennzahl nur bei eingeschaltetem Schalter
+```
+
+### B) Datenmodell
+
+**Steward-Note** (höchstens eine pro Person und Tasting)
+- Tasting, bewertende Person, Note (0–10, Dezimal wie die Whisky-Punkte), Kommentar (optional,
+  max. 500 Zeichen), Zeitpunkt der letzten Änderung
+- Der Steward selbst steht **nicht** in der Zeile — er ergibt sich aus dem Tasting. So kann es
+  keine Note für die falsche Person geben, und ein Steward-Wechsel im Entwurf braucht keine
+  Nacharbeit (im Entwurf gibt es ohnehin keine Noten).
+- Wird das Tasting oder die bewertende Person gelöscht, verschwindet die Note mit.
+
+**Profil:** NEU Schalter „Steward-Bilanz sichtbar" (Standard: an).
+
+### C) Zugriffsregeln (Datenbankebene)
+
+| Wer | Während des Tastings | Nach dem Abschluss |
+|---|---|---|
+| Mitverkoster (inkl. Gastgeber) | eigene Note setzen / ändern / zurückziehen / lesen | eigene Note + alle aufgedeckten Noten lesen |
+| Whisky-Steward | **nichts** (keine Note, keine fremden Noten, nicht im Live-Einblick) | alle aufgedeckten Noten lesen |
+| Admin / andere aktive Mitglieder | keine fremden Noten | alle aufgedeckten Noten lesen (sofern das Tasting für sie sichtbar ist, PROJ-26) |
+| Deaktivierte / nicht angemeldet | nichts | nichts |
+
+- **Speichern** nur über die Funktion „Steward-Note setzen" (Tasting, Note, Kommentar). Sie prüft:
+  aktives Mitglied, Tasting läuft (gegen gleichzeitiges Abschließen gesperrt), Tasting hat einen
+  Steward, Person ist Teilnehmer und nicht der Steward, Note 0–10 und passt zur Schrittweite,
+  Kommentar ≤ 500 Zeichen → sonst **TS028** mit verständlicher Meldung. Ein zweiter Aufruf
+  ersetzt die Note; leerer Kommentar wird als „kein Kommentar" gespeichert.
+- **Zurückziehen** über die Funktion „Steward-Note zurückziehen" — gleiche Prüfungen (läuft,
+  Teilnehmer); nach dem Abschluss abgelehnt (TS028).
+- **Direktes Lesen der Tabelle:** ausschließlich die eigene Zeile. Kein Direktschreiben.
+- **Aufdecken** über die Sicht „aufgedeckte Steward-Noten": nur abgeschlossene Tastings, nur
+  aktive Mitglieder, gleiche Sichtbarkeit des Tastings wie die Ranglisten-Sichten (inkl.
+  Testkonten-Regel PROJ-26). Liefert je Note: Tasting, Steward, bewertende Person (Name), Note,
+  Kommentar.
+- **Live-Einblick (PROJ-20)** bleibt unverändert — er liest die neue Tabelle nicht.
+
+### D) Auswertung
+- **Ergebnisseite:** Durchschnitt und Anzahl aus der Sicht, Anzeige mit der bestehenden
+  Punkte-Formatierung („8,5"). Keine Note → kein Abschnitt.
+- **Bilanz:** „Abende" = abgeschlossene Tastings mit dieser Person als Steward (aus der
+  bestehenden Historien-Sicht, die den Steward bereits kennt); „Ø" = Durchschnitt aller dort
+  erhaltenen Noten (eine Note = eine Stimme, nicht Durchschnitt der Abend-Schnitte). Für das
+  fremde Profil nur bei eingeschaltetem Schalter — die Abfrage prüft den Schalter wie beim
+  Kenner-Zähler.
+
+### E) Migration (eine Datei)
+1. Tabelle „Steward-Noten" mit RLS (nur eigene Zeile lesbar, kein Direktschreiben), Prüfregeln
+   für Wertebereich, Halbschritte und Kommentarlänge.
+2. Funktionen „Steward-Note setzen" und „Steward-Note zurückziehen" (TS028).
+3. Sicht „aufgedeckte Steward-Noten".
+4. Profil-Schalter + Erweiterung der Profil-Sicht + Spalten-Rechte (wie PROJ-14/22).
+Danach Typen neu erzeugen. Ausrollen wie immer: `db:push` → App.
+
+### F) Wartungsskripte
+- `tasting:delete`: Noten gehen per Kaskade mit, nichts zu tun.
+- `user:delete`: Fußabdruck zählt **abgegebene** Steward-Noten (Kaskade bei `hard`/`cascade`) und
+  **erhaltene** (über die Steward-Rolle, die bereits als geschützter Verweis gilt).
+
+### G) Tests
+- **DB-Integration:** Teilnehmer setzt / ändert / zieht zurück; Gastgeber darf; Steward,
+  Außenstehender, Admin ohne Teilnahme, Tasting ohne Steward, Entwurf, abgeschlossen → TS028;
+  Note außerhalb 0–10, falsche Schrittweite, Kommentar > 500 → TS028; kein Direktschreiben;
+  während des Tastings sieht niemand (Teilnehmer/Gastgeber/Steward/Admin) fremde Noten — weder
+  in der Tabelle noch in der Sicht; nach dem Abschluss liefert die Sicht alle Noten mit Namen;
+  Testkonten-Tasting für normale Mitglieder unsichtbar; Profil-Schalter.
+- **Unit:** Durchschnitt/Anzahl, Sortierung der Liste, Bilanz-Text („noch keine Note"),
+  Formular-Prüfung.
+- **E2E:** Karte nur mit Steward; Note setzen + Wiederöffnen + ändern + zurückziehen; 0-Rückfrage;
+  Steward sieht keine Karte und im Live-Einblick nichts; Ergebnis-Abschnitt nach dem Abschluss;
+  Bilanz + Schalter im fremden Profil; 360 px.
+
+### H) Abhängigkeiten (Pakete)
+Keine. Alle UI-Bausteine (Collapsible, Card, Textarea, AlertDialog, ScoreField) sind vorhanden.
+
+### Arbeitsaufteilung
+- `/backend` zuerst: Migration, Typen, Server-Aktionen, Integrationstests (wie bei PROJ-22).
+- `/frontend`: Karte in der Bewertungsansicht, Ergebnis-Abschnitt, Bilanz + Schalter.
 
 ## QA Test Results
 _To be added by /qa_
