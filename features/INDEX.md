@@ -42,7 +42,7 @@
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
 | PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Deployed | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
-| PROJ-28 | Whisky-Fotos | Planned | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
+| PROJ-28 | Whisky-Fotos | Architected | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
 | PROJ-29 | Steward-Bewertung durch Teilnehmer | Roadmap | – | 2026-11-23 |
 
 <!-- Add features above this line -->

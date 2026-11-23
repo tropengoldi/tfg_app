@@ -1,6 +1,6 @@
 # PROJ-28: Whisky-Fotos
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -114,7 +114,8 @@ eingefroren; die Ausnahme gilt ausschließlich für das Foto.
 
 ## Open Questions
 - [ ] Soll die Historien-Liste später das Foto des Sieger-Whiskys zeigen? (bewusst nicht in PROJ-28)
-- [ ] Gesamt-Speicherbedarf im Blick behalten: reicht das kostenlose Supabase-Storage-Kontingent langfristig? (bei ~10 Fotos je Abend unkritisch, Bewertung in `/architecture`)
+- [ ] Gesamt-Speicherbedarf im Blick behalten: reicht das kostenlose Supabase-Storage-Kontingent langfristig? (bei ~10 Fotos je Abend unkritisch, Bewertung in `/architecture`) — **Architektur:** ca. 0,3–0,5 MB je Foto (beide Fassungen) → das kostenlose 1-GB-Kontingent reicht für über 2.000 Fotos; offen bleibt nur das Beobachten im Betrieb
+- [ ] HEIC-Bilder aus der Galerie auf Android-Browsern: werden sie gelesen oder greift die Fehlermeldung? (in `/qa` auf einem echten Android-Handy prüfen)
 
 ## Decision Log
 
@@ -138,12 +139,129 @@ eingefroren; die Ausnahme gilt ausschließlich für das Foto.
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Supabase Storage, ein privater Bucket `whisky-photos` mit Bereichen `tasting/` und `collection/` | Vorhandene Infrastruktur und Zugriffsregeln; ein Bucket, damit „Zur Sammlung hinzufügen" per Kopie im Bucket geht | 2026-11-23 |
+| Anzeige nur über serverseitig erzeugte signierte Links (~1 h gültig) | Blindheit serverseitig erzwungen; weitergegebene Links verfallen | 2026-11-23 |
+| Gemeinsame Prüf-Funktion „darf Whisky-Details sehen" für Tabelle und Bucket | Eine einzige Wahrheit für die Blindheit, inkl. Steward- und Testkonten-Regel | 2026-11-23 |
+| Verkleinern im Browser (Canvas), zwei Fassungen: ~1600 px und ~240 px Vorschau | Kleine Uploads bei schwachem WLAN; GPS/Metadaten fallen weg; keine kostenpflichtige Bild-Umrechnung nötig | 2026-11-23 |
+| Direkter Browser-Upload in den Bucket, danach Server-Aktion „Foto setzen" | Server-Aktionen sind auf ~1 MB begrenzt; Bucket prüft Rechte selbst; Datenbank kennt nur den Speicherort | 2026-11-23 |
+| Eigener, eng begrenzter Schreibweg für die Foto-Angaben (Bringer/Admin, jeder Status) | Bestehende Sperre „Details nur im Entwurf" bleibt für alle anderen Felder unverändert | 2026-11-23 |
+| Neuer Dateiname pro Upload (Zeitstempel) | Kein veraltetes Bild aus Zwischenspeichern nach „Ersetzen" | 2026-11-23 |
+| Bucket-Limit 2 MB, nur Bildformate | Verkleinertes Ergebnis passt immer; schützt vor Missbrauch an der Oberfläche vorbei | 2026-11-23 |
+| Aufräumen in App-Aktionen + Wartungsskripten + neues Skript `photos:cleanup` | Datenbank-Kaskaden löschen keine Storage-Dateien | 2026-11-23 |
+| Keine neuen npm-Pakete | Browser kann verkleinern; Storage-Client und shadcn-Dialog sind vorhanden | 2026-11-23 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Fotos liegen in einem **privaten Supabase-Storage-Bucket**. Der Browser verkleinert das Foto
+selbst und lädt es **direkt** in diesen Bucket hoch; danach meldet eine Server-Aktion der
+Datenbank „dieser Whisky hat jetzt dieses Foto". Angezeigt werden Fotos ausschließlich über
+**kurzlebige, signierte Links**, die der Server beim Laden der Seite mit den Rechten des
+angemeldeten Nutzers erzeugt. Wer laut Zugriffsregeln ein Foto nicht sehen darf, bekommt
+keinen Link — und auch mit einer erratenen Adresse liefert der Bucket nichts aus.
+
+### A) Betroffene Oberflächen (Komponenten-Baum)
+```
+Gemeinsamer Baustein (neu)
++-- Foto-Feld                       Mini-Bild/Platzhalter + „Foto hinzufügen" / „Ersetzen" / „Entfernen"
+|   +-- Auswahl: Kamera oder Galerie
+|   +-- Verkleinern im Browser + Fortschrittsanzeige + Fehlermeldung mit „Erneut versuchen"
++-- Foto-Vorschau (Vollbild)        Antippen eines Mini-Bilds → großes Foto + Whisky-Name, schließbar
+
+„Meine Whiskys"  (tastings/[eventId]/whiskies)
++-- Whisky-Abschnitt / Whisky-Karte     + Mini-Bild
++-- Whisky-Formular (Dialog)            + Foto-Feld
+    +-- nach dem Start: Formular gesperrt, nur Foto-Feld bleibt aktiv
+
+Steuerungsseite (Gastgeber/Steward)
++-- Ausschankliste (Drag & Drop)        + Mini-Bild je Zeile
+
+Ergebnisseite (tastings/[eventId]/ergebnisse)
++-- Rangliste
+    +-- Ranglisten-Zeile                + Mini-Bild (antippen = Vollbild)
+        +-- eigener Whisky / Admin:     Foto-Aktionen direkt in der Zeile
+        +-- „Zur Sammlung hinzufügen":  übernimmt das Foto als Kopie
+
+Sammlung (profil/sammlung, profil/[id]/sammlung)
++-- Sammlungs-Karte                     + Mini-Bild (antippen = Vollbild)
++-- Sammlungs-Dialog                    + Foto-Feld (nur eigene Sammlung)
+```
+Bewertungsansicht, Dashboard und eigene Live-Rangliste bleiben **unverändert** — dort taucht
+nie ein Foto oder ein Hinweis darauf auf.
+
+### B) Datenmodell (in Worten)
+**Ein Bucket „whisky-photos" (privat)**, zwei Bereiche:
+- `tasting/<Event>/<Whisky>/…` — Fotos von Tasting-Whiskys
+- `collection/<Mitglied>/<Eintrag>/…` — Fotos aus der persönlichen Sammlung
+
+Je Foto werden **zwei Dateien** gespeichert: eine **große Fassung** (ca. 1600 px lange Kante,
+typisch 200–400 KB) für die Vollbild-Ansicht und ein **Vorschaubild** (ca. 240 px, wenige KB)
+für Listen. Jeder Upload bekommt einen neuen Dateinamen (Zeitstempel) — so zeigt nach einem
+„Ersetzen" kein Zwischenspeicher mehr das alte Bild.
+
+**Neue Angaben in der Datenbank:**
+- Whisky-Details: Speicherort der großen Fassung und des Vorschaubilds (leer = kein Foto)
+- Sammlungs-Eintrag: dieselben zwei Angaben
+- Die Ranglisten-Sicht der Ergebnisseite reicht die beiden Angaben durch (sie gibt Details
+  ohnehin erst nach dem Abschluss heraus)
+
+**Zugriffsregeln (Datenbank + Bucket):**
+
+| Aktion | Tasting-Foto | Sammlungs-Foto |
+|---|---|---|
+| Ansehen | exakt die bestehende Regel der Whisky-Details: Admin, Steward, Teilnehmer, die Bringer sind, Gastgeber ohne Steward, nach dem Abschluss alle Teilnehmer; Testkonten-Tastings für normale Mitglieder unsichtbar | eigene immer; fremde nur bei „Sammlung sichtbar" (bestehende Regel aus PROJ-14/15/26) |
+| Hochladen / Ersetzen / Entfernen | Bringer oder Admin, in jedem Event-Status | nur der Besitzer |
+
+Die Regel „wer sieht die Details" wird dafür in **eine gemeinsame Prüf-Funktion** gezogen,
+die sowohl die Tabelle als auch der Bucket nutzen — so können die beiden nie auseinanderlaufen.
+
+**Eintragen des Fotos in die Datenbank:** über einen eigenen, eng begrenzten Weg
+(„Foto setzen/entfernen"), der nur Bringer oder Admin erlaubt und nur die zwei Foto-Angaben
+ändert. Die bestehende Sperre „Details nur im Entwurf änderbar" bleibt für alle anderen
+Felder unangetastet.
+
+### C) Technische Entscheidungen (begründet)
+- **Supabase Storage statt externem Bilddienst** — läuft schon im Projekt, gleiche Anmeldung,
+  gleiche Zugriffsregeln, kein neuer Anbieter, keine neuen Secrets.
+- **Privater Bucket + signierte Links (gültig ca. 1 Stunde)** — die Blindheit wird vom Server
+  erzwungen; ein weitergeleiteter Link verfällt von selbst (Prüfpunkt „geteilte Adresse").
+- **Verkleinern im Browser** — ein 20-MB-iPhone-Foto wird am Handy auf wenige hundert KB
+  gebracht, bevor es ins (oft schwache) WLAN geht. Beim Neu-Zeichnen fallen alle Metadaten
+  weg, **inklusive GPS-Standort**, und die Handy-Drehung wird richtig umgesetzt.
+- **Direkter Upload vom Browser in den Bucket** — Server-Aktionen sind auf ca. 1 MB pro Anfrage
+  begrenzt und würden den Upload unnötig durch Vercel schleusen; der Bucket prüft die Rechte
+  selbst. Der Bucket nimmt nur Bilder bis 2 MB an (das verkleinerte Ergebnis passt immer).
+- **Zwei Fassungen statt Bild-Umrechnung auf dem Server** — Supabase rechnet Vorschaubilder
+  erst im kostenpflichtigen Tarif um; zwei kleine Dateien sind einfacher und kostenlos.
+- **Kopie bei „Zur Sammlung hinzufügen"** — Kopieren innerhalb desselben Buckets; deshalb
+  ein Bucket für beide Bereiche statt zwei.
+- **Aufräumen ohne Datenbank-Automatik** — Datenbank-Löschungen können Storage-Dateien nicht
+  selbst entfernen. Deshalb: (1) „Ersetzen"/„Entfernen" und das Löschen eines Whiskys oder
+  Sammlungs-Eintrags räumen die Dateien direkt mit weg; (2) die Wartungsskripte
+  `tasting:delete` und `user:delete` löschen die zugehörigen Ordner mit; (3) ein neues
+  Wartungsskript **`photos:cleanup`** findet verwaiste Dateien (Trockenlauf zuerst, wie die
+  bestehenden Skripte).
+- **iPhone-Fotos (HEIC):** Safari auf dem iPhone liefert bei der Auswahl automatisch ein
+  verarbeitbares Bild. Kann ein Browser ein Format nicht lesen, kommt eine verständliche
+  Meldung („Bitte als JPEG aufnehmen") und der alte Zustand bleibt.
+
+### D) Abhängigkeiten
+- **Keine neuen Pakete.** Verkleinern übernimmt der Browser selbst; Storage ist Teil des
+  vorhandenen Supabase-Clients. Für die Vollbild-Ansicht reicht der vorhandene
+  shadcn-Dialog.
+- **DB-Migration nötig** (neue Spalten, gemeinsame Prüf-Funktion, „Foto setzen"-Weg,
+  Bucket inkl. Zugriffsregeln, Ranglisten-Sicht erweitert). Wie üblich: `db:push` durch dich
+  **vor** dem Code-Push.
+
+### Testschwerpunkte (für /qa)
+- Blindheit: normaler Teilnehmer bekommt vor dem Abschluss weder Link noch Datei — auch nicht
+  bei direktem Bucket-Zugriff mit erratener Adresse; Gastgeber mit Steward ebenso.
+- Schreibrechte: Gastgeber/Steward (nicht Bringer) kann nicht hochladen; Admin kann es immer.
+- Sammlung: ausgeschalteter Schalter sperrt auch die Dateien.
+- Aufräumen: nach Ersetzen/Entfernen/Löschen bleibt keine Datei zurück.
 
 ## QA Test Results
 _To be added by /qa_
