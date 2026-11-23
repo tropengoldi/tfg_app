@@ -113,7 +113,9 @@ Vercel. `.mcp.json` ist gitignored, weil sie einen Supabase Personal Access Toke
 - **Keine YouTube-Integration** — das Verkostungsvideo ist eine gespeicherte Verknüpfung, die
   in einem neuen Tab öffnet. Kein eingebetteter Player, keine API-Abfrage, kein automatisches
   Suchen von Videos beim Anlegen eines Whiskys
-- **Keine Fotos oder Datei-Uploads** in dieser Version (Supabase Storage bleibt ungenutzt)
+- **Keine Datei-Uploads außer Whisky-Fotos** — einzige Ausnahme ist seit PROJ-28 je ein
+  optionales Foto pro Tasting-Whisky und pro Sammlungs-Eintrag (Supabase Storage). Keine
+  weiteren Uploads (Profilbilder, Event-Fotos, Anhänge an Nachrichten)
 - **Keine Aromen-Räder, Flavour-Profile oder Tasting-Notes-Vorlagen** — nur Nasenpunkte, Gaumenpunkte
   und ein Freitextfeld
 - **Keine Einladung von Gästen außerhalb der Runde** — geschlossener Nutzerkreis

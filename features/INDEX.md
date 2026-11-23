@@ -42,10 +42,12 @@
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
 | PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Deployed | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
+| PROJ-28 | Whisky-Fotos | Planned | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
+| PROJ-29 | Steward-Bewertung durch Teilnehmer | Roadmap | – | 2026-11-23 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-28
+## Next Available ID: PROJ-30
 
 ## Stand der Roadmap
 
@@ -282,6 +284,8 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-25** | **Erweiterte Ergebnis-Statistiken** | Nach dem Abschluss: (1) Rangliste zeigt die **Ausschank-Nummer** jedes Whiskys; (2) Rangliste zeigt je Whisky die **eigene Platzierung** des Betrachters; (3) **Vergleichsdiagramm** der Tasting-Whiskies über Gesamtplatzierung, Nasenpunkte, Gaumenpunkte, Alkoholgehalt und Alter (ohne Altersangabe: 3 Jahre angenommen, im Diagramm als „angenommen" markiert). Zusatzvorschläge für die Spec: **Preis-Leistungs-Sieger** (Punkte je Euro, nur wenn Preise erfasst sind — `price_eur` existiert bereits), **Konsens- vs. umstrittenster Whisky** (Streuung der Bewertungen), **Nase-/Gaumen-Diskrepanz** (größte Abweichung zwischen Nasen- und Gaumenrang), **persönliche Übereinstimmung** mit der Gesamtrangliste. Alles pro Tasting, keine Auswertung über die Runde hinweg. **Mit erledigen:** PROJ-19 BUG-2 (Historie zeigt „kein Sieger", wenn nur 0-Punkte vergeben wurden — Logik `winner_points > 0`) und BUG-1 (TS021-Meldung bei manipulierten Nachkommastellen). | P1 | PROJ-19 |
 | **PROJ-26** | **Testkonten für normale Nutzer unsichtbar** | Der Admin markiert Konten als **Testkonto**. Normale Mitglieder sehen markierte Konten nirgends (Teilnehmerauswahl, Nachrichten-Empfänger, Teilnehmerlisten, Profile, „mitgebracht von"); **Tastings mit Testkonten-Beteiligung** werden für normale Nutzer komplett ausgeblendet (Dashboard, Historie, Ergebnisse, Bilanz). Testkonten sehen sich gegenseitig, damit Testläufe funktionieren; der Admin sieht alle, Testkonten mit Kennzeichen. Durchsetzung auf **Datenbankebene (RLS/Views)**, nicht nur im Frontend. Gilt auf Staging und Produktion. Für die Spec offen: Wegwerf-Konten der E2E-Suite automatisch markieren; Zusammenspiel mit dem Backlog-Punkt „E2E-Suite hängt an den Seed-Konten". | P2 | PROJ-3, PROJ-14 |
 | **PROJ-27** | **Release-Notes-Seite „Neuigkeiten“** | Öffentliche Seite `/neuigkeiten` (ohne Login, `noindex`) mit den Release Notes zu PROJ-18..26 auf dezentem Marken-Hintergrund. Schlanker Ablauf, reiner Inhalt. | P2 | PROJ-13 |
+| **PROJ-28** | **Whisky-Fotos** | Optional ein Foto je Whisky hinterlegen — sowohl bei der Vorbereitung (Eintragen auf „Meine Whiskys") als auch nachträglich nach dem Tasting. Ein Etikettfoto verrät den Whisky: vor dem Abschluss nur für Bringer und Gastgeber/Steward sichtbar, danach für alle (Ergebnisseite/Historie). Hebt das PRD-Non-Goal „Keine Fotos oder Datei-Uploads" für Whisky-Fotos auf (Supabase Storage). Spec: ein Foto je Whisky, Bringer + Admin jederzeit, Mini-Bild in Rangliste und Ausschankliste, auch für Sammlungs-Einträge (PROJ-15, Kopie bei „Zur Sammlung hinzufügen"). | P2 | PROJ-5, PROJ-9, PROJ-15 |
+| **PROJ-29** | **Steward-Bewertung durch Teilnehmer** | Ist bei einem Tasting ein Whisky-Steward benannt, können die Teilnehmer ihn mit 0–10 Punkten bewerten. Für die Spec offen: Zeitpunkt (während/nach dem Tasting), Sichtbarkeit (Durchschnitt, Einzelwertungen anonym, sieht der Steward seine Note), Schrittweite (ganz/0,5), optionale Notiz, Anzeige in der Bilanz des Stewards mit Sichtbarkeits-Schalter (PROJ-14). Keine Steward-Rangliste über alle Tastings (PRD-Non-Goal). | P2 | PROJ-11, PROJ-18 |
 
 ### Anmerkungen zur Aufteilung
 
