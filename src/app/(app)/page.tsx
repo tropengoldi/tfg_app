@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CalendarClock, GlassWater } from 'lucide-react'
+import { CalendarClock, GlassWater, Sparkles } from 'lucide-react'
 
 import { DashboardView } from '@/components/dashboard/dashboard-view'
 import { PageHeader } from '@/components/layout/page-header'
@@ -53,6 +53,17 @@ export default async function StartPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      {/* Dezenter Hinweis auf die Release Notes (PROJ-27). */}
+      <p className="mt-6 text-center">
+        <Link
+          href="/neuigkeiten"
+          className="inline-flex min-h-11 items-center gap-1.5 text-xs text-muted-foreground hover:text-primary hover:underline"
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          Was gibt&apos;s Neues in Whizzky?
+        </Link>
+      </p>
     </>
   )
 }

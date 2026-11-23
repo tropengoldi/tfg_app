@@ -61,6 +61,20 @@ test('angemeldet: Seite bleibt erreichbar, keine Umleitung', async ({ page }) =>
   }
 })
 
+test('Startseite verlinkt dezent auf die Neuigkeiten', async ({ page }) => {
+  test.skip(!hasServiceClient, 'Service-Client nötig')
+  const u = await createDisposableUser(`n27l${Date.now()}`)
+  try {
+    await login(page, u.email)
+    await page.goto('/', { waitUntil: 'networkidle' })
+    await page.getByRole('link', { name: /Was gibt.s Neues in Whizzky/ }).click()
+    await page.waitForURL((url) => new URL(url).pathname === '/neuigkeiten')
+    await expect(page.getByRole('heading', { level: 1, name: /Was gibt.s Neues im Glas/ })).toBeVisible()
+  } finally {
+    await deleteUser(u.id)
+  }
+})
+
 test('Sichtprüfung: Screenshot (nur mit SHOT_DIR)', async ({ page }) => {
   test.skip(!process.env.SHOT_DIR, 'nur für die manuelle Sichtprüfung')
   await page.setViewportSize({ width: 390, height: 900 })
