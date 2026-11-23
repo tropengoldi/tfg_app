@@ -64,8 +64,8 @@ eingefroren; die Ausnahme gilt ausschließlich für das Foto.
 - [ ] Angenommen ein Tasting ist noch nicht abgeschlossen, wenn ein normaler Teilnehmer (nicht Bringer, nicht Gastgeber/Steward mit Detail-Einblick, nicht Admin) versucht, das Foto eines fremden Whiskys abzurufen — auch über eine direkte Bild-Adresse —, dann bekommt er es nicht
 - [ ] Angenommen ein Tasting ist noch nicht abgeschlossen, wenn der Bringer, der Gastgeber (ohne benannten Steward) bzw. der Steward oder der Admin das Foto abruft, dann wird es angezeigt (gleiche Regel wie für Name und Details)
 - [ ] Angenommen für ein Tasting ist ein Steward benannt, wenn der Gastgeber (der dann blind mitverkostet) das Foto eines fremden Whiskys vor dem Abschluss abrufen will, dann bekommt er es nicht
-- [ ] Angenommen ein Tasting ist abgeschlossen, wenn ein Teilnehmer dieses Tastings die Ergebnisseite öffnet, dann sieht er alle vorhandenen Fotos
-- [ ] Angenommen jemand ist kein Teilnehmer eines Tastings (und kein Admin), wenn er ein Foto dieses Tastings abrufen will, dann bekommt er es nicht — auch nicht nach dem Abschluss
+- [ ] Angenommen ein Tasting ist abgeschlossen, wenn ein aktives Mitglied (Teilnehmer oder nicht) die Ergebnisseite öffnet, dann sieht es alle vorhandenen Fotos — wie Namen und Rangliste im gemeinsamen Archiv (PROJ-9) *(geändert 2026-11-23 in `/backend`, vorher „nur Teilnehmer")*
+- [ ] Angenommen jemand ist deaktiviert oder nicht angemeldet, wenn er ein Foto eines Tastings abrufen will, dann bekommt er es nicht; Tastings mit Testkonten-Beteiligung bleiben für normale Mitglieder auch nach dem Abschluss ohne Foto (PROJ-26)
 - [ ] Angenommen eine einmal geteilte Bild-Adresse, wenn sie von einer nicht angemeldeten Person geöffnet wird, dann wird kein Bild ausgeliefert (spätestens nach kurzer Zeit nicht mehr)
 
 ### Anzeige
@@ -127,6 +127,7 @@ eingefroren; die Ausnahme gilt ausschließlich für das Foto.
 | Gastgeber/Steward dürfen keine Fotos für fremde Whiskys hochladen | Klare Zuständigkeit; Admin deckt die Ausnahmefälle ab | 2026-11-23 |
 | Foto ist die einzige Ausnahme von der Sperre nach dem Start | Ein Foto verändert keine Bewertungsgrundlage; Name/Details nachträglich zu ändern wäre ein eigenes Thema | 2026-11-23 |
 | Sichtbarkeit wie die Whisky-Details (vor Abschluss Bringer, Gastgeber bzw. Steward, Admin; danach alle Teilnehmer) | Ein Etikettfoto verrät den Whisky genauso wie der Name — eine einzige, schon bewährte Regel | 2026-11-23 |
+| **Korrektur:** nach dem Abschluss sieht **jedes aktive Mitglied** die Fotos, nicht nur die Teilnehmer | Abgeschlossene Tastings sind seit PROJ-9 ein gemeinsames Archiv (Namen + Rangliste für alle); ein Platzhalter nur für Nicht-Teilnehmer wäre widersprüchlich. Entschieden vom Nutzer in `/backend` | 2026-11-23 |
 | Anzeige als Mini-Bild in der Rangliste, Antippen = groß | Rangliste bleibt bis 10 Whiskys ohne Scrollen lesbar (PRD-Constraint) | 2026-11-23 |
 | Nachträgliches Hochladen sowohl auf der Ergebnisseite als auch auf „Meine Whiskys" | Ergebnisseite ist der natürliche Ort nach dem Abend; „Meine Whiskys" ist der bekannte Ort für die eigenen Whiskys | 2026-11-23 |
 | Kamera oder Galerie, automatische Verkleinerung, Originale bis ca. 20 MB | Bedienung in Sekunden, auch bei schwachem WLAN; iPhone-Fotos funktionieren ohne Vorarbeit | 2026-11-23 |
@@ -319,6 +320,42 @@ nach dem Start (wenn der Bearbeiten-Dialog gesperrt ist) am selben Ort erreichba
   `profile_shows_collection` (inkl. Testkonten-Regel); Anlegen/Löschen tasting = Bringer oder
   Admin, collection = nur eigener Ordner. Kopieren braucht Lesen der Quelle + Anlegen im Ziel
 - `tasting:delete` / `user:delete` räumen Ordner mit; neues Skript `photos:cleanup`
+
+## Implementation Notes (Backend)
+
+**Migration `supabase/migrations/20261123120000_whisky_photos.sql`** — noch **nicht
+eingespielt** (`db:push` durch den Nutzer, danach `npm run db:types` und `npm run test:rls`).
+- Spalten `photo_path` / `photo_thumb_path` an `whisky_details` und `collection_entries`
+  (≤ 300 Zeichen, nur paarweise gesetzt). Sammlung: Update-Grant erweitert plus
+  CHECK, dass die Pfade im eigenen Ordner `collection/<profil>/<eintrag>/` liegen.
+  `whisky_details`: kein Update-Grant — Schreiben nur über die RPC.
+- `whisky_rankings`: beide Spalten angehängt, Filter unverändert.
+- `can_view_whisky_details(whisky)` — gemeinsame Blindheits-Regel für Fotos (vor dem
+  Abschluss wie `wd_select`, danach jedes aktive Mitglied; Testkonten-Regel inklusive).
+  `can_edit_whisky_photo(whisky)` — aktiver Bringer oder Admin.
+  `whisky_photo_object_ok(name, op)` — dieselben Regeln für Bucket-Objekte, liest
+  Event/Whisky bzw. Besitzer aus dem Pfad, prüft die Form per Regex vor jedem Cast und
+  verlangt, dass das Event-Segment zum Whisky passt.
+- RPC `set_whisky_photo(whisky, photo, thumb)` — Bringer/Admin, jeder Status; beide null =
+  entfernen; Pfad-Prüfung → neuer Fehlercode **TS027** („Ungültiger Speicherort für das
+  Foto."), in `src/lib/errors.ts` ergänzt; liefert die alten Pfade.
+- Bucket `whisky-photos`: privat, 2 MB, nur `image/jpeg`; Regeln für Lesen / Anlegen /
+  Löschen auf `storage.objects`, kein Überschreiben.
+
+**Wartungsskripte**
+- `scripts/_supa.mjs`: `listPhotoFiles` (rekursiv) und `removePhotoFolder`
+- `tasting:delete` löscht `tasting/<event>/` mit; `user:delete` löscht bei `hard` den
+  Sammlungs-Ordner, bei `cascade` zusätzlich die Ordner der Gastgeber-Events und der
+  mitgebrachten Whiskys
+- **neu `npm run photos:cleanup`** — findet Dateien ohne Verweis (älter als 1 h),
+  Trockenlauf ohne `CONFIRM=yes`. Vor der Migration meldet es „Bucket existiert nicht".
+
+**Integrationstests** `src/lib/supabase/__tests__/whisky-photos.integration.test.ts`
+(13 Fälle): Schreibrechte (Bringer, Admin, Gastgeber/Steward/Teilnehmer/Fremde abgelehnt),
+TS027-Pfadprüfung, kein Direkt-Update, Blindheit im Entwurf (mit und ohne Steward),
+Archiv-Sichtbarkeit nach dem Abschluss, Rangliste mit Pfaden, Ersetzen/Entfernen mit
+alten Pfaden, Sammlung (Ordner-CHECK, Sichtbarkeits-Schalter, Kopie aus dem Tasting).
+Bewusst ohne Event im Status „aktiv" (Live-DB; ein Start könnte ein echtes Tasting stören).
 
 ## QA Test Results
 _To be added by /qa_

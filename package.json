@@ -22,6 +22,7 @@
     "tasting:delete": "node --env-file=.env.local scripts/delete-tasting.mjs",
     "user:delete": "node --env-file=.env.local scripts/delete-user.mjs",
     "tasting:list": "node --env-file=.env.local scripts/delete-tasting.mjs",
+    "photos:cleanup": "node --env-file=.env.local scripts/cleanup-photos.mjs",
     "icons:gen": "node scripts/gen-icons.mjs"
   },
   "dependencies": {

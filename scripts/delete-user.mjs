@@ -24,7 +24,7 @@
  *
  * Alles außer report/reactivate verlangt zusätzlich CONFIRM=yes.
  */
-import { serviceClient, findUserByEmail, must } from './_supa.mjs'
+import { serviceClient, findUserByEmail, must, removePhotoFolder } from './_supa.mjs'
 
 const email = (process.env.EMAIL ?? '').trim()
 const mode = (process.env.MODE ?? 'report').trim().toLowerCase()
@@ -146,7 +146,10 @@ async function main() {
       process.exit(1)
     }
     must(await supabase.auth.admin.deleteUser(user.id), 'deleteUser')
-    console.log('\n  ✓ Auth-User + Profil gelöscht (Teilnahmen per CASCADE).\n')
+    // PROJ-28: Sammlungs-Einträge gehen per CASCADE, ihre Fotos hier.
+    const photos = await removePhotoFolder(supabase, `collection/${user.id}`)
+    console.log('\n  ✓ Auth-User + Profil gelöscht (Teilnahmen per CASCADE).')
+    console.log(`  ✓ ${photos} Sammlungs-Foto-Datei(en) entfernt.\n`)
     return
   }
 
@@ -168,7 +171,9 @@ async function main() {
     const hostIds = (hostEv ?? []).map((e) => e.id)
     if (hostIds.length > 0) {
       must(await supabase.from('tasting_events').delete().in('id', hostIds), 'delete host events')
-      console.log(`  – ${hostIds.length} Gastgeber-Events gelöscht`)
+      let photos = 0
+      for (const id of hostIds) photos += await removePhotoFolder(supabase, `tasting/${id}`)
+      console.log(`  – ${hostIds.length} Gastgeber-Events gelöscht (${photos} Foto-Dateien)`)
     }
 
     // 2) Als Whisky-Steward aus fremden Events nehmen (Ergebnis-Kopf verliert den Namen)
@@ -183,12 +188,18 @@ async function main() {
     //    (CASCADE räumt whisky_details + ratings darauf)
     const { data: wd } = await supabase
       .from('whisky_details')
-      .select('whisky_id')
+      .select('whisky_id, event_id')
       .eq('brought_by', user.id)
     const wIds = (wd ?? []).map((r) => r.whisky_id)
     if (wIds.length > 0) {
       must(await supabase.from('whiskies').delete().in('id', wIds), 'delete whiskies')
-      console.log(`  – ${wIds.length} mitgebrachte Whiskys (in fremden Events) gelöscht`)
+      let photos = 0
+      for (const r of wd ?? []) {
+        photos += await removePhotoFolder(supabase, `tasting/${r.event_id}/${r.whisky_id}`)
+      }
+      console.log(
+        `  – ${wIds.length} mitgebrachte Whiskys (in fremden Events) gelöscht (${photos} Foto-Dateien)`,
+      )
     }
 
     // 4) Verbliebene eigene Bewertungen
@@ -201,6 +212,8 @@ async function main() {
 
     // 6) Nutzer selbst
     must(await supabase.auth.admin.deleteUser(user.id), 'deleteUser')
+    const collPhotos = await removePhotoFolder(supabase, `collection/${user.id}`)
+    if (collPhotos > 0) console.log(`  – ${collPhotos} Sammlungs-Foto-Dateien entfernt`)
     console.log('\n  ✓ Nutzer vollständig entfernt.\n')
     return
   }

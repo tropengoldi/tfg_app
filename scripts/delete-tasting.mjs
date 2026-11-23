@@ -2,7 +2,8 @@
  * Tasting-Events auflisten und komplett löschen. Nutzt den Service-Role-Key,
  * umgeht also die `delete_event`-RPC (die nur leere Entwürfe zulässt) und die RLS.
  * Löschen räumt Whiskys, Whisky-Details, Bewertungen und Teilnehmerzuordnung
- * per ON DELETE CASCADE mit weg.
+ * per ON DELETE CASCADE mit weg. PROJ-28: die Fotos im Bucket (Ordner
+ * tasting/<event>/) werden anschließend gelöscht.
  *
  * Alle Events auflisten (Datum · ID · Ort · Status):
  *   node --env-file=.env.local scripts/delete-tasting.mjs
@@ -19,7 +20,7 @@
  *   node --env-file=.env.local scripts/delete-tasting.mjs
  *   EVENT_ID='...' CONFIRM=yes node --env-file=.env.local scripts/delete-tasting.mjs
  */
-import { serviceClient, must } from './_supa.mjs'
+import { serviceClient, must, removePhotoFolder } from './_supa.mjs'
 
 const eventId = (process.env.EVENT_ID ?? '').trim()
 const confirmed = (process.env.CONFIRM ?? '').trim().toLowerCase() === 'yes'
@@ -110,7 +111,9 @@ async function handleOne() {
   }
 
   must(await supabase.from('tasting_events').delete().eq('id', eventId), 'delete tasting_events')
-  console.log('\n  ✓ Gelöscht. Whiskys / Details / Bewertungen / Teilnahme sind per CASCADE mit weg.\n')
+  const photos = await removePhotoFolder(supabase, `tasting/${eventId}`)
+  console.log('\n  ✓ Gelöscht. Whiskys / Details / Bewertungen / Teilnahme sind per CASCADE mit weg.')
+  console.log(`  ✓ ${photos} Foto-Datei(en) entfernt.\n`)
 }
 
 async function main() {

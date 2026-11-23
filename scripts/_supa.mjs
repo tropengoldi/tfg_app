@@ -56,3 +56,43 @@ export function must(res, label) {
   }
   return res
 }
+
+// ---------------------------------------------------------------------------
+// PROJ-28 · Whisky-Fotos im privaten Bucket
+// ---------------------------------------------------------------------------
+export const PHOTO_BUCKET = 'whisky-photos'
+
+/**
+ * Alle Dateien unter einem Präfix (rekursiv). Storage listet nur eine Ebene;
+ * Einträge ohne `id` sind Ordner. Liefert `{ name, created_at }` mit vollem Pfad.
+ */
+export async function listPhotoFiles(supabase, prefix) {
+  const out = []
+  const walk = async (dir) => {
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .list(dir, { limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } })
+      if (error) throw new Error(`list ${dir}: ${error.message}`)
+      for (const item of data ?? []) {
+        const path = dir ? `${dir}/${item.name}` : item.name
+        if (item.id === null) await walk(path)
+        else out.push({ name: path, created_at: item.created_at })
+      }
+      if ((data ?? []).length < 1000) break
+    }
+  }
+  await walk(prefix.replace(/\/+$/, ''))
+  return out
+}
+
+/** Löscht alle Dateien unter einem Präfix; liefert die Anzahl. */
+export async function removePhotoFolder(supabase, prefix) {
+  const files = await listPhotoFiles(supabase, prefix)
+  for (let i = 0; i < files.length; i += 100) {
+    const chunk = files.slice(i, i + 100).map((f) => f.name)
+    const { error } = await supabase.storage.from(PHOTO_BUCKET).remove(chunk)
+    if (error) throw new Error(`remove ${prefix}: ${error.message}`)
+  }
+  return files.length
+}

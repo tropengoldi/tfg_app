@@ -214,8 +214,11 @@ Betriebsaufgaben rund um das Live-Deployment (2026-08-30, v1.0.0). Kein
   `hard` nur ohne geschützte Verweise (Gastgeber, Ersteller, Whisky-Steward,
   mitgebrachte Whiskys, Bewertungen, gesendete Nachrichten); `cascade` löscht auch
   die Historie und ist für Admin-/`created_by`-Konten gesperrt.
+- `npm run photos:cleanup` (PROJ-28) — verwaiste Whisky-Fotos im Bucket finden
+  (Trockenlauf) und mit `CONFIRM=yes` löschen. `tasting:delete` und `user:delete`
+  räumen die Foto-Ordner bereits selbst mit weg.
 - Details in den Datei-Köpfen von `scripts/delete-tasting.mjs` /
-  `scripts/delete-user.mjs`.
+  `scripts/delete-user.mjs` / `scripts/cleanup-photos.mjs`.
 
 **Konkrete Beispiele (PowerShell, im Projektordner):**
 

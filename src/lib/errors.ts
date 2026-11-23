@@ -38,6 +38,7 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   TS024: 'Testkonten können nur andere Testkonten anschreiben.',
   TS025: 'Testkonten können keine Admins sein.',
   TS026: 'Merken ist gerade nicht möglich.',
+  TS027: 'Ungültiger Speicherort für das Foto.',
 
   // --- Standard-PostgreSQL-Codes -----------------------------------------
   '23505': 'Dieser Eintrag existiert bereits.',
