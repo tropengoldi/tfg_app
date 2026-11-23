@@ -42,7 +42,7 @@
 | PROJ-25 | Erweiterte Ergebnis-Statistiken | Deployed | [PROJ-25-erweiterte-ergebnis-statistiken.md](PROJ-25-erweiterte-ergebnis-statistiken.md) | 2026-10-05 |
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
 | PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Deployed | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
-| PROJ-28 | Whisky-Fotos | Approved | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
+| PROJ-28 | Whisky-Fotos | Deployed | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
 | PROJ-29 | Steward-Bewertung durch Teilnehmer | Roadmap | – | 2026-11-23 |
 
 <!-- Add features above this line -->
@@ -140,6 +140,13 @@ Nummern-Knöpfe, Gruppen verschmelzen, nur ausgeschenkte Whiskies, nach dem Absc
 PROJ-27 (Release-Notes-Seite „Neuigkeiten“: öffentliche Seite `/neuigkeiten` ohne Login, `noindex`,
 Release Notes zu PROJ-18..26 auf dem Marken-Hintergrund) am 2026-10-09 als `v1.16.0` live, ohne
 DB-Migration.
+PROJ-28 (Whisky-Fotos: je ein optionales Foto pro Tasting-Whisky und Sammlungs-Eintrag, im Browser
+verkleinert und ohne GPS, privater Bucket mit signierten Links, Blindheit bis zum Abschluss, danach
+Archiv für alle aktiven Mitglieder; Mini-Bilder in Rangliste, Ausschankliste und Sammlung; Kopie bei
+„Zur Sammlung hinzufügen“; neues Wartungsskript `photos:cleanup`) am 2026-11-23 als `v1.17.0` live (mit
+DB-Migration `20261123120000_whisky_photos.sql`; 34/34 AC nach Re-Test, 1 High-Bug während der QA
+gefunden und behoben — Whisky-Dialog auf dem Handy nicht abschließbar —, BUG-2 akzeptiert, BUG-3 Low
+im Backlog). Offen auf der Roadmap: PROJ-17 (Web-Push), PROJ-29 (Steward-Bewertung).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)

@@ -1,6 +1,6 @@
 # PROJ-28: Whisky-Fotos
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -498,4 +498,15 @@ Bewusst ohne Event im Status „aktiv" (Live-DB; ein Start könnte ein echtes Ta
 - **Recommendation:** Deploy (Reihenfolge: Migration ist bereits live → Code-Push)
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-11-23 als **`v1.17.0`** (Commit `10ed131`, Vercel-Auto-Deploy über `main`)
+- **Reihenfolge eingehalten:** Migration `20261123120000_whisky_photos.sql` (inkl. Bucket
+  `whisky-photos`) war vor dem Code-Push per `db:push` eingespielt
+- **Vorab:** Lint und Produktions-Build lokal grün; keine neuen Umgebungsvariablen; keine CSP,
+  die Bilder von der Supabase-Domain blockieren würde
+- **Post-Deploy-Smoke-Test:** PROJ-28-E2E-Suite gegen die Produktions-URL
+  (temporäre Playwright-Konfiguration, danach gelöscht): **24/24 grün** (Chromium + Mobile
+  Safari) — Upload, Verkleinerung/Drehung/ohne GPS, Blindheit, Rangliste + Vollbild,
+  Admin-Nachtrag, Kopie in die Sammlung, Löschen. Bucket danach leer (`photos:cleanup`)
+- **Offen (Backlog):** HEIC aus der Android-Galerie auf echtem Gerät; BUG-3 (Low)
