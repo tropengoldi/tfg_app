@@ -1,6 +1,6 @@
 # PROJ-28: Whisky-Fotos
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -262,6 +262,63 @@ Felder unangetastet.
 - Schreibrechte: Gastgeber/Steward (nicht Bringer) kann nicht hochladen; Admin kann es immer.
 - Sammlung: ausgeschalteter Schalter sperrt auch die Dateien.
 - Aufräumen: nach Ersetzen/Entfernen/Löschen bleibt keine Datei zurück.
+
+## Implementation Notes (Frontend)
+
+**Stand 2026-11-23 — Frontend gebaut, läuft erst mit der Backend-Migration.** Die Abfragen
+lesen bereits die neuen Spalten `photo_path` / `photo_thumb_path`; ohne Migration schlagen
+„Meine Whiskys", Ergebnisseite, Steuerungsseite und Sammlung gegen die Live-DB fehl. Deshalb
+**nicht pushen, bevor `/backend` fertig und `db:push` eingespielt ist.** Die Typen in
+`src/lib/supabase/types.ts` sind von Hand so ergänzt, wie `npm run db:types` sie nach der
+Migration erzeugen wird.
+
+**Neue Bausteine**
+- `src/lib/photos/paths.ts` — Bucket-Name, Ordner (`tasting/<event>/<whisky>`,
+  `collection/<profil>/<eintrag>`), neues Pfad-Paar je Upload, serverseitige Prüfung
+  `isPhotoPairFor` (Ordner + gleicher Zeitstempel, keine Pfad-Tricks) — mit Unit-Tests
+- `src/lib/photos/resize.ts` — Prüfung (Bild, ≤ 20 MB, HEIC per Dateiname), Verkleinern per
+  Canvas auf 1600 px / 240 px JPEG, Drehung aus EXIF, Metadaten (GPS) fallen weg — Unit-Tests
+  für die reinen Funktionen
+- `src/lib/photos/upload.ts` — Browser lädt beide Fassungen direkt in den Bucket
+  (bewusste Ausnahme von „Mutationen nur über Server-Aktionen", siehe Tech Design)
+- `src/lib/photos/signed.ts` — signiert alle Pfade einer Seite in einem Aufruf (1 h), mit den
+  Rechten des Betrachters; Fehler → Platzhalter statt Seitenfehler
+- `src/lib/actions/photos.ts` — `setWhiskyPhotoAction` (RPC `set_whisky_photo`, räumt alte
+  Dateien weg, bei Ablehnung auch die neuen) und `setCollectionPhotoAction`
+- `src/components/photos/` — `PhotoThumb` (Mini-Bild/Platzhalter, Vollbild-Dialog),
+  `PhotoControl` (Hinzufügen/Ersetzen/Entfernen mit Ladeanzeige, Fehlermeldung +
+  „Erneut versuchen", Bestätigung beim Entfernen), `PhotoPicker` (Auswahl im Anlege-Formular)
+
+**Eingebunden**
+- „Meine Whiskys": Foto-Feld an jeder Whisky-Zeile, in jedem Status aktiv; Foto-Auswahl im
+  „Whisky hinzufügen"-Dialog (Upload nach dem Speichern mit der neuen ID — `addWhiskyAction`
+  gibt sie jetzt zurück); Hinweis bei geschlossenem Eintragen, dass Fotos weiter gehen
+- `removeWhiskyAction`: löst vorher das Foto und löscht die Dateien, dann `remove_whisky`
+- Steuerungsseite: Mini-Bild in der Ausschankliste (Entwurf + laufend)
+- Ergebnisseite: Mini-Bild in jeder Ranglisten-Karte; Foto-Aktionen für Bringer und Admin;
+  „Zur Sammlung hinzufügen" kopiert das Tasting-Foto (außer man wählt ein eigenes)
+- Sammlung: Mini-Bild auf jeder Karte, Foto-Aktionen in der eigenen Sammlung, Foto-Auswahl im
+  Anlege-Dialog; Löschen eines Eintrags löscht die Dateien mit
+- Fremde Sammlung: nur Mini-Bild (Sichtbarkeit regelt RLS/Bucket)
+
+**Abweichung von der Spec:** Beim *Bearbeiten* eines Whiskys bzw. Sammlungs-Eintrags sitzt
+das Foto nicht im Dialog, sondern direkt an der Zeile/Karte und speichert sofort. So ist es
+nach dem Start (wenn der Bearbeiten-Dialog gesperrt ist) am selben Ort erreichbar wie vorher.
+
+**Vertrag für `/backend`**
+- Spalten `photo_path`, `photo_thumb_path` (text, null) an `whisky_details` und
+  `collection_entries`; Spalten-GRANT für Update bei `collection_entries` ergänzen,
+  bei `whisky_details` **nicht** (Schreiben nur über die RPC)
+- `whisky_rankings` reicht beide Spalten durch (angehängt)
+- RPC `set_whisky_photo(p_whisky uuid, p_photo_path text default null, p_thumb_path text
+  default null)` → `table(old_photo_path text, old_thumb_path text)`; Bringer oder Admin, jeder
+  Status; prüft, dass die Pfade im Ordner `tasting/<event>/<whisky>/` liegen; beide null =
+  entfernen
+- Privater Bucket `whisky-photos`, 2 MB, nur `image/jpeg`; Regeln auf `storage.objects`:
+  Lesen tasting = gemeinsame Prüf-Funktion „darf Details sehen", collection = eigene oder
+  `profile_shows_collection` (inkl. Testkonten-Regel); Anlegen/Löschen tasting = Bringer oder
+  Admin, collection = nur eigener Ordner. Kopieren braucht Lesen der Quelle + Anlegen im Ziel
+- `tasting:delete` / `user:delete` räumen Ordner mit; neues Skript `photos:cleanup`
 
 ## QA Test Results
 _To be added by /qa_

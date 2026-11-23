@@ -4,10 +4,13 @@ import { revalidatePath } from 'next/cache'
 
 import { getSessionContext } from '@/lib/auth'
 import { messageForDbError } from '@/lib/errors'
+import { PHOTO_BUCKET } from '@/lib/photos/paths'
 import { toNumber, whiskyFormSchema } from '@/lib/schemas/whiskies'
 import { createClient } from '@/lib/supabase/server'
 
 export type ActionResult = { error: string } | { ok: true }
+/** PROJ-28: beim Anlegen kommt die neue ID zurück, damit ein Foto folgen kann. */
+export type AddWhiskyResult = { error: string } | { ok: true; whiskyId: string }
 
 function pathFor(eventId: string): string {
   return `/tastings/${eventId}/whiskies`
@@ -48,7 +51,7 @@ function normalize(input: unknown): Normalized {
 export async function addWhiskyAction(
   eventId: string,
   input: unknown,
-): Promise<ActionResult> {
+): Promise<AddWhiskyResult> {
   const session = await getSessionContext()
   if (!session) return { error: 'Bitte melde dich neu an.' }
 
@@ -56,7 +59,7 @@ export async function addWhiskyAction(
   if (!n.ok) return { error: n.error }
 
   const supabase = await createClient()
-  const { error } = await supabase.rpc('add_whisky', {
+  const { data: whiskyId, error } = await supabase.rpc('add_whisky', {
     p_event: eventId,
     p_name: n.data.name,
     p_video_url: n.data.videoUrl,
@@ -68,7 +71,7 @@ export async function addWhiskyAction(
   if (error) return { error: messageForDbError(error) }
 
   revalidatePath(pathFor(eventId))
-  return { ok: true }
+  return { ok: true, whiskyId }
 }
 
 /**
@@ -112,7 +115,14 @@ export async function updateWhiskyAction(
   return { ok: true }
 }
 
-/** Einen eigenen Whisky entfernen (nur solange „In Vorbereitung"). */
+/**
+ * Einen eigenen Whisky entfernen (nur solange „In Vorbereitung").
+ *
+ * PROJ-28: Hat der Whisky ein Foto, wird es vorher gelöst und die Dateien
+ * gelöscht — solange der Whisky noch existiert, erlaubt der Bucket dem Bringer
+ * das Löschen. Scheitert danach `remove_whisky`, bleibt der Whisky ohne Foto
+ * stehen (kein Verweis ins Leere).
+ */
 export async function removeWhiskyAction(
   eventId: string,
   whiskyId: string,
@@ -121,6 +131,18 @@ export async function removeWhiskyAction(
   if (!session) return { error: 'Bitte melde dich neu an.' }
 
   const supabase = await createClient()
+  const { data: photo } = await supabase
+    .from('whisky_details')
+    .select('photo_path, photo_thumb_path')
+    .eq('whisky_id', whiskyId)
+    .maybeSingle()
+  if (photo?.photo_path || photo?.photo_thumb_path) {
+    const { error: clearError } = await supabase.rpc('set_whisky_photo', { p_whisky: whiskyId })
+    if (clearError) return { error: messageForDbError(clearError) }
+    const files = [photo.photo_path, photo.photo_thumb_path].filter((p): p is string => Boolean(p))
+    await supabase.storage.from(PHOTO_BUCKET).remove(files).catch(() => {})
+  }
+
   const { error } = await supabase.rpc('remove_whisky', { p_whisky: whiskyId })
   if (error) return { error: messageForDbError(error) }
 

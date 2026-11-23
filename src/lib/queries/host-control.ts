@@ -1,3 +1,4 @@
+import { photoFor, signPhotoPairs, type PhotoUrls } from '@/lib/photos/signed'
 import { createClient } from '@/lib/supabase/server'
 import type { EventStatus } from '@/lib/supabase/aliases'
 import {
@@ -11,6 +12,8 @@ export interface OrderedWhisky {
   whisky_id: string
   name: string
   position: number
+  /** PROJ-28: Mini-Bild für die Ausschankliste; `null` = kein Foto. */
+  photo: PhotoUrls | null
 }
 
 export interface RatingProgress {
@@ -117,16 +120,22 @@ export async function getHostControlData(
       .select('id, position')
       .eq('event_id', eventId)
       .order('position', { ascending: true }),
-    supabase.from('whisky_details').select('whisky_id, name').eq('event_id', eventId),
+    supabase
+      .from('whisky_details')
+      .select('whisky_id, name, photo_path, photo_thumb_path')
+      .eq('event_id', eventId),
   ])
 
   const nameById = new Map(
     (details ?? []).map((d) => [d.whisky_id as string, d.name as string]),
   )
+  const photos = await signPhotoPairs(supabase, details ?? [])
+  const photoById = new Map((details ?? []).map((d) => [d.whisky_id, photoFor(photos, d)]))
   const whiskies: OrderedWhisky[] = (rows ?? []).map((r) => ({
     whisky_id: r.id,
     name: nameById.get(r.id) ?? '—',
     position: r.position,
+    photo: photoById.get(r.id) ?? null,
   }))
 
   let progress: RatingProgress | null = null

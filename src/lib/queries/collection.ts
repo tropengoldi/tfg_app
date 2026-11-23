@@ -1,7 +1,12 @@
+import { photoFor, signPhotoPairs, type PhotoUrls } from '@/lib/photos/signed'
 import { createClient } from '@/lib/supabase/server'
 
 export interface CollectionEntry {
   id: string
+  /** PROJ-28: Besitzer — bestimmt den Foto-Ordner. */
+  profileId: string
+  /** PROJ-28: signierte Links, `null` = kein Foto. */
+  photo: PhotoUrls | null
   name: string
   distillery: string | null
   region: string | null
@@ -20,7 +25,7 @@ export interface CollectionEntry {
 }
 
 const COLUMNS =
-  'id, name, distillery, region, age_label, tasted_on, value_note, rating, notes, owned, source_event_id, source_event_date, updated_at'
+  'id, profile_id, name, distillery, region, age_label, tasted_on, value_note, rating, notes, owned, source_event_id, source_event_date, updated_at, photo_path, photo_thumb_path'
 
 /**
  * Liest die Sammlungs-Einträge eines Mitglieds (PROJ-15) — derselbe Aufruf
@@ -39,8 +44,12 @@ export async function getCollectionEntries(profileId: string): Promise<Collectio
     .order('updated_at', { ascending: false })
   if (error) throw error
 
+  const photos = await signPhotoPairs(supabase, data ?? [])
+
   return (data ?? []).map((r) => ({
     id: r.id,
+    profileId: r.profile_id,
+    photo: photoFor(photos, r),
     name: r.name,
     distillery: r.distillery,
     region: r.region,

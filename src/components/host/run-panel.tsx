@@ -38,6 +38,7 @@ export function RunPanel({
   const total = whiskies.length
   const last = isLastWhisky(currentPosition, total)
   const nameById = new Map(whiskies.map((w) => [w.whisky_id, w.name]))
+  const photoById = new Map(whiskies.map((w) => [w.whisky_id, w.photo]))
 
   const [advancing, startAdvancing] = useTransition()
   const [closing, startClosing] = useTransition()
@@ -140,6 +141,7 @@ export function RunPanel({
           <WhiskyOrderList
             ids={whiskies.map((w) => w.whisky_id)}
             nameById={nameById}
+            photoById={photoById}
             editable={false}
             changed={false}
             saving={false}

@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 
+import { PhotoControl } from '@/components/photos/photo-control'
+import { PhotoThumb } from '@/components/photos/photo-thumb'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,7 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { setCollectionPhotoAction } from '@/lib/actions/photos'
 import { formatEventDate } from '@/lib/dates'
+import { collectionPhotoFolder } from '@/lib/photos/paths'
 import { formatPoints } from '@/lib/points'
 import type { CollectionEntry } from '@/lib/queries/collection'
 
@@ -34,6 +38,7 @@ export function CollectionEntryCard({
     <Card>
       <CardContent className="space-y-2 pt-6">
         <div className="flex items-start gap-3">
+          <PhotoThumb photo={entry.photo} name={entry.name} />
           <div className="min-w-0 flex-1 space-y-1">
             <p className="font-display text-lg leading-tight">{entry.name}</p>
             {meta ? <p className="text-xs text-muted-foreground">{meta}</p> : null}
@@ -92,6 +97,17 @@ export function CollectionEntryCard({
 
         {entry.notes ? (
           <p className="whitespace-pre-wrap text-sm text-muted-foreground">{entry.notes}</p>
+        ) : null}
+
+        {editable ? (
+          <PhotoControl
+            photo={entry.photo}
+            name={entry.name}
+            canEdit
+            hideThumb
+            folder={collectionPhotoFolder(entry.profileId, entry.id)}
+            save={(paths) => setCollectionPhotoAction(entry.id, paths)}
+          />
         ) : null}
 
         {entry.sourceEventDate ? (

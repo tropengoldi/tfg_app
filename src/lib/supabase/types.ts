@@ -23,6 +23,8 @@ export type Database = {
           name: string
           notes: string | null
           owned: boolean
+          photo_path: string | null
+          photo_thumb_path: string | null
           profile_id: string
           rating: number | null
           region: string | null
@@ -40,6 +42,8 @@ export type Database = {
           name: string
           notes?: string | null
           owned?: boolean
+          photo_path?: string | null
+          photo_thumb_path?: string | null
           profile_id: string
           rating?: number | null
           region?: string | null
@@ -57,6 +61,8 @@ export type Database = {
           name?: string
           notes?: string | null
           owned?: boolean
+          photo_path?: string | null
+          photo_thumb_path?: string | null
           profile_id?: string
           rating?: number | null
           region?: string | null
@@ -624,6 +630,8 @@ export type Database = {
           event_id: string
           name: string
           owner_notes: string | null
+          photo_path: string | null
+          photo_thumb_path: string | null
           price_eur: number | null
           region: string | null
           updated_at: string
@@ -641,6 +649,8 @@ export type Database = {
           event_id: string
           name: string
           owner_notes?: string | null
+          photo_path?: string | null
+          photo_thumb_path?: string | null
           price_eur?: number | null
           region?: string | null
           updated_at?: string
@@ -658,6 +668,8 @@ export type Database = {
           event_id?: string
           name?: string
           owner_notes?: string | null
+          photo_path?: string | null
+          photo_thumb_path?: string | null
           price_eur?: number | null
           region?: string | null
           updated_at?: string
@@ -882,6 +894,8 @@ export type Database = {
           is_test: boolean | null
           name: string | null
           nose_total: number | null
+          photo_path: string | null
+          photo_thumb_path: string | null
           position: number | null
           price_eur: number | null
           rank: number | null
@@ -1188,6 +1202,13 @@ export type Database = {
       set_whisky_order: {
         Args: { p_event: string; p_ordered: string[] }
         Returns: undefined
+      }
+      set_whisky_photo: {
+        Args: { p_photo_path?: string; p_thumb_path?: string; p_whisky: string }
+        Returns: {
+          old_photo_path: string
+          old_thumb_path: string
+        }[]
       }
       set_winner_tip: {
         Args: { p_event: string; p_position: number }

@@ -8,6 +8,7 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
+import { PhotoPicker } from '@/components/photos/photo-picker'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -42,6 +43,9 @@ import {
   updateCollectionEntryAction,
   type CollectionOrigin,
 } from '@/lib/actions/collection'
+import { setCollectionPhotoAction } from '@/lib/actions/photos'
+import { collectionPhotoFolder } from '@/lib/photos/paths'
+import { uploadPhoto } from '@/lib/photos/upload'
 import { formatEventDate, toISODate } from '@/lib/dates'
 import { formatPoints } from '@/lib/points'
 import type { CollectionEntry } from '@/lib/queries/collection'
@@ -70,7 +74,9 @@ export interface CollectionEntryDialogProps {
   entry?: CollectionEntry
   /** Nur beim Anlegen über den PROJ-9-„Zur Sammlung hinzufügen"-Button:
    * füllt Name + Notiz vor und setzt das Herkunftsfeld beim Speichern. */
-  origin?: CollectionOrigin & { whiskyName: string; note: string | null }
+  origin?: CollectionOrigin & { whiskyName: string; note: string | null; hasPhoto?: boolean }
+  /** PROJ-28: eigene ID — Ordner für ein beim Anlegen gewähltes Foto. */
+  profileId?: string
   onSaved: () => void
 }
 
@@ -87,10 +93,13 @@ export function CollectionEntryDialog({
   onOpenChange,
   entry,
   origin,
+  profileId,
   onSaved,
 }: CollectionEntryDialogProps) {
   const isEdit = Boolean(entry)
   const [pending, startTransition] = React.useTransition()
+  // PROJ-28: Foto nur beim Anlegen hier; beim Bearbeiten liegt es an der Karte.
+  const [photoFile, setPhotoFile] = React.useState<File | null>(null)
 
   const defaultValues: CollectionEntryFormInput = entry
     ? {
@@ -131,12 +140,31 @@ export function CollectionEntryDialog({
           ? await updateCollectionEntryAction(entry.id, values)
           : await addCollectionEntryAction(
               values,
-              origin ? { eventId: origin.eventId, eventDate: origin.eventDate } : undefined,
+              origin
+                ? { eventId: origin.eventId, eventDate: origin.eventDate, whiskyId: origin.whiskyId }
+                : undefined,
+              // Eigenes Foto gewählt → Tasting-Foto nicht zusätzlich kopieren.
+              { copyPhoto: photoFile === null },
             )
 
       if ('error' in result) {
         form.setError('root', { message: result.error })
         return
+      }
+
+      // PROJ-28: Der Eintrag ist gespeichert — ein Foto-Fehler macht das nicht rückgängig.
+      const newId = 'entryId' in result && typeof result.entryId === 'string' ? result.entryId : null
+      if (!isEdit && photoFile && newId && profileId) {
+        const up = await uploadPhoto(photoFile, collectionPhotoFolder(profileId, newId))
+        const saved = up.ok
+          ? await setCollectionPhotoAction(newId, up.paths)
+          : { error: up.error }
+        if ('error' in saved) {
+          toast.warning(`Eintrag gespeichert, aber das Foto fehlt: ${saved.error}`)
+          onOpenChange(false)
+          onSaved()
+          return
+        }
       }
       toast.success(isEdit ? 'Eintrag aktualisiert.' : 'Eintrag gespeichert.')
       onOpenChange(false)
@@ -344,6 +372,19 @@ export function CollectionEntryDialog({
                 </FormItem>
               )}
             />
+
+            {!isEdit && profileId ? (
+              <PhotoPicker
+                file={photoFile}
+                onChange={setPhotoFile}
+                disabled={pending}
+                hint={
+                  origin?.hasPhoto
+                    ? 'Ohne eigene Auswahl wird das Foto aus dem Tasting übernommen.'
+                    : undefined
+                }
+              />
+            ) : null}
 
             <DialogFooter>
               <Button type="submit" disabled={pending}>

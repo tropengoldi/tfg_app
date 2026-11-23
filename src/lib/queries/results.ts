@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { photoFor, signPhotoPairs, type PhotoUrls } from '@/lib/photos/signed'
 import {
   computeResultStats,
   ownPlacements,
@@ -111,6 +112,8 @@ export interface RankingRow {
   abv: number | null
   ageYears: number | null
   price: number | null
+  /** PROJ-28: signierte Links, `null` = kein Foto. */
+  photo: PhotoUrls | null
 }
 
 export interface EventResults {
@@ -171,7 +174,7 @@ export async function getEventResults(
     supabase
       .from('whisky_rankings')
       .select(
-        'whisky_id, position, rank, name, distillery, region, brought_by, video_url, nose_total, taste_total, total_points, rating_count, abv, age_years, price_eur',
+        'whisky_id, position, rank, name, distillery, region, brought_by, video_url, nose_total, taste_total, total_points, rating_count, abv, age_years, price_eur, photo_path, photo_thumb_path',
       )
       .eq('event_id', eventId)
       .order('rank', { ascending: true }),
@@ -279,6 +282,8 @@ export async function getEventResults(
       })),
   )
 
+  const photos = await signPhotoPairs(supabase, rankRows)
+
   const ranking: RankingRow[] = rankRows
     .map((r) => ({
       whiskyId: r.whisky_id,
@@ -301,6 +306,7 @@ export async function getEventResults(
       abv: num(r.abv),
       ageYears: num(r.age_years),
       price: num(r.price_eur),
+      photo: photoFor(photos, r),
     }))
 
   return {

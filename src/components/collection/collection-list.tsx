@@ -14,7 +14,14 @@ import { Input } from '@/components/ui/input'
 import { deleteCollectionEntryAction } from '@/lib/actions/collection'
 import type { CollectionEntry } from '@/lib/queries/collection'
 
-export function CollectionList({ entries }: { entries: CollectionEntry[] }) {
+export function CollectionList({
+  entries,
+  profileId,
+}: {
+  entries: CollectionEntry[]
+  /** PROJ-28: eigene ID — Ordner für Fotos neuer Einträge. */
+  profileId: string
+}) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -107,6 +114,7 @@ export function CollectionList({ entries }: { entries: CollectionEntry[] }) {
         open={formOpen}
         onOpenChange={setFormOpen}
         entry={editTarget ?? undefined}
+        profileId={profileId}
         onSaved={() => router.refresh()}
       />
       <ConfirmDialog

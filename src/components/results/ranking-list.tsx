@@ -14,6 +14,8 @@ export function RankingList({
   eventDate,
   viewerHasRated,
   kenner,
+  viewerId,
+  viewerIsAdmin,
 }: {
   ranking: EventResults['ranking']
   participantCount: number
@@ -23,6 +25,9 @@ export function RankingList({
   viewerHasRated: boolean
   /** PROJ-22: Kenner-Hinweis für die Sieger-Zeile. */
   kenner?: KennerSummary
+  /** PROJ-28: Bringer und Admin dürfen Fotos pflegen. */
+  viewerId: string
+  viewerIsAdmin: boolean
 }) {
   const ties = tieRanks(
     ranking.map((r) => ({ rank: r.rank, totalPoints: r.totalPoints })),
@@ -53,6 +58,8 @@ export function RankingList({
             eventDate={eventDate}
             viewerHasRated={viewerHasRated}
             kenner={row.rank === 1 ? kenner : undefined}
+            canEditPhoto={viewerIsAdmin || row.broughtById === viewerId}
+            viewerId={viewerId}
           />
         ))}
       </ol>

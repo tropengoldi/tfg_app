@@ -51,7 +51,8 @@ export default async function WhiskyEntryPage({
         <Alert className="mb-4">
           <Lock className="h-4 w-4" />
           <AlertDescription>
-            Das Eintragen für diesen Abend ist geschlossen.
+            Das Eintragen für diesen Abend ist geschlossen. Fotos kannst du weiterhin
+            hinzufügen, ersetzen oder entfernen.
           </AlertDescription>
         </Alert>
       ) : null}

@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
@@ -25,8 +25,12 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { PhotoPicker } from '@/components/photos/photo-picker'
 import { Textarea } from '@/components/ui/textarea'
+import { setWhiskyPhotoAction } from '@/lib/actions/photos'
 import { addWhiskyAction, updateWhiskyAction } from '@/lib/actions/whiskies'
+import { tastingPhotoFolder } from '@/lib/photos/paths'
+import { uploadPhoto } from '@/lib/photos/upload'
 import { whiskyFormSchema, type WhiskyFormInput } from '@/lib/schemas/whiskies'
 
 const EMPTY: WhiskyFormInput = {
@@ -67,6 +71,8 @@ export function WhiskyFormDialog({
 }: WhiskyFormDialogProps) {
   const isEdit = Boolean(whiskyId)
   const [pending, startTransition] = useTransition()
+  // PROJ-28: Foto nur beim Anlegen hier; beim Bearbeiten liegt es an der Whisky-Zeile.
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
   const form = useForm<WhiskyFormInput>({
     resolver: zodResolver(whiskyFormSchema),
     defaultValues: defaultValues ?? EMPTY,
@@ -81,6 +87,21 @@ export function WhiskyFormDialog({
       if ('error' in result) {
         form.setError('root', { message: result.error })
         return
+      }
+
+      // PROJ-28: Der Whisky ist gespeichert — ein Foto-Fehler macht das nicht rückgängig.
+      const newId = 'whiskyId' in result && typeof result.whiskyId === 'string' ? result.whiskyId : null
+      if (!isEdit && photoFile && newId) {
+        const up = await uploadPhoto(photoFile, tastingPhotoFolder(eventId, newId))
+        const saved = up.ok
+          ? await setWhiskyPhotoAction(eventId, newId, up.paths)
+          : { error: up.error }
+        if ('error' in saved) {
+          toast.warning(`Whisky eingetragen, aber das Foto fehlt: ${saved.error} Du kannst es in der Liste nachreichen.`)
+          onOpenChange(false)
+          onSaved()
+          return
+        }
       }
       toast.success(isEdit ? 'Whisky aktualisiert.' : 'Whisky eingetragen.')
       onOpenChange(false)
@@ -214,6 +235,15 @@ export function WhiskyFormDialog({
                 </FormItem>
               )}
             />
+
+            {!isEdit ? (
+              <PhotoPicker
+                file={photoFile}
+                onChange={setPhotoFile}
+                disabled={pending}
+                hint="Flasche oder Etikett. Sieht vor dem Abschluss niemand außer den Berechtigten."
+              />
+            ) : null}
 
             <DialogFooter>
               <Button type="submit" disabled={pending}>

@@ -4,10 +4,13 @@ import { revalidatePath } from 'next/cache'
 
 import { getSessionContext } from '@/lib/auth'
 import { messageForDbError } from '@/lib/errors'
+import { collectionPhotoFolder, newPhotoPaths, PHOTO_BUCKET } from '@/lib/photos/paths'
 import { collectionEntryFormSchema } from '@/lib/schemas/collection'
 import { createClient } from '@/lib/supabase/server'
 
 export type ActionResult = { error: string } | { ok: true }
+/** PROJ-28: beim Anlegen kommt die neue ID zurück, damit ein Foto folgen kann. */
+export type AddEntryResult = { error: string } | { ok: true; entryId: string }
 
 /** Herkunft eines über den PROJ-9-Übernehmen-Button angelegten Eintrags. Wird
  * nur beim Anlegen gesetzt und danach nie mehr geändert (auch nicht beim
@@ -15,6 +18,8 @@ export type ActionResult = { error: string } | { ok: true }
 export interface CollectionOrigin {
   eventId: string
   eventDate: string
+  /** PROJ-28: Whisky, dessen Foto als eigene Kopie übernommen wird. */
+  whiskyId?: string
 }
 
 interface Fields {
@@ -61,7 +66,8 @@ function normalize(input: unknown): Normalized {
 export async function addCollectionEntryAction(
   input: unknown,
   origin?: CollectionOrigin,
-): Promise<ActionResult> {
+  options?: { copyPhoto?: boolean },
+): Promise<AddEntryResult> {
   const session = await getSessionContext()
   if (!session) return { error: 'Bitte melde dich neu an.' }
 
@@ -69,7 +75,7 @@ export async function addCollectionEntryAction(
   if (!n.ok) return { error: n.error }
 
   const supabase = await createClient()
-  const { error } = await supabase.from('collection_entries').insert({
+  const { data: created, error } = await supabase.from('collection_entries').insert({
     profile_id: session.userId,
     name: n.data.name,
     distillery: n.data.distillery,
@@ -82,11 +88,59 @@ export async function addCollectionEntryAction(
     owned: n.data.owned,
     source_event_id: origin?.eventId ?? null,
     source_event_date: origin?.eventDate ?? null,
-  })
-  if (error) return { error: messageForDbError(error) }
+  }).select('id').single()
+  if (error || !created) {
+    return { error: error ? messageForDbError(error) : 'Speichern fehlgeschlagen.' }
+  }
+
+  if (origin?.whiskyId && options?.copyPhoto !== false) {
+    await copyTastingPhoto(supabase, session.userId, created.id, origin.whiskyId)
+  }
 
   revalidatePath('/profil/sammlung')
-  return { ok: true }
+  return { ok: true, entryId: created.id }
+}
+
+/**
+ * PROJ-28: Foto des Tasting-Whiskys als eigene, unabhängige Kopie in die
+ * Sammlung übernehmen. Läuft mit den Rechten des Nutzers: die Pfade kommen nur
+ * heraus, wenn er die Details sehen darf (Tabellen-Regel), und der Bucket prüft
+ * Lesen der Quelle und Schreiben ins eigene Sammlungs-Verzeichnis. Scheitert
+ * etwas, bleibt der Eintrag einfach ohne Foto — kein Fehler für den Nutzer.
+ */
+async function copyTastingPhoto(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  profileId: string,
+  entryId: string,
+  whiskyId: string,
+): Promise<void> {
+  const { data: src } = await supabase
+    .from('whisky_details')
+    .select('photo_path, photo_thumb_path')
+    .eq('whisky_id', whiskyId)
+    .maybeSingle()
+  if (!src?.photo_path || !src.photo_thumb_path) return
+
+  const dest = newPhotoPaths(collectionPhotoFolder(profileId, entryId))
+  const bucket = supabase.storage.from(PHOTO_BUCKET)
+  try {
+    const [a, b] = await Promise.all([
+      bucket.copy(src.photo_path, dest.photoPath),
+      bucket.copy(src.photo_thumb_path, dest.thumbPath),
+    ])
+    if (a.error || b.error) {
+      await bucket.remove([dest.photoPath, dest.thumbPath])
+      return
+    }
+    const { error } = await supabase
+      .from('collection_entries')
+      .update({ photo_path: dest.photoPath, photo_thumb_path: dest.thumbPath })
+      .eq('id', entryId)
+      .eq('profile_id', profileId)
+    if (error) await bucket.remove([dest.photoPath, dest.thumbPath])
+  } catch {
+    /* Eintrag bleibt ohne Foto */
+  }
 }
 
 /**
@@ -140,10 +194,18 @@ export async function deleteCollectionEntryAction(entryId: string): Promise<Acti
     .delete()
     .eq('id', entryId)
     .eq('profile_id', session.userId)
-    .select('id')
+    .select('id, photo_path, photo_thumb_path')
   if (error) return { error: messageForDbError(error) }
   if (!data || data.length === 0) {
     return { error: 'Der Eintrag wurde bereits gelöscht.' }
+  }
+
+  // PROJ-28: Fotos mitlöschen (der Bucket erlaubt das im eigenen Verzeichnis).
+  const files = data
+    .flatMap((r) => [r.photo_path, r.photo_thumb_path])
+    .filter((p): p is string => Boolean(p))
+  if (files.length > 0) {
+    await supabase.storage.from(PHOTO_BUCKET).remove(files).catch(() => {})
   }
 
   revalidatePath('/profil/sammlung')

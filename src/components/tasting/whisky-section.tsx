@@ -6,10 +6,13 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { PhotoControl } from '@/components/photos/photo-control'
 import { WhiskyFormDialog } from '@/components/tasting/whisky-form-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { setWhiskyPhotoAction } from '@/lib/actions/photos'
 import { removeWhiskyAction } from '@/lib/actions/whiskies'
+import { tastingPhotoFolder } from '@/lib/photos/paths'
 import type { MyWhisky } from '@/lib/queries/tastings'
 import { detailsLine } from '@/lib/result-stats'
 import type { WhiskyFormInput } from '@/lib/schemas/whiskies'
@@ -108,7 +111,7 @@ export function WhiskySection({
         >
           {whiskies.map((whisky) => (
             <li key={whisky.whisky_id} className="flex items-start gap-3 p-4">
-              <div className="min-w-0 flex-1 space-y-1">
+              <div className="min-w-0 flex-1 space-y-2">
                 <p className="font-medium">{whisky.name}</p>
                 {detailsLine({
                   abv: whisky.abv,
@@ -139,6 +142,14 @@ export function WhiskySection({
                     {whisky.owner_notes}
                   </p>
                 ) : null}
+                {/* PROJ-28: Foto bleibt in jedem Status pflegbar. */}
+                <PhotoControl
+                  photo={whisky.photo}
+                  name={whisky.name}
+                  canEdit
+                  folder={tastingPhotoFolder(eventId, whisky.whisky_id)}
+                  save={(paths) => setWhiskyPhotoAction(eventId, whisky.whisky_id, paths)}
+                />
               </div>
 
               {editable ? (

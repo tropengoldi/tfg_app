@@ -14,7 +14,7 @@ export default async function MeineSammlungPage() {
   return (
     <>
       <PageHeader title="Meine Sammlung" />
-      <CollectionList entries={entries} />
+      <CollectionList entries={entries} profileId={userId} />
     </>
   )
 }

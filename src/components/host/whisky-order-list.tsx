@@ -2,12 +2,16 @@
 
 import { ArrowDown, ArrowUp, Shuffle } from 'lucide-react'
 
+import { PhotoThumb } from '@/components/photos/photo-thumb'
 import { Button } from '@/components/ui/button'
+import type { PhotoUrls } from '@/lib/photos/signed'
 
 interface WhiskyOrderListProps {
   /** IDs in aktueller Anzeige-Reihenfolge (Index 0 = Position 1). */
   ids: string[]
   nameById: Map<string, string>
+  /** PROJ-28: Mini-Bilder je Whisky (Gastgeber/Steward sehen die Details ohnehin). */
+  photoById?: Map<string, PhotoUrls | null>
   editable: boolean
   changed: boolean
   saving: boolean
@@ -20,6 +24,7 @@ interface WhiskyOrderListProps {
 export function WhiskyOrderList({
   ids,
   nameById,
+  photoById,
   editable,
   changed,
   saving,
@@ -61,6 +66,9 @@ export function WhiskyOrderList({
             <span className="w-6 shrink-0 text-center font-display text-lg text-muted-foreground">
               {index + 1}
             </span>
+            {photoById ? (
+              <PhotoThumb photo={photoById.get(id) ?? null} name={nameById.get(id) ?? ''} size="sm" />
+            ) : null}
             <span className="min-w-0 flex-1 truncate font-medium">
               {nameById.get(id) ?? '—'}
             </span>

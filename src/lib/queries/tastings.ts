@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { photoFor, signPhotoPairs, type PhotoUrls } from '@/lib/photos/signed'
 import { todayISO } from '@/lib/dates'
 import { testEventIds } from '@/lib/queries/test-flags'
 import type { EventStatus } from '@/lib/supabase/aliases'
@@ -103,6 +104,8 @@ export interface MyWhisky {
   abv: number | null
   age_years: number | null
   price_eur: number | null
+  /** PROJ-28: signierte Links, `null` = kein Foto. */
+  photo: PhotoUrls | null
 }
 
 export interface WhiskyEntryData {
@@ -157,7 +160,9 @@ export async function getWhiskyEntryData(
 
   const { data: details } = await supabase
     .from('whisky_details')
-    .select('whisky_id, name, video_url, owner_notes, abv, age_years, price_eur, created_at')
+    .select(
+      'whisky_id, name, video_url, owner_notes, abv, age_years, price_eur, created_at, photo_path, photo_thumb_path',
+    )
     .eq('event_id', eventId)
     .eq('brought_by', userId)
     .order('created_at', { ascending: true })
@@ -166,6 +171,8 @@ export async function getWhiskyEntryData(
     .from('whiskies')
     .select('id', { count: 'exact', head: true })
     .eq('event_id', eventId)
+
+  const photos = await signPhotoPairs(supabase, details ?? [])
 
   return {
     event: {
@@ -186,6 +193,7 @@ export async function getWhiskyEntryData(
       abv: d.abv === null ? null : Number(d.abv),
       age_years: d.age_years,
       price_eur: d.price_eur === null ? null : Number(d.price_eur),
+      photo: photoFor(photos, d),
     })),
     eventWhiskyCount: count ?? 0,
   }

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ChevronDown, Library, Play, Trophy } from 'lucide-react'
 
 import { CollectionEntryDialog } from '@/components/collection/collection-entry-dialog'
+import { PhotoControl } from '@/components/photos/photo-control'
+import { PhotoThumb } from '@/components/photos/photo-thumb'
 import {
   Collapsible,
   CollapsibleContent,
@@ -12,6 +14,8 @@ import {
 } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { setWhiskyPhotoAction } from '@/lib/actions/photos'
+import { tastingPhotoFolder } from '@/lib/photos/paths'
 import { formatPoints } from '@/lib/points'
 import type { RankingRow as Row } from '@/lib/queries/results'
 import { detailsLine } from '@/lib/result-stats'
@@ -33,8 +37,14 @@ export function RankingRow({
   eventDate,
   viewerHasRated,
   kenner,
+  canEditPhoto = false,
+  viewerId,
 }: {
+  /** PROJ-28: Ordner für ein eigenes Foto beim „Zur Sammlung hinzufügen". */
+  viewerId?: string
   row: Row
+  /** PROJ-28: Bringer oder Admin — zeigt die Foto-Aktionen. */
+  canEditPhoto?: boolean
   /** PROJ-22: nur an der Sieger-Zeile gesetzt. */
   kenner?: KennerSummary
   /** PROJ-25: nur wer selbst bewertet hat, sieht „Dein Platz". */
@@ -57,7 +67,7 @@ export function RankingRow({
     <li>
       <Card className={cn(isWinnerRow && 'border-gold/60 bg-gold/5')}>
         <CardContent className="space-y-3 pt-6">
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-3">
             <span
               className={cn(
                 'font-display text-3xl tabular-nums leading-none',
@@ -67,6 +77,8 @@ export function RankingRow({
             >
               {row.rank}
             </span>
+
+            <PhotoThumb photo={row.photo} name={row.name} size="sm" />
 
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-display text-xl leading-tight">
@@ -130,6 +142,17 @@ export function RankingRow({
 
           <VideoRow name={row.name} videoUrl={row.videoUrl} />
 
+          {canEditPhoto ? (
+            <PhotoControl
+              photo={row.photo}
+              name={row.name}
+              canEdit
+              hideThumb
+              folder={tastingPhotoFolder(eventId, row.whiskyId)}
+              save={(paths) => setWhiskyPhotoAction(eventId, row.whiskyId, paths)}
+            />
+          ) : null}
+
           {row.ownNote ? (
             <p className="whitespace-pre-wrap rounded-md bg-muted px-3 py-2 text-sm italic text-muted-foreground">
               Deine Notiz: {row.ownNote}
@@ -185,9 +208,12 @@ export function RankingRow({
           origin={{
             eventId,
             eventDate,
+            whiskyId: row.whiskyId,
             whiskyName: row.name,
             note: row.ownNote,
+            hasPhoto: row.photo !== null,
           }}
+          profileId={viewerId}
           onSaved={() => {}}
         />
       ) : null}

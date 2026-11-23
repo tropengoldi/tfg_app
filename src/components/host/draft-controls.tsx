@@ -25,6 +25,7 @@ export function DraftControls({
   const router = useRouter()
   const initialIds = whiskies.map((w) => w.whisky_id)
   const nameById = new Map(whiskies.map((w) => [w.whisky_id, w.name]))
+  const photoById = new Map(whiskies.map((w) => [w.whisky_id, w.photo]))
 
   const [ids, setIds] = useState<string[]>(initialIds)
   const [savingOrder, startSaveOrder] = useTransition()
@@ -69,6 +70,7 @@ export function DraftControls({
           <WhiskyOrderList
             ids={ids}
             nameById={nameById}
+            photoById={photoById}
             editable
             changed={changed}
             saving={busy}

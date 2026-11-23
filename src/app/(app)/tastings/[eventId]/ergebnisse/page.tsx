@@ -10,6 +10,7 @@ import { TipsSection } from '@/components/results/tips-section'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/auth-rules'
 import { formatEventDate } from '@/lib/dates'
 import { getEventResults } from '@/lib/queries/results'
 import { getRevealedTips } from '@/lib/queries/tips'
@@ -23,7 +24,7 @@ export default async function ErgebnissePage({
   params: Promise<{ eventId: string }>
 }) {
   const { eventId } = await params
-  const { userId } = await requireUser()
+  const { userId, profile } = await requireUser()
 
   const data = await getEventResults(eventId, userId)
   if (data === null) notFound()
@@ -79,6 +80,8 @@ export default async function ErgebnissePage({
               eventDate={data.head.event_date}
               viewerHasRated={data.viewerHasRated}
               kenner={kenner}
+              viewerId={userId}
+              viewerIsAdmin={isAdmin(profile)}
             />
             {kenner ? <TipsSection tips={tips} summary={kenner} /> : null}
             {data.hasAnyRatings ? (
