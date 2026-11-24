@@ -1,6 +1,6 @@
 # PROJ-30: Feedback-Formular (Fehler & Wünsche)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-11-24
 **Last Updated:** 2026-11-24
 
@@ -417,4 +417,18 @@ Playwright-Setup.
   ankommt.
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://tfg-app-self.vercel.app/feedback (Link auf der Startseite)
+- **Deployed:** 2026-11-24 als `v1.19.0` (Vercel-Auto-Deploy beim Push auf `main`)
+- **DB-Migration:** `20261125120000_feedback_submissions.sql`. Der Nutzer hat sie **vor** dem Code-Push per `db:push`
+  eingespielt; die Typen sind neu erzeugt.
+- **Umgebungsvariable:** `FEEDBACK_EMAIL` ist bei Vercel (Production) gesetzt. `FEEDBACK_DRY_RUN` ist bei Vercel
+  **nicht** gesetzt.
+- **Vorab-Checks:**
+  - Build und Lint grün.
+  - Unit 268/268, Integration 8/8, E2E 30/30.
+  - Regression PROJ-16 und PROJ-27 grün.
+  - Keine Secrets im Diff.
+- **Offener Low-Bug:** BUG-1 (abgelaufene Sitzung zeigt „Keine Verbindung“). Er steht im Post-Deploy-Backlog.
+- **Nach dem Deploy:** Eine echte Feedback-Nachricht über die Live-App senden und prüfen, ob die Mail mit Reply-To
+  ankommt.
