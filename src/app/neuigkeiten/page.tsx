@@ -35,7 +35,8 @@ export default function NeuigkeitenPage() {
               </h1>
               <p className="text-sm text-muted-foreground">Stand 24. November 2026</p>
               <p className="leading-relaxed">
-                Ganz frisch im Glas: <b>Noten für den Whisky-Steward</b> und <b>Whisky-Fotos</b>.
+                Ganz frisch im Glas: ein <b>Kummerkasten für Fehler und Wünsche</b>,{' '}
+                <b>Noten für den Whisky-Steward</b> und <b>Whisky-Fotos</b>.
                 Darunter weiterhin alles aus dem Oktober –
                 neun Neuerungen, von halben Punkten bis zum Sieger-Tipp. Hier der Überblick in einem
                 Schluck – ohne Abgang, aber mit viel Nachhall.
@@ -45,6 +46,21 @@ export default function NeuigkeitenPage() {
                 aktualisiert sich von selbst, beim nächsten Öffnen ist alles da.
               </p>
             </header>
+
+            <Section title="Neu im November: Fehler gefunden? Idee im Glas?">
+              <p>
+                Irgendwas klemmt, oder euch kommt nach dem dritten Dram die zündende Idee? Ganz unten
+                auf der Startseite wartet jetzt <b>„Fehler gefunden oder eine Idee?“</b>. Antippen,
+                Fehler, Wunsch oder Sonstiges wählen, ein paar Sätze schreiben, absenden – die
+                Nachricht landet direkt beim Admin, mit eurem Namen, damit er nachfragen kann.
+              </p>
+              <p>
+                Bei Fehlern schickt die App gleich mit, auf welcher Seite und mit welchem Gerät es
+                passiert ist. Das spart die Rückfrage „Welches Handy war das nochmal?“. Gespeichert
+                wird nichts, und fünf Nachrichten pro Stunde reichen auch für die längste
+                Wunschliste. Ab dem sechsten Glas bitte erst ein Wasser.
+              </p>
+            </Section>
 
             <Section title="Neu im November: Eine Note für den Steward">
               <p>

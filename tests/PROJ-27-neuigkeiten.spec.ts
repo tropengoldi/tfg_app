@@ -7,6 +7,7 @@ import { expect, test } from '@playwright/test'
 import { createDisposableUser, deleteUser, hasServiceClient, login } from './helpers/auth'
 
 const SECTIONS = [
+  'Neu im November: Fehler gefunden? Idee im Glas?',
   'Neu im November: Eine Note für den Steward',
   'Neu im November: Fotos von der Flasche',
   'Neue Begriffe: Nase, Gaumen, Steward',
