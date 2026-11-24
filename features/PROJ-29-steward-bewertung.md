@@ -1,8 +1,8 @@
 # PROJ-29: Steward-Bewertung durch Teilnehmer
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-11-23
-**Last Updated:** 2026-11-23
+**Last Updated:** 2026-11-24
 
 ## Dependencies
 - **Requires: PROJ-11 / PROJ-18 (Whisky-Steward)** — nur Tastings mit benanntem Steward.
@@ -458,4 +458,16 @@ Keine. Alle UI-Bausteine (Collapsible, Card, Textarea, AlertDialog, ScoreField) 
 - **Recommendation:** Deploy (`db:push` ist bereits erfolgt — nur der Code-Push fehlt)
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://tfg-app-self.vercel.app
+- **Deployed:** 2026-11-24 als `v1.18.0`
+- **Reihenfolge:** DB-Migration `20261124120000_steward_scores.sql` per `db:push` (Nutzer, 2026-11-24) **vor**
+  dem Code-Push; danach Backend-Commits (Build grün dank neu erzeugter Typen), zuletzt Frontend + QA + BUG-1-Fix
+  (`d1828b1`). Vercel hat automatisch ausgerollt.
+- **Vorab-Prüfung:** `npm run build` und `npm run lint` grün, keine neuen Umgebungsvariablen, alles committet.
+- **Produktions-Smoke-Test:** `tests/PROJ-29-steward-bewertung.spec.ts` gegen die Live-URL (temporäre Config,
+  danach gelöscht): **28/28** bestanden (1 erst im zweiten Anlauf — Kaltstart beim ersten Aufruf). Vorher und
+  nachher kein laufendes Tasting; keine QA29-Tastings übrig.
+- **Release Notes:** `/neuigkeiten` und das Claude-Doc „Whizzky – Was gibt's Neues im Glas?" um den Abschnitt
+  „Neu im November: Eine Note für den Steward" ergänzt (Stand 24. November 2026).
+- **Offen:** keine neuen Backlog-Punkte.

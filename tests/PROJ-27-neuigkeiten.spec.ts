@@ -7,6 +7,7 @@ import { expect, test } from '@playwright/test'
 import { createDisposableUser, deleteUser, hasServiceClient, login } from './helpers/auth'
 
 const SECTIONS = [
+  'Neu im November: Eine Note für den Steward',
   'Neu im November: Fotos von der Flasche',
   'Neue Begriffe: Nase, Gaumen, Steward',
   'Punkte: jetzt auch null und halb',
@@ -22,7 +23,7 @@ test('ohne Anmeldung: Seite lädt mit allen Abschnitten, keine Umleitung', async
   await page.goto('/neuigkeiten', { waitUntil: 'networkidle' })
   expect(new URL(page.url()).pathname).toBe('/neuigkeiten')
   await expect(page.getByRole('heading', { level: 1, name: /Was gibt.s Neues im Glas/ })).toBeVisible()
-  await expect(page.getByText('Stand 23. November 2026')).toBeVisible()
+  await expect(page.getByText('Stand 24. November 2026')).toBeVisible()
   for (const s of SECTIONS) {
     await expect(page.getByRole('heading', { level: 2, name: s })).toBeVisible()
   }

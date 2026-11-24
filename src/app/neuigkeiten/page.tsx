@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 }
 
 /**
- * Release Notes zu PROJ-18 … PROJ-26 (PROJ-27), ergänzt um PROJ-28 (Whisky-Fotos). Öffentlich ohne Anmeldung
+ * Release Notes zu PROJ-18 … PROJ-26 (PROJ-27), ergänzt um PROJ-28 (Whisky-Fotos) und
+ * PROJ-29 (Steward-Bewertung). Öffentlich ohne Anmeldung
  * (`PUBLIC_PATHS` in `src/proxy.ts`), reiner Inhalt. Hintergrund = der dezente
  * Marken-Hintergrund aus PROJ-13; der Text liegt auf einer ruhigen Karte.
  */
@@ -32,9 +33,10 @@ export default function NeuigkeitenPage() {
               <h1 className="font-display text-3xl leading-tight sm:text-4xl">
                 Was gibt&apos;s Neues im Glas?
               </h1>
-              <p className="text-sm text-muted-foreground">Stand 23. November 2026</p>
+              <p className="text-sm text-muted-foreground">Stand 24. November 2026</p>
               <p className="leading-relaxed">
-                Ganz frisch im Glas: <b>Whisky-Fotos</b>. Darunter weiterhin alles aus dem Oktober –
+                Ganz frisch im Glas: <b>Noten für den Whisky-Steward</b> und <b>Whisky-Fotos</b>.
+                Darunter weiterhin alles aus dem Oktober –
                 neun Neuerungen, von halben Punkten bis zum Sieger-Tipp. Hier der Überblick in einem
                 Schluck – ohne Abgang, aber mit viel Nachhall.
               </p>
@@ -43,6 +45,31 @@ export default function NeuigkeitenPage() {
                 aktualisiert sich von selbst, beim nächsten Öffnen ist alles da.
               </p>
             </header>
+
+            <Section title="Neu im November: Eine Note für den Steward">
+              <p>
+                Der Whisky-Steward schenkt aus, hält den Abend zusammen und trinkt selbst keinen
+                Tropfen. Dafür bekommt er jetzt, was er verdient: <b>eure Note von 0 bis 10</b>.
+              </p>
+              <p>
+                Läuft ein Tasting mit Steward, findet ihr in der Bewertung unter dem Sieger-Tipp die
+                Karte <b>„Den Steward bewerten“</b>. Note einstellen, wer mag, schreibt noch einen
+                kurzen Kommentar dazu – fertig. Bis zum Abschluss könnt ihr die Note ändern oder
+                wieder zurückziehen. Ist der letzte Whisky im Glas und ihr habt noch nicht bewertet,
+                erinnert euch die Karte dezent daran.
+              </p>
+              <p>
+                <b>Bis zum Abschluss geheim.</b> Eure Note sieht während des Abends niemand – auch
+                der Steward selbst nicht, nicht einmal in seinem Live-Einblick. Nach dem Abschluss
+                steht auf der Ergebnisseite der Schnitt, und darunter alle Noten{' '}
+                <b>mit Namen und Kommentar</b>. Lob kommt also an, Kritik bitte charmant verpacken.
+              </p>
+              <p>
+                Wer schon einmal Steward war, sieht in seiner Bilanz den Eintrag{' '}
+                <b>„Als Whisky-Steward“</b> mit seinem Notenschnitt. Ob andere den sehen dürfen,
+                entscheidet ihr im Profil mit dem neuen Schalter „Steward-Bilanz“.
+              </p>
+            </Section>
 
             <Section title="Neu im November: Fotos von der Flasche">
               <p>

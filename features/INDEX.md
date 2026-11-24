@@ -43,7 +43,7 @@
 | PROJ-26 | Testkonten für normale Nutzer unsichtbar | Deployed | [PROJ-26-testkonten-unsichtbar.md](PROJ-26-testkonten-unsichtbar.md) | 2026-10-05 |
 | PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Deployed | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
 | PROJ-28 | Whisky-Fotos | Deployed | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
-| PROJ-29 | Steward-Bewertung durch Teilnehmer | Approved | [PROJ-29-steward-bewertung.md](PROJ-29-steward-bewertung.md) | 2026-11-23 |
+| PROJ-29 | Steward-Bewertung durch Teilnehmer | Deployed | [PROJ-29-steward-bewertung.md](PROJ-29-steward-bewertung.md) | 2026-11-23 |
 
 <!-- Add features above this line -->
 
@@ -146,7 +146,14 @@ Archiv für alle aktiven Mitglieder; Mini-Bilder in Rangliste, Ausschankliste un
 „Zur Sammlung hinzufügen“; neues Wartungsskript `photos:cleanup`) am 2026-11-23 als `v1.17.0` live (mit
 DB-Migration `20261123120000_whisky_photos.sql`; 34/34 AC nach Re-Test, 1 High-Bug während der QA
 gefunden und behoben — Whisky-Dialog auf dem Handy nicht abschließbar —, BUG-2 akzeptiert, BUG-3 Low
-im Backlog). Offen auf der Roadmap: PROJ-17 (Web-Push), PROJ-29 (Steward-Bewertung).
+im Backlog).
+PROJ-29 (Steward-Bewertung: Teilnehmer geben dem Whisky-Steward während des Tastings eine Note 0–10 mit
+optionalem Kommentar, geheim bis zum Abschluss — auch für den Steward —, danach mit Namen auf der Ergebnisseite;
+Bilanz „Als Whisky-Steward" mit eigenem Schalter) am 2026-11-24 als `v1.18.0` live (mit DB-Migration
+`20261124120000_steward_scores.sql` — Tabelle `steward_scores`, RPCs `set_steward_score` /
+`clear_steward_score` (TS028), Sicht `steward_scores_revealed`, `profiles.show_steward_balance`; 26/26 AC,
+1 Medium-Bug während der QA gefunden und behoben — leere Bilanz-Karte im fremden Profil).
+Offen auf der Roadmap: PROJ-17 (Web-Push).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
