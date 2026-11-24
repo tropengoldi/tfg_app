@@ -23,7 +23,7 @@ Interview the user until you reach a **complete shared understanding** of the fe
 1. Read `docs/PRD.md` — understand the project vision and target users
 2. Read `features/INDEX.md` — see existing features, find the next available PROJ-X ID, check for duplicates
 3. Check existing components: `git ls-files src/components/`
-4. Check existing APIs: `git ls-files src/app/api/`
+4. Check existing backend: `git ls-files src/lib/actions/ src/lib/queries/` und `ls supabase/migrations/` (es gibt keine API-Routen)
 
 **If the project has not been initialized** (PRD is still the empty template):
 > "The project hasn't been set up yet. Run `/init` first to define the project vision and feature map."
@@ -94,8 +94,8 @@ Update `features/INDEX.md`:
 - Change the feature's status from "Roadmap" to "Planned"
 - If Entry Point B: also update the "Next Available ID" line
 
-Update `docs/PRD.md`:
-- Update the status column in the roadmap table for this feature (if listed there)
+Update `docs/feature-map.md`:
+- Add (or update) the feature's row with description, priority and dependencies
 
 ## Feature Granularity (Single Responsibility)
 Each spec = ONE testable, deployable unit.
@@ -147,7 +147,7 @@ This format ensures every criterion is unambiguous and directly testable by QA.
 - [ ] Feature ID assigned (PROJ-X)
 - [ ] File saved to `features/PROJ-X-feature-name.md`
 - [ ] `features/INDEX.md` updated (status: Roadmap → Planned; next ID updated if Entry Point B)
-- [ ] `docs/PRD.md` roadmap table updated if applicable
+- [ ] `docs/feature-map.md` row added (description, priority, dependencies)
 - [ ] User has reviewed and approved the spec
 
 ## Handoff

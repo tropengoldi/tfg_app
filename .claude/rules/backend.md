@@ -1,32 +1,44 @@
 ---
 paths:
-  - "src/app/api/**"
-  - "src/lib/supabase*"
   - "supabase/**"
+  - "src/lib/actions/**"
+  - "src/lib/queries/**"
+  - "src/lib/supabase/**"
+  - "src/lib/email/**"
+  - "scripts/**"
 ---
 
-# Backend Development Rules
+# Backend Rules (Supabase + Server Actions)
 
-## Database (Supabase)
-- ALWAYS enable Row Level Security on every table
-- Create RLS policies for SELECT, INSERT, UPDATE, DELETE
-- Add indexes on columns used in WHERE, ORDER BY, and JOIN clauses
-- Use foreign keys with ON DELETE CASCADE where appropriate
-- Never skip RLS - security first
+## Migrationen
+- Neue Datei `supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql`, in `begin; … commit;`, Kopfkommentar mit Zweck,
+  Regeln und neuen Fehlercodes. Bestehende Migrationen nie ändern.
+- RLS auf jeder neuen Tabelle. Direkte Schreibrechte für `anon`/`authenticated` entziehen; geschrieben wird über
+  SECURITY-DEFINER-Funktionen mit `set search_path = ''`, die Mitgliedschaft (`is_active_member()`), Rolle und
+  Zustand prüfen. `revoke execute … from public, anon` und gezielt `grant … to authenticated`.
+- Policies nur für die Lesezugriffe, die wirklich direkt passieren; Archiv-/Ergebnisdaten über Sichten.
+- Testkonten-Regel (PROJ-26) in jeder neuen Sicht bzw. Abfrage auf Mitglieder/Tastings mitdenken.
+- Fremdschlüssel bewusst wählen: `on delete cascade` für abhängige Daten, `restrict` für Historie
+  (dann `scripts/delete-user.mjs` mitziehen).
+- Indizes für Spalten in WHERE/ORDER BY/JOIN; Nebenläufigkeit über Zeilensperren oder Advisory-Locks absichern.
+- Fehler: `raise exception '<deutscher Text>' using errcode = 'TS0xx'` (nächste freie Nummer in `src/lib/errors.ts`
+  nachsehen und dort eintragen). Nie die Klasse `PT`.
 
-## API Routes
-- Validate all inputs using Zod schemas before processing
-- Always check authentication: verify user session exists
-- Return meaningful error messages with appropriate HTTP status codes
-- Use `.limit()` on all list queries
+## Server Actions (`src/lib/actions/`)
+- `'use server'`; Sitzung mit `getSessionContext()` prüfen; Eingabe mit dem Zod-Schema aus `src/lib/schemas/` parsen.
+- Rückgabe `{ ok: true } | { error: string }`, DB-Fehler über `messageForDbError`. Keine Exceptions bis in die UI.
+- Nach Schreibzugriffen passende Pfade mit `revalidatePath` neu laden.
+- Nach externem Netzwerkverkehr (z. B. Nodemailer) für weitere RPCs einen frischen Supabase-Client erzeugen
+  (PROJ-16-Fund).
 
-## Query Patterns
-- Use Supabase joins instead of N+1 query loops
-- Use `unstable_cache` from Next.js for rarely-changing data
-- Always handle errors from Supabase responses
+## Lesen (`src/lib/queries/`)
+- Joins statt N+1-Schleifen, `.limit()` auf Listen, Fehler der Supabase-Antworten behandeln.
 
-## Security
-- Never hardcode secrets in source code
-- Use environment variables for all credentials
-- Validate and sanitize all user input
-- Use parameterized queries (Supabase handles this)
+## Ablauf nach einer Migration
+Nutzer: `npm run db:push` → Claude: `npm run db:types`, `npx tsc --noEmit`, `npm run test:rls` (betroffene Datei) →
+erst dann Code mit den neuen Typen pushen lassen.
+
+## Integrationstests
+`src/lib/supabase/__tests__/<feature>.integration.test.ts`: Wegwerfkonten mit `is_test: true`, Happy Path, jede
+Ablehnung (anonym, deaktiviert, falsche Rolle, falscher Zustand), kein Direktzugriff auf Tabellen, Aufräumen im
+`afterAll`.

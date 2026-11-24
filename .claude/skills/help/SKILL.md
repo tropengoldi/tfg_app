@@ -30,7 +30,7 @@ Read these files to understand where the project stands:
 
 4. **Check Codebase:** Quick scan of what's been built
    - `ls src/components/*.tsx 2>/dev/null` → Custom components
-   - `ls src/app/api/ 2>/dev/null` → API routes
+   - `ls src/lib/actions/` → Server Actions, `ls supabase/migrations/ | tail -3` → latest migrations
    - `ls src/components/ui/` → Installed shadcn components
 
 ### Step 2: Determine Next Action
@@ -52,8 +52,8 @@ Based on the state analysis, determine what the user should do next:
 
 **If features have Tech Design but no implementation:**
 > Feature PROJ-X has a tech design and is ready for implementation.
-> Run `/frontend` to build the UI for `features/PROJ-X-name.md`
-> (If backend is needed, run `/backend` after frontend is done)
+> Run `/backend` for `features/PROJ-X-name.md` (migration, RPCs, Server Actions)
+> (No database change needed? Go straight to `/frontend`.)
 
 **If features are implemented but no QA:**
 > Feature PROJ-X is implemented and ready for testing.
@@ -66,7 +66,7 @@ Based on the state analysis, determine what the user should do next:
 **If all features are deployed:**
 > All current features are deployed! You can:
 > - Run `/write-spec` to spec out a new feature
-> - Check `docs/PRD.md` for planned features not yet specified
+> - Check `features/INDEX.md` (Roadmap status) and its backlog for open work
 
 ### Step 3: Answer User Questions
 

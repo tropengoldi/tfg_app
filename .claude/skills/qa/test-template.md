@@ -8,8 +8,15 @@ Add this section to the END of the feature spec `/features/PROJ-X.md`:
 ## QA Test Results
 
 **Tested:** YYYY-MM-DD
-**App URL:** http://localhost:3000
+**App URL:** http://localhost:3000 (Produktions-Build, Live-Datenbank, Wegwerf-Testkonten)
 **Tester:** QA Engineer (AI)
+**Browser:** Chromium (Desktop) + Mobile Safari (iPhone 13); 360/768/1440 px geprüft
+
+### Automatisierte Tests
+- **Neu E2E** `tests/PROJ-X-….spec.ts`: N/N grün (Fälle × 2 Browser)
+- **Integration** `….integration.test.ts`: N/N
+- **Unit:** N/N gesamt (neu: …)
+- **Regression E2E** (betroffene Features): …
 
 ### Acceptance Criteria Status
 

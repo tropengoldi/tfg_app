@@ -23,7 +23,7 @@ NEVER write code or show implementation details:
    - The feature's status in INDEX.md is **"Planned"** (not "Roadmap")
    - A spec file `features/PROJ-X-*.md` actually exists on disk
 3. Check existing components: `git ls-files src/components/`
-4. Check existing APIs: `git ls-files src/app/api/`
+4. Check existing backend: `git ls-files src/lib/actions/ src/lib/queries/` und `ls supabase/migrations/` (es gibt keine API-Routen)
 5. Read the feature spec the user references
 
 **If the feature status is "Roadmap" or no spec file exists:**
@@ -117,9 +117,9 @@ If any questions came up during the design that couldn't be resolved, add them t
 
 ## Handoff
 After approval, tell the user:
-> "Design is ready! Next step: Run `/frontend` to build the UI components for this feature."
+> "Design is ready! Next step: Run `/backend PROJ-X` (migration, RPCs, Server Actions)."
 >
-> If this feature needs backend work, you'll run `/backend` after frontend is done.
+> If this feature needs no database change, go straight to `/frontend PROJ-X`.
 
 ## Git Commit
 ```

@@ -1,95 +1,35 @@
 ---
 name: frontend
-description: Build UI components with React, Next.js, Tailwind CSS, and shadcn/ui. Use after architecture is designed.
-argument-hint: "feature-spec-path"
+description: Build the UI of a feature with Next.js App Router, Tailwind and shadcn/ui, wired to the feature's Server Actions and queries. Use after /backend (or right after /architecture when the feature needs no DB change).
+argument-hint: "PROJ-X"
 user-invocable: true
 ---
 
 # Frontend Developer
 
 ## Role
-You are an experienced Frontend Developer. You read feature specs + tech design and implement the UI using React, Next.js, Tailwind CSS, and shadcn/ui.
+Du baust die Oberfläche einer Spec nach ihrem Tech Design. Verbindliche Muster: `.claude/rules/frontend.md`,
+Gestaltung: `docs/design-system.md` (dort Geklärtes nicht erneut beim Nutzer erfragen).
 
-## Before Starting
-1. Read `features/INDEX.md` for project context
-2. Read the feature spec referenced by the user (including Tech Design section)
-3. Check installed shadcn/ui components: `ls src/components/ui/`
-4. Check existing custom components: `ls src/components/*.tsx 2>/dev/null`
-5. Check existing hooks: `ls src/hooks/ 2>/dev/null`
-6. Check existing pages: `ls src/app/`
+## Vorbereitung
+1. Index und Spec lesen (Tech Design: Komponentenbaum, welche shadcn-Bausteine).
+2. Vorhandenes ansehen: `ls src/components/ui/`, die Komponenten im passenden Bereich (`src/components/<area>/`), ein
+   ähnliches bestehendes Formular bzw. eine ähnliche Seite als Vorlage, die Server Actions/Queries aus `/backend`.
 
-## Workflow
+## Ablauf
+1. Komponenten in `src/components/<area>/` bauen, Seite(n) in `src/app/(app)/…` einbinden (`requireUser()`).
+2. Server Actions in `useTransition` mit `try/catch` aufrufen; dasselbe Zod-Schema wie die Action für Feldfehler.
+3. Prüfen: `npx tsc --noEmit`, `npx eslint <geänderte Dateien>`.
+4. **Sichtprüfung** bei 375 px: kurzer Playwright-Lauf mit Screenshots in den Scratchpad (Wegwerfkonto, Port 3000
+   vorher frei), Screenshots ansehen, Auffälligkeiten beheben, Hilfstest wieder löschen.
+5. Commit lokal: `feat(PROJ-X): Implement frontend for <feature>`.
 
-### 1. Read Feature Spec + Design
-- Understand the component architecture from Solution Architect
-- Identify which shadcn/ui components to use
-- Identify what needs to be built custom
+## Nach Abschluss
+- [checklist.md](checklist.md) durchgehen.
+- Spec: Abschnitt „Frontend-Implementierung“ (Dateien, Verhalten, Abweichungen vom Tech Design, Sichtprüfung); Status
+  „In Progress“ in Spec und Index.
+- Dem Nutzer beschreiben, was er sieht und wie er es lokal ausprobieren kann (Achtung bei Features, die Mails
+  verschicken: `npm run dev` versendet echt). Fragen, ob die Oberfläche passt; dann „Als Nächstes `/qa PROJ-X`“.
 
-### 2. Clarify Design Requirements
-First check for a project design system: `cat docs/design-system.md 2>/dev/null`
-
-If `docs/design-system.md` exists → read it and apply its colors, typography, and component guidelines throughout. Do not ask the user about design choices already covered there.
-
-If it does not exist, check for other design files: `ls -la design/ mockups/ assets/ 2>/dev/null`
-
-If no design specs exist at all, ask the user:
-- Visual style preference (modern/minimal, corporate, playful, dark mode)
-- Reference designs or inspiration URLs
-- Brand colors (hex codes or use Tailwind defaults)
-- Layout preference (sidebar, top-nav, centered)
-
-### 3. Clarify Technical Questions
-- Mobile-first or desktop-first?
-- Any specific interactions needed (hover effects, animations, drag & drop)?
-- Accessibility requirements beyond defaults (WCAG 2.1 AA)?
-
-### 4. Implement Components
-- Create components in `/src/components/`
-- ALWAYS use shadcn/ui for standard UI elements (check `src/components/ui/` first!)
-- If a shadcn component is missing, install it: `npx shadcn@latest add <name> --yes`
-- Only create custom components as compositions of shadcn primitives
-- Use Tailwind CSS for all styling
-
-### 5. Integrate into Pages
-- Add components to pages in `/src/app/`
-- Set up routing if needed
-- Connect to backend APIs or localStorage as specified in tech design
-
-### 6. User Review
-- Tell the user to test in browser (localhost:3000)
-- Ask: "Does the UI look right? Any changes needed?"
-- Iterate based on feedback
-
-## Context Recovery
-If your context was compacted mid-task:
-1. Re-read the feature spec you're implementing
-2. Re-read `features/INDEX.md` for current status
-3. Run `git diff` to see what you've already changed
-4. Run `git ls-files src/components/ | head -20` to see current component state
-5. Continue from where you left off - don't restart or duplicate work
-
-## After Completion: Backend & QA Handoff
-
-Check the feature spec - does this feature need backend?
-
-**Backend needed if:** Database access, user authentication, server-side logic, API endpoints, multi-user data sync
-
-**No backend if:** localStorage only, no user accounts, no server communication
-
-If backend is needed:
-> "Frontend is done! This feature needs backend work. Next step: Run `/backend` to build the APIs and database."
-
-If no backend needed:
-> "Frontend is done! Next step: Run `/qa` to test this feature against its acceptance criteria."
-
-## Checklist
-See [checklist.md](checklist.md) for the full implementation checklist.
-
-After completion, update tracking files:
-- [ ] Feature spec updated with implementation notes
-- [ ] `features/INDEX.md` status updated to "In Progress"
-
-## Git Commit
-```
-feat(PROJ-X): Implement frontend for [feature name]
-```
+## Kontext wiederherstellen
+Spec und Index neu lesen, `git status`/`git diff` ansehen und dort weitermachen.

@@ -1,6 +1,6 @@
 ---
 name: refine
-description: Always use when the user wants to discuss an exsiting feature or specification. Open an existing feature spec to improve, extend, or fundamentally challenge it. Pass the feature ID as argument (e.g. /refine PROJ-2).
+description: Always use when the user wants to discuss an existing feature or specification. Open an existing feature spec to improve, extend, or fundamentally challenge it. Pass the feature ID as argument (e.g. /refine PROJ-2).
 argument-hint: "PROJ-X"
 user-invocable: true
 ---
@@ -70,7 +70,7 @@ Same as in `/init` and `/write-spec`:
 
 ## After the Interview: Update the Spec
 
-Make the changes to `features/PROJ-X-*.md`. After saving, re-read the file to verify the changes are present.
+Make the changes to `features/PROJ-X-*.md` with the Edit tool and check them with `git diff` before committing.
 
 ### Maintain the Decision Log and Open Questions
 
@@ -88,18 +88,18 @@ If the refinement surfaced questions that couldn't be resolved now, add them as 
 
 ## Update Tracking Files
 - Update `features/INDEX.md` if status or dependencies changed
-- Update `docs/PRD.md` if the roadmap is affected
+- Update `docs/feature-map.md` if description, priority or dependencies changed
 
 ## Checklist Before Completion
 - [ ] Opening question asked and path determined
 - [ ] All interview questions resolved
-- [ ] Spec file updated and verified (re-read after editing)
+- [ ] Spec file updated (checked via `git diff`)
 - [ ] Out of Scope updated if scope boundaries changed
 - [ ] Resolved Open Questions marked as `- [x]` with resolution note
 - [ ] New decisions logged in Decision Log with rationale
 - [ ] New Open Questions added if anything remains unresolved
 - [ ] `features/INDEX.md` updated if status or dependencies changed
-- [ ] `docs/PRD.md` updated if roadmap affected
+- [ ] `docs/feature-map.md` updated if affected
 - [ ] User has reviewed the changes
 
 ## Handoff

@@ -29,7 +29,7 @@
 ## Technical Requirements (optional)
 - Performance: < 200ms response time
 - Security: Authentication required
-- Browser Support: Chrome, Firefox, Safari
+- Browser Support: Chromium + Mobile Safari (Playwright), mobile-first
 
 ## Open Questions
 <!-- Unresolved questions from the spec interview. Close them in /refine when answered. -->

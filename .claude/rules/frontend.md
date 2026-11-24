@@ -6,29 +6,28 @@ paths:
   - "src/hooks/**"
 ---
 
-# Frontend Development Rules
+# Frontend Rules
 
-## shadcn/ui First (MANDATORY)
-- Before creating ANY UI component, check if shadcn/ui has it: `ls src/components/ui/`
-- NEVER create custom implementations of: Button, Input, Select, Checkbox, Switch, Dialog, Modal, Alert, Toast, Table, Tabs, Card, Badge, Dropdown, Popover, Tooltip, Navigation, Sidebar, Breadcrumb
-- If a shadcn component is missing, install it: `npx shadcn@latest add <name> --yes`
-- Custom components are ONLY for business-specific compositions that internally use shadcn primitives
+## shadcn/ui zuerst
+- Vor jeder neuen UI-Komponente in `src/components/ui/` nachsehen. Button, Input, Select, Checkbox, Switch, Dialog,
+  Alert, Toast (sonner), Table, Tabs, Card, Badge, Dropdown, Popover, Tooltip, RadioGroup, Collapsible usw. werden
+  nicht nachgebaut, weil die vorhandenen bereits ans Design-System angepasst sind.
+- Fehlt eine: `npx shadcn@latest add <name> --yes`. Eigene Komponenten sind Kompositionen daraus.
+- Import: `import { Button } from '@/components/ui/button'`.
+- Farben, Schriften und Abstände aus `docs/design-system.md` (dunkles Whisky-Thema, `font-display` für Titel).
 
-## Import Pattern
-```tsx
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-```
+## Komponenten
+- Nur Tailwind (keine Inline-Styles, keine CSS-Module); Props mit TypeScript-Interfaces.
+- Mobile-first: bei 360–375 px ohne horizontales Scrollen, Bedienelemente ≥ 44 px (`min-h-11`); Tablet und Desktop
+  müssen funktionieren, sind aber zweitrangig.
+- Lade-, Fehler- und Leerzustände; semantisches HTML, ARIA-Namen für Icons/Regler, `role="status"`/`alert` für
+  Rückmeldungen.
+- Server Components laden Daten über `src/lib/queries/`; Client Components rufen Server Actions in `useTransition`
+  auf, immer mit `try/catch`, und behalten bei Fehlern die Eingaben.
+- Logik, die sich testen lässt (Punkte, Sortierung, Texte), in reine Funktionen unter `src/lib/` auslagern und dort
+  unit-testen.
 
-## Component Standards
-- Use Tailwind CSS exclusively (no inline styles, no CSS modules)
-- All components must be responsive (mobile 375px, tablet 768px, desktop 1440px)
-- Implement loading states, error states, and empty states
-- Use semantic HTML and ARIA labels for accessibility
-- Keep components small and focused
-- Use TypeScript interfaces for all props
-
-## Auth Best Practices (Supabase)
-- Use `window.location.href` for post-login redirect (not `router.push`)
-- Always verify `data.session` exists before redirecting
-- Always reset loading state in all code paths (success, error, finally)
+## Auth
+- Seiten im angemeldeten Bereich holen den Nutzer mit `requireUser()` (`requireAdmin()` für Admin-Seiten).
+- Nach dem Login per `window.location.href` weiterleiten, erst wenn `data.session` existiert; Ladezustand in allen
+  Pfaden zurücksetzen.

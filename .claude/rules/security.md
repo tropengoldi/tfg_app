@@ -1,36 +1,35 @@
 ---
 paths:
-  - "src/app/api/**"
-  - ".env*"
   - "supabase/**"
+  - "src/lib/actions/**"
+  - "src/lib/email/**"
+  - "src/proxy.ts"
+  - "src/lib/auth*.ts"
+  - "src/app/auth/**"
+  - ".env*"
   - "next.config.*"
 ---
 
 # Security Rules
 
-## Secrets Management
-- NEVER commit secrets, API keys, or credentials to git
-- Use `.env.local` for local development (already in .gitignore)
-- Use `NEXT_PUBLIC_` prefix ONLY for values safe to expose in browser
-- Document all required env vars in `.env.local.example` with dummy values
+## Secrets
+- Keine Secrets im Code oder in Commits. Lokal stehen sie in `.env.local` (gitignored, für Claude gesperrt), live als
+  Vercel-Umgebungsvariablen.
+- `NEXT_PUBLIC_` nur für Werte, die in den Browser dürfen. Server-only: `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_*`,
+  `FEEDBACK_EMAIL`.
+- Jede neue Umgebungsvariable mit Dummy-Wert und Erklärung in `.env.local.example` dokumentieren und dem Nutzer
+  sagen, dass er sie lokal und bei Vercel setzen muss.
 
-## Input Validation
-- Validate ALL user input on the server side with Zod
-- Never trust client-side validation alone
-- Sanitize data before database insertion
+## Eingaben
+- Jede Server Action validiert serverseitig mit Zod; Client-Validierung ist nur Komfort.
+- Nutzertext in Mails nur im Klartext-Inhalt, nie in Kopfzeilen; Einzeiler von Steuerzeichen befreien.
+- Weiterleitungsziele über `safeInternalPath` (`src/lib/safe-redirect.ts`).
 
-## Authentication
-- Always verify authentication before processing API requests
-- Use Supabase RLS as a second line of defense
-- Implement rate limiting on authentication endpoints
+## Zugriff
+- RLS und RPC-Prüfungen sind die tragende Schicht; die UI blendet nur aus. Die Blindheit der Verkostung muss in der
+  Datenbank halten.
+- Änderungen an RLS-Policies, Rechten, Auth-Flow oder `src/proxy.ts` dem Nutzer ausdrücklich vorstellen.
+- Ratenbegrenzung für alles, was Mails verschickt oder teure Arbeit auslöst (Muster: PROJ-30 `register_feedback`).
 
-## Security Headers
-- X-Frame-Options: DENY
-- X-Content-Type-Options: nosniff
-- Referrer-Policy: origin-when-cross-origin
-- Strict-Transport-Security with includeSubDomains
-
-## Code Review Triggers
-- Any changes to RLS policies require explicit user approval
-- Any changes to authentication flow require explicit user approval
-- Any new environment variables must be documented in .env.local.example
+## Security-Header
+Bereits in `next.config.ts` gesetzt (X-Frame-Options DENY, nosniff, Referrer-Policy, HSTS); bei Änderungen erhalten.

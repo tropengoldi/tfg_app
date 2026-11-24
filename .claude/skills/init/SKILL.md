@@ -1,6 +1,6 @@
 ---
 name: init
-description: Initialize a new project. Creates the PRD and a prioritized feature map. Run once at the very start of a new project. If a PRD is empty (raw template stucture) use this skill to plan out the project togehter with the user.
+description: Initialize a new project. Creates the PRD and a prioritized feature map. Run once at the very start of a new project. If a PRD is empty (raw template stucture) use this skill to plan out the project together with the user.
 argument-hint: "description of what you want to build"
 user-invocable: true
 ---

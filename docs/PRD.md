@@ -25,20 +25,9 @@ Handy bedient — mit einem Glas in der anderen Hand, oft bei gedämpftem Licht.
 
 ## Core Features (Roadmap)
 
-| Priority | Feature | Status |
-|----------|---------|--------|
-| P0 (MVP) | Supabase-Infrastruktur (Schema, RLS, RPCs, Seed) | Planned |
-| P0 (MVP) | Auth & Zugangskontrolle | Planned |
-| P0 (MVP) | Admin – Teilnehmerverwaltung | Planned |
-| P0 (MVP) | Admin – Tasting-Events verwalten | Planned |
-| P0 (MVP) | Whisky-Erfassung (blind) | Planned |
-| P0 (MVP) | Gastgeber-Steuerung & Ablauf | Planned |
-| P0 (MVP) | Bewertungsansicht | Planned |
-| P0 (MVP) | Tasting-Dashboard mit Live-Sync | Planned |
-| P1 | Ergebnisse & Tasting-Historie | Planned |
-| P2 | Profil-Seite mit persönlicher Bilanz | Planned |
-
-Details und Abhängigkeiten: siehe [features/INDEX.md](../features/INDEX.md).
+Das MVP (PROJ-1..10) ist seit 2026-08-30 live; seither kamen Erweiterungen bis PROJ-30 dazu (Stand 2026-11-24).
+Aktueller Status aller Features: [features/INDEX.md](../features/INDEX.md). Beschreibung, Priorität und
+Abhängigkeiten: [docs/feature-map.md](feature-map.md). Versionshistorie: [docs/CHANGELOG.md](CHANGELOG.md).
 
 ## Kernablauf eines Tastings
 
@@ -124,7 +113,3 @@ Vercel. `.mcp.json` ist gitignored, weil sie einen Supabase Personal Access Toke
 - **Keine Auswertungen über die Runde hinweg** — die persönliche Bilanz auf der Profil-Seite
   (eigene Tastings, mitgebrachte Whiskies, beste Platzierung, Punkteschnitt) ist Teil von
   PROJ-10. Gruppenweite Ranglisten („wer vergibt die härtesten Noten") sind es nicht.
-
----
-
-Use `/write-spec` to create detailed feature specifications for each item in the roadmap above.
