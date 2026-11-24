@@ -329,6 +329,7 @@ export type Database = {
           show_favorite_dram: boolean
           show_favorite_region: boolean
           show_kenner_count: boolean
+          show_steward_balance: boolean
           show_tasting_count: boolean
           show_whisky_count: boolean
           updated_at: string
@@ -351,6 +352,7 @@ export type Database = {
           show_favorite_dram?: boolean
           show_favorite_region?: boolean
           show_kenner_count?: boolean
+          show_steward_balance?: boolean
           show_tasting_count?: boolean
           show_whisky_count?: boolean
           updated_at?: string
@@ -373,6 +375,7 @@ export type Database = {
           show_favorite_dram?: boolean
           show_favorite_region?: boolean
           show_kenner_count?: boolean
+          show_steward_balance?: boolean
           show_tasting_count?: boolean
           show_whisky_count?: boolean
           updated_at?: string
@@ -479,6 +482,59 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "whisky_rankings"
             referencedColumns: ["whisky_id"]
+          },
+        ]
+      }
+      steward_scores: {
+        Row: {
+          comment: string | null
+          event_id: string
+          profile_id: string
+          score: number
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          event_id: string
+          profile_id: string
+          score: number
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          event_id?: string
+          profile_id?: string
+          score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steward_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "steward_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steward_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steward_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -853,6 +909,7 @@ export type Database = {
           show_avg_points: boolean | null
           show_best_placement: boolean | null
           show_kenner_count: boolean | null
+          show_steward_balance: boolean | null
           show_tasting_count: boolean | null
           show_whisky_count: boolean | null
         }
@@ -866,6 +923,7 @@ export type Database = {
           show_avg_points?: boolean | null
           show_best_placement?: boolean | null
           show_kenner_count?: boolean | null
+          show_steward_balance?: boolean | null
           show_tasting_count?: boolean | null
           show_whisky_count?: boolean | null
         }
@@ -879,10 +937,66 @@ export type Database = {
           show_avg_points?: boolean | null
           show_best_placement?: boolean | null
           show_kenner_count?: boolean | null
+          show_steward_balance?: boolean | null
           show_tasting_count?: boolean | null
           show_whisky_count?: boolean | null
         }
         Relationships: []
+      }
+      steward_scores_revealed: {
+        Row: {
+          comment: string | null
+          display_name: string | null
+          event_id: string | null
+          is_test: boolean | null
+          profile_id: string | null
+          score: number | null
+          steward_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steward_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "past_tastings"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "steward_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "tasting_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steward_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steward_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasting_events_helper_id_fkey"
+            columns: ["steward_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasting_events_helper_id_fkey"
+            columns: ["steward_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whisky_rankings: {
         Row: {
@@ -1131,6 +1245,7 @@ export type Database = {
       can_rate_whisky: { Args: { p_whisky: string }; Returns: boolean }
       can_run_host_control: { Args: { p_event: string }; Returns: boolean }
       can_view_whisky_details: { Args: { p_whisky: string }; Returns: boolean }
+      clear_steward_score: { Args: { p_event: string }; Returns: undefined }
       close_event: { Args: { p_event: string }; Returns: undefined }
       close_round: {
         Args: { p_event: string; p_expected_position: number }
@@ -1201,6 +1316,10 @@ export type Database = {
         Args: { p_make_admin: boolean; p_target: string }
         Returns: undefined
       }
+      set_steward_score: {
+        Args: { p_comment?: string; p_event: string; p_score: number }
+        Returns: undefined
+      }
       set_whisky_order: {
         Args: { p_event: string; p_ordered: string[] }
         Returns: undefined
@@ -1232,6 +1351,7 @@ export type Database = {
           whisky_position: number
         }[]
       }
+      steward_score_guard: { Args: { p_event: string }; Returns: number }
       steward_winner_tips: {
         Args: { p_event: string }
         Returns: {

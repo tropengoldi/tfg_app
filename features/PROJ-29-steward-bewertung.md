@@ -325,8 +325,9 @@ Keine. Alle UI-Bausteine (Collapsible, Card, Textarea, AlertDialog, ScoreField) 
   0 erlaubt; Grenzen + Schrittweite 1; Zurückziehen; kein Direktschreiben; Geheimhaltung Tabelle + Sicht
   für Teilnehmer/Gastgeber/Steward/Admin; Live-Einblick ohne Steward-Noten; Aufdecken mit Namen;
   Testkonten-Regel; Profil-Schalter. Sicherheitsnetz: bricht ab, wenn ein fremdes Tasting läuft.
-- Offen bis `db:push`: Typen neu erzeugen (`db:types`), `auth.ts` Session-Spalten um
-  `show_steward_balance` ergänzen, `npm run test:rls`.
+- `db:push` durch den Nutzer am 2026-11-24, danach `db:types`; `auth.ts` Session-Spalten um
+  `show_steward_balance` ergänzt. Typprüfung fehlerfrei. Integrationstest **16/16** grün; Regression
+  `profile-visibility` / `test-accounts` / `winner-tips` / `steward-insight` **49/49**; Unit **246/246**.
 
 ## QA Test Results
 _To be added by /qa_
