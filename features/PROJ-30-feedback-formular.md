@@ -1,6 +1,6 @@
 # PROJ-30: Feedback-Formular (Fehler & Wünsche)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-11-24
 **Last Updated:** 2026-11-24
 
@@ -309,7 +309,112 @@ Damit ist die offene Frage zu E2E-Mails beantwortet: Trockenlauf per Umgebungsva
   Der Versand lief im Trockenlauf.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-11-24
+**App URL:** http://localhost:3000 (Produktions-Build, Live-Datenbank, Wegwerf-Testkonten, Mailversand im Trockenlauf)
+**Tester:** QA Engineer (AI)
+**Browser:** Chromium (Desktop) und Mobile Safari (iPhone 13). Geprüft bei 360, 768 und 1440 px. Firefox ist nicht im
+Playwright-Setup.
+
+### Automatisierte Tests
+- **Neu E2E** `tests/PROJ-30-feedback.spec.ts`: **30/30** grün (15 Fälle × 2 Browser).
+- **Integration** `feedback.integration.test.ts`: **8/8** grün.
+- **Unit:** **268/268** grün, davon neu `feedback-mail.test.ts` (10) und `schemas/feedback.test.ts` (5).
+- **Regression E2E:**
+  - PROJ-27 (Neuigkeiten und Startseiten-Link) grün.
+  - PROJ-16 (Nachrichten, wegen des ausgelagerten SMTP-Transports) **16/16** grün, inklusive echtem Versand an
+    Wegwerf-Adressen.
+- **Lint:** sauber. **Build:** erfolgreich (Playwright-Webserver).
+- Hinweis: Ein erster Lauf hatte versehentlich den lokalen Dev-Server des Nutzers mitbenutzt, also ohne Trockenlauf,
+  bis dieser gestoppt wurde. Dabei können vereinzelt echte Testmails „[Whizzky] … (Testkonto)“ angekommen sein.
+
+### Acceptance Criteria Status
+
+#### Einstieg
+- [x] Dezenter Link „Fehler gefunden oder eine Idee?“ unter dem Neuigkeiten-Link führt zu `/feedback`. Geprüft per E2E.
+- [x] Ohne Anmeldung wird `/feedback` auf `/login` umgeleitet. Geprüft per E2E.
+
+#### Formular
+- [x] Art Fehler/Wunsch/Sonstiges ohne Vorauswahl, Beschreibung mit Zähler. Geprüft per E2E.
+- [x] Platzhalter je Art. Geprüft per E2E.
+- [x] Hinweis auf Name, E-Mail und technische Angaben. Geprüft per E2E.
+- [x] Fehlende Art oder weniger als 10 Zeichen (nach dem Trimmen) ergeben Feldhinweise, und nichts wird gesendet.
+  Geprüft per E2E und Unit.
+- [x] Bei mehr als 2000 Zeichen wird der Zähler rot und der Knopf gesperrt; bei 2000 ist er wieder frei. Geprüft per
+  E2E.
+- [x] Während des Sendens ist der Knopf gesperrt; ein Doppelklick erzeugt genau eine Anfrage. Geprüft per E2E.
+
+#### Versand
+- [x] Die Mail geht an `FEEDBACK_EMAIL`. Geprüft per Code-Review; in E2E läuft nur der Trockenlauf. **Ein echter
+  Versand wird nach dem Deploy mit einer Testnachricht geprüft.**
+- [x] Betreff „[Whizzky] {Art} von {Name}“ mit Beschreibung, Absender, deutscher Zeit, Seite, Gerät und Version. Geprüft
+  per Unit.
+- [x] Reply-To ist der Absender. Geprüft per Code-Review (`send-feedback.ts`).
+- [x] HTML, Skript-Code und Zeilenumbrüche bleiben reiner Text; Zeilenumbrüche im Namen kommen nicht in den Betreff.
+  Geprüft per Unit; per E2E mit `<script>`, Umlauten und Emoji erfolgreich gesendet.
+
+#### Rückmeldung
+- [x] Nach dem Erfolg erscheint die Bestätigung (`role=status`), das Formular ist geleert, und „Zur Startseite“ sowie
+  „Noch etwas melden“ funktionieren. Geprüft per E2E.
+- [x] Bei einem Netzwerkfehler erscheint eine Meldung, Art und Text bleiben erhalten, und es gibt keine Fehlergrenze.
+  Geprüft per E2E mit abgebrochener Anfrage.
+- [x] Die 6. Nachricht pro Stunde wird mit TS029 und Hinweistext abgelehnt, der Text bleibt. Geprüft per E2E und
+  Integration, auch bei parallelen Aufrufen.
+
+#### Zugriff
+- [x] Ein deaktiviertes Konto (auch wenn es während des Ausfüllens deaktiviert wird) bekommt „Dazu fehlt dir die
+  Berechtigung.“, und nichts wird gesendet. Geprüft per E2E und Integration (TS004).
+- [x] Ohne gültige Sitzung wird keine Mail gesendet. Geprüft per E2E: Die Middleware fängt die Anfrage vorher ab, siehe
+  BUG-1 zur Meldung.
+
+### Edge Cases
+- [x] Fehlt `FEEDBACK_EMAIL`, gibt es die Fehlermeldung und einen Log-Eintrag, und nichts wird gezählt. Geprüft per
+  Code-Review.
+- [x] Testkonto: Betreff mit „(Testkonto)“. Geprüft per Unit.
+- [x] Herkunftsseite unbekannt oder manipuliert (fremde Domain, `//`, sehr lang) ergibt „unbekannt“ bzw. eine gekürzte
+  Angabe. Geprüft per Unit.
+- [x] Die Browserkennung wird auf 300 Zeichen gekürzt. Geprüft per Unit.
+- [x] Emoji und Umlaute bleiben erhalten. Geprüft per Unit und E2E.
+- [x] Neuladen nach dem Senden schickt nichts erneut, weil der Versand nur per Klick ausgelöst wird. Geprüft per
+  Code-Review.
+
+### Security Audit
+- [x] Die Empfängeradresse, `SMTP_*` und `FEEDBACK_DRY_RUN` stehen nicht im Browser-Bundle (`.next/static` per grep
+  geprüft).
+- [x] Die Zähler-Tabelle ist für Mitglieder weder lesbar noch beschreibbar oder löschbar; anonyme Aufrufe der
+  Datenbankfunktion scheitern. Geprüft per Integration.
+- [x] Das Limit lässt sich nicht durch parallele Aufrufe umgehen (Advisory-Lock). Geprüft per Integration (8 parallele
+  Aufrufe, 4 zugelassen).
+- [x] Mail-Header-Injection: Betreff und Reply-To entstehen nur aus Sitzungsdaten, Steuerzeichen werden entfernt.
+  Geprüft per Unit.
+- [x] Die Server-Aktion prüft Eingaben unabhängig vom Browser (Zod) und begrenzt die Herkunftsangabe auf App-Pfade.
+- [x] Es wird kein Inhalt gespeichert, der Zähler hält nur Mitglied und Zeitpunkt für höchstens einen Tag.
+- [x] `FEEDBACK_DRY_RUN` darf nie in Produktion gesetzt sein; das steht in `.env.local.example`. Nach dem Deploy prüft
+  die echte Testnachricht das.
+
+### Bugs Found
+
+#### BUG-1: Abgelaufene Sitzung zeigt „Keine Verbindung“ statt „Bitte melde dich neu an“
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Formular öffnen und ausfüllen.
+  2. Sitzung verlieren (Cookies gelöscht oder Sitzung abgelaufen).
+  3. „Absenden“ tippen.
+  4. Erwartet: „Bitte melde dich neu an.“ Tatsächlich: „Keine Verbindung – bitte versuch es gleich noch einmal.“
+- **Ursache:** Die Middleware leitet den Aufruf der Server-Aktion ohne Sitzung zur Anmeldung um, bevor die Aktion
+  läuft. Im Browser endet das als Fehler beim Aufruf. Es wird nichts gesendet, und der Text bleibt erhalten.
+- **Einordnung:** Das ist dasselbe Verhalten wie bei allen anderen Formularen der App, also nicht spezifisch für
+  PROJ-30. Ein Fix ist optional, z. B. eine Meldung „Keine Verbindung oder Sitzung abgelaufen – bitte Seite neu laden.“
+- **Priority:** Nice to have
+
+### Summary
+- **Acceptance Criteria:** 19/19 bestanden. Der echte Mailversand wird nach dem Deploy mit einer Testnachricht
+  bestätigt.
+- **Bugs:** 0 Critical, 0 High, 0 Medium, 1 Low.
+- **Security:** keine Befunde.
+- **Production Ready:** **JA**
+- **Recommendation:** deployen. Danach eine echte Feedback-Nachricht senden und prüfen, ob die Mail mit Reply-To
+  ankommt.
 
 ## Deployment
 _To be added by /deploy_
