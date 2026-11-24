@@ -224,6 +224,8 @@ test('Alle Felder verborgen → nur der Anzeigename', async ({ page }) => {
     show_best_placement: false,
     show_avg_points: false,
     show_kenner_count: false, // PROJ-22
+    // show_steward_balance bleibt bewusst AN (Default, PROJ-29): ohne Steward-Abend darf
+    // das trotzdem keine (leere) Bilanz-Karte erzeugen — Regression PROJ-29 BUG-1.
   })
 
   await login(page, viewer.email)

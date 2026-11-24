@@ -1,6 +1,6 @@
 # PROJ-29: Steward-Bewertung durch Teilnehmer
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -445,14 +445,17 @@ Keine. Alle UI-Bausteine (Collapsible, Card, Textarea, AlertDialog, ScoreField) 
   zählt nur mit vorhandenem `stewardBalance`). Den PROJ-14-E2E-Fall um `show_steward_balance: false`
   ergänzen und einen Fall „nur Steward-Schalter an, nie Steward → keine Karte" hinzufügen.
 - **Priority:** Fix before deployment
+- **Status:** ✅ **Behoben 2026-11-24** — `getPublicProfile` lädt die Steward-Bilanz vorab und zählt den
+  Schalter nur, wenn es sie gibt (`stewardBalance !== null`). Der PROJ-14-Fall bleibt unverändert und prüft
+  genau dieses Szenario (Steward-Schalter auf Default „an", nie Steward) — Kommentar im Test ergänzt.
+  Re-Test: PROJ-14 + PROJ-29 + PROJ-10 **76/76** grün (beide Browser).
 
 ### Summary
 - **Acceptance Criteria:** 26/26 passed (1 Darstellungs-Abweichung bei der Bilanz-Zeile, siehe Frontend-Notizen)
-- **Bugs Found:** 1 total (0 critical, 0 high, 1 medium, 0 low)
+- **Bugs Found:** 1 total (0 critical, 0 high, 1 medium, 0 low) — BUG-1 behoben und nachgetestet
 - **Security:** Pass
-- **Production Ready:** YES nach Regel (kein Critical/High) — **Empfehlung: BUG-1 vorher beheben**, weil er
-  bestehende Mitglieder sofort nach dem Deploy betrifft
-- **Recommendation:** BUG-1 fixen, PROJ-14-Regression erneut laufen lassen, dann deployen
+- **Production Ready:** **YES**
+- **Recommendation:** Deploy (`db:push` ist bereits erfolgt — nur der Code-Push fehlt)
 
 ## Deployment
 _To be added by /deploy_

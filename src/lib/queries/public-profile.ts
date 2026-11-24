@@ -85,18 +85,31 @@ export async function getPublicProfile(targetId: string): Promise<PublicProfileD
   if (profileError) throw profileError
   if (!row || !row.id || !row.display_name) return null
 
+  // PROJ-29 BUG-1: Der Steward-Eintrag zählt nur, wenn es ihn auch gibt (mindestens
+  // ein abgeschlossener Steward-Abend) — sonst bekäme jemand, der alle übrigen
+  // Kennzahlen verborgen hat, eine leere „Bilanz"-Karte.
+  let stewardBalance: StewardBalance | null = null
+  if (row.show_steward_balance) {
+    try {
+      stewardBalance = await getStewardBalance(targetId, Boolean(row.is_test))
+    } catch {
+      stewardBalance = null
+    }
+  }
+
   const showAnyBalance =
     Boolean(row.show_tasting_count) ||
     Boolean(row.show_whisky_count) ||
     Boolean(row.show_best_placement) ||
     Boolean(row.show_avg_points) ||
     Boolean(row.show_kenner_count) ||
-    Boolean(row.show_steward_balance)
+    stewardBalance !== null
 
   let balance: PublicBalance | null = null
   if (showAnyBalance) {
     try {
       balance = await computeMaskedBalance(targetId, row)
+      if (stewardBalance) balance.stewardBalance = stewardBalance
     } catch {
       balance = null
     }
@@ -212,9 +225,6 @@ async function computeMaskedBalance(
   }
   if (flags.show_kenner_count) {
     balance.kennerCount = await getKennerCount(targetId, ownerIsTest)
-  }
-  if (flags.show_steward_balance) {
-    balance.stewardBalance = await getStewardBalance(targetId, ownerIsTest)
   }
   return balance
 }
