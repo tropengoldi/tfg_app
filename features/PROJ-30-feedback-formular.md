@@ -1,0 +1,146 @@
+# PROJ-30: Feedback-Formular (Fehler & Wünsche)
+
+## Status: Planned
+**Created:** 2026-11-24
+**Last Updated:** 2026-11-24
+
+## Dependencies
+- **Requires: PROJ-2 (Auth & Zugangskontrolle)**: Nur angemeldete, aktive Mitglieder können Feedback senden. Name und
+  E-Mail-Adresse kommen aus der Sitzung.
+- **Reuses: PROJ-16 (Nachrichten an Teilnehmer)**: Der Mailversand über das vorhandene Gmail-SMTP (`SMTP_*`-Variablen)
+  ist bereits eingerichtet.
+- **Analog zu: PROJ-27 (Neuigkeiten)**: Der dezente Link auf der Startseite steht direkt neben „Was gibt's Neues in
+  Whizzky?“.
+
+## Kontext
+Fehler und Ideen aus der Runde kommen heute verstreut per WhatsApp oder im Gespräch beim Tasting an und gehen leicht
+verloren. Ein einfaches Formular in der App soll beides direkt in das Postfach des Admins bringen. Technische Angaben
+(Seite, Gerät) werden mitgeschickt, damit sich ein Fehler nachvollziehen lässt.
+
+## User Stories
+- Als **Mitglied** möchte ich einen Fehler, den ich in der App bemerke, schnell melden, ohne die Adresse des Admins
+  kennen oder ein Mailprogramm öffnen zu müssen.
+- Als **Mitglied** möchte ich eine Idee für eine neue Funktion einreichen, damit sie nicht im Gruppenchat untergeht.
+- Als **Mitglied** möchte ich nach dem Absenden eine klare Bestätigung sehen. Schlägt das Senden fehl, möchte ich
+  meinen Text nicht verlieren.
+- Als **Admin** möchte ich jede Einreichung als E-Mail erhalten und mit „Antworten“ direkt dem Absender schreiben
+  können.
+- Als **Admin** möchte ich bei Fehlermeldungen sehen, auf welcher Seite und mit welchem Gerät sie entstanden sind.
+
+## Out of Scope
+- **Speichern in der Datenbank** oder eine Admin-Übersicht der Einreichungen. Gmail ist das Archiv.
+- **Feedback ohne Anmeldung.** Es gibt keinen Link auf der öffentlichen Seite `/neuigkeiten` und kein Formular für
+  Nicht-Mitglieder.
+- **Anhänge und Screenshots.** Das PRD-Non-Goal „Keine Datei-Uploads außer Whisky-Fotos“ bleibt bestehen.
+- **Status-Rückmeldung in der App** („in Arbeit“, „erledigt“). Rückmeldung gibt es per Mail-Antwort.
+- **Eingangsbestätigung per Mail an den Absender.** Die Bestätigung erscheint nur in der App.
+- **Ein frei wählbarer Betreff.** Der Betreff entsteht automatisch.
+- **Push-Benachrichtigung** an den Admin (→ PROJ-17).
+
+## Acceptance Criteria
+
+**Format:** Angenommen [Vorbedingung] / Wenn [Aktion] / Dann [Ergebnis]
+
+### Einstieg
+- [ ] Angenommen ein Mitglied ist auf der Startseite, dann sieht es unten neben dem Neuigkeiten-Link einen zweiten,
+  gleich dezenten Link „Fehler gefunden oder eine Idee?“. Ein Antippen öffnet das Feedback-Formular.
+- [ ] Angenommen jemand ist nicht angemeldet, wenn er die Formular-Adresse direkt aufruft, dann wird er wie bei allen
+  App-Seiten zur Anmeldung umgeleitet.
+
+### Formular
+- [ ] Angenommen das Formular ist geöffnet, dann zeigt es die Pflichtauswahl **Art** mit „Fehler“, „Wunsch“ und
+  „Sonstiges“ (vorausgewählt ist keine) sowie ein Textfeld **Beschreibung** mit Zeichenzähler.
+- [ ] Angenommen „Fehler“ ist gewählt, dann zeigt das Textfeld einen passenden Platzhalter, z. B. „Was hast du gemacht,
+  was ist passiert, was hättest du erwartet?“. Bei „Wunsch“ erscheint ein eigener Platzhalter.
+- [ ] Angenommen das Formular ist geöffnet, dann steht ein kurzer Hinweis darunter: Die Nachricht geht mit deinem
+  Namen und deiner E-Mail-Adresse an den Admin, dazu technische Angaben (Seite, Gerät/Browser).
+- [ ] Angenommen keine Art ist gewählt oder die Beschreibung hat nach dem Entfernen von Leerzeichen am Anfang und Ende
+  weniger als 10 Zeichen, wenn das Mitglied absendet, dann erscheint am betroffenen Feld eine Fehlermeldung und
+  nichts wird gesendet.
+- [ ] Angenommen die Beschreibung ist länger als 2000 Zeichen, dann warnt der Zähler sichtbar und der Knopf
+  „Absenden“ ist gesperrt.
+- [ ] Angenommen das Mitglied tippt auf „Absenden“, dann ist der Knopf bis zur Antwort gesperrt und zeigt einen
+  Ladezustand. Doppeltes Antippen erzeugt keine zweite Mail.
+
+### Versand
+- [ ] Angenommen das Formular ist gültig, wenn es abgesendet wird, dann geht eine E-Mail an die hinterlegte
+  Feedback-Adresse des Admins.
+- [ ] Angenommen eine Feedback-Mail kommt an, dann lautet der Betreff „[Whizzky] Fehler von {Anzeigename}“ (bzw.
+  „Wunsch“ oder „Sonstiges“). Die Mail enthält die Beschreibung im Klartext, den Absender (Anzeigename und E-Mail),
+  Datum und Uhrzeit (deutsche Zeit), die Seite, von der das Mitglied ins Formular kam, die Browser-/Gerätekennung
+  und die App-Version, sofern verfügbar.
+- [ ] Angenommen der Admin tippt in seinem Mailprogramm auf „Antworten“, dann ist die E-Mail-Adresse des Absenders
+  als Empfänger eingetragen (Reply-To).
+- [ ] Angenommen die Beschreibung enthält HTML, Skript-Code oder Zeilenumbrüche, dann erscheint sie in der Mail als
+  reiner Text. Nichts davon wird ausgeführt oder verändert Kopfzeilen der Mail (keine Header-Injection).
+
+### Rückmeldung
+- [ ] Angenommen der Versand ist erfolgreich, dann sieht das Mitglied eine Bestätigung („Danke! Deine Nachricht ist
+  beim Admin angekommen.“), das Formular ist geleert, und es führt ein Weg zurück zur Startseite.
+- [ ] Angenommen der Versand schlägt fehl (SMTP nicht erreichbar, Netzwerkfehler), dann sieht das Mitglied eine
+  verständliche Fehlermeldung. Art und Beschreibung bleiben erhalten, ein erneuter Versuch ist möglich, und es
+  erscheint kein Absturz und keine Fehlergrenze.
+- [ ] Angenommen ein Mitglied hat in der letzten Stunde bereits 5 Nachrichten gesendet, wenn es eine sechste
+  absendet, dann wird sie nicht gesendet. Es sieht den Hinweis „Du hast gerade viele Nachrichten geschickt – bitte
+  versuch es später noch einmal.“, und sein Text bleibt erhalten.
+
+### Zugriff
+- [ ] Angenommen ein Konto ist deaktiviert, dann kann es kein Feedback senden. Es gilt dieselbe Sperre wie für alle
+  App-Seiten.
+- [ ] Angenommen jemand ruft den Versand ohne gültige Sitzung direkt auf (z. B. per manipulierter Anfrage), dann wird
+  keine Mail gesendet.
+
+## Edge Cases
+- **Feedback-Adresse nicht konfiguriert** (Umgebungsvariable fehlt): Der Versand schlägt mit der normalen
+  Fehlermeldung fehl, der Text bleibt erhalten. Im Server-Log steht ein klarer Hinweis auf die fehlende Konfiguration.
+- **Admin meldet selbst etwas:** Das ist erlaubt. Die Mail geht an die eigene Adresse.
+- **Testkonto (PROJ-26)** sendet Feedback: Das ist erlaubt. Der Betreff erhält zusätzlich „(Testkonto)“, damit E2E-Läufe
+  im Postfach erkennbar sind.
+- **Herkunftsseite unbekannt** (Formular direkt aufgerufen): Die Mail enthält dann „Seite: unbekannt“.
+- **Manipulierte Herkunftsangabe** (eine fremde Domain, eine sehr lange Zeichenkette): Sie wird nur als gekürzter
+  Klartext übernommen. Nichts davon wird als Link ausgeführt.
+- **Sehr lange Browserkennung:** Sie wird gekürzt (z. B. auf 300 Zeichen).
+- **Seite neu laden nach dem Absenden:** Es entsteht keine zweite Mail.
+- **Emoji und Umlaute** in der Beschreibung oder im Anzeigenamen kommen unverändert in der Mail an.
+
+## Technical Requirements
+- Security: Versand nur serverseitig nach Prüfung der Sitzung. Die Empfängeradresse liegt in einer
+  Server-Umgebungsvariable und erscheint nie im Browser.
+- Rate-Limit: höchstens 5 Einreichungen pro Person und Stunde.
+- Mobile-first: Das Formular ist bei 360 px ohne horizontales Scrollen bedienbar und hat große Bedienelemente.
+- Antwortzeit: Die Bestätigung erscheint in der Regel innerhalb weniger Sekunden.
+
+## Open Questions
+- [ ] Wie lässt sich das Rate-Limit ohne Speicherung der Einreichungen umsetzen? Ein Zähler im Arbeitsspeicher hält
+  auf Vercel nicht zuverlässig. Möglich ist eine minimale Zähler-Tabelle ohne Inhalte oder ein anderer Weg. Das
+  entscheidet `/architecture`.
+- [ ] Woher kommt die App-Version (z. B. Commit-Kennung des Deployments)? Das entscheidet `/architecture`.
+
+## Decision Log
+
+### Product Decisions
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Formular in der App statt `mailto:`-Link | Funktioniert ohne eingerichtetes Mailprogramm am Handy, Admin-Adresse bleibt verborgen, Technik-Angaben automatisch | 2026-11-24 |
+| Nur angemeldete Mitglieder | Geschlossener Nutzerkreis; Absender automatisch bekannt; kein Spam-Schutz nötig | 2026-11-24 |
+| Reply-To = Absender | Admin kann Rückfragen direkt per „Antworten“ stellen | 2026-11-24 |
+| Empfänger als Umgebungsvariable statt „alle Admins“ | Änderbar ohne Code; heute ohnehin nur ein Admin | 2026-11-24 |
+| Nur E-Mail, keine Speicherung der Inhalte | Schlank; Gmail ist das Archiv; bei Fehler bleibt der Text im Formular | 2026-11-24 |
+| Felder: Art + Beschreibung, Betreff automatisch | Wenig Tipparbeit am Handy; Betreff trotzdem filterbar in Gmail | 2026-11-24 |
+| Technik-Angaben (Seite, Gerät, Version) mitsenden, mit Hinweis | Fehler nachvollziehbar, ohne Rückfrage; Transparenz durch Hinweis | 2026-11-24 |
+| Rate-Limit 5 pro Stunde je Person | Schützt Postfach und Gmail-Versandlimit vor Fehlbedienung | 2026-11-24 |
+
+### Technical Decisions
+| Decision | Rationale | Date |
+|----------|-----------|------|
+
+---
+
+## Tech Design (Solution Architect)
+_To be added by /architecture_
+
+## QA Test Results
+_To be added by /qa_
+
+## Deployment
+_To be added by /deploy_

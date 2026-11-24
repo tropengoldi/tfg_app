@@ -44,10 +44,11 @@
 | PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Deployed | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
 | PROJ-28 | Whisky-Fotos | Deployed | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
 | PROJ-29 | Steward-Bewertung durch Teilnehmer | Deployed | [PROJ-29-steward-bewertung.md](PROJ-29-steward-bewertung.md) | 2026-11-23 |
+| PROJ-30 | Feedback-Formular (Fehler & Wünsche) | Planned | [PROJ-30-feedback-formular.md](PROJ-30-feedback-formular.md) | 2026-11-24 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-30
+## Next Available ID: PROJ-31
 
 ## Stand der Roadmap
 
@@ -153,7 +154,7 @@ Bilanz „Als Whisky-Steward" mit eigenem Schalter) am 2026-11-24 als `v1.18.0` 
 `20261124120000_steward_scores.sql` — Tabelle `steward_scores`, RPCs `set_steward_score` /
 `clear_steward_score` (TS028), Sicht `steward_scores_revealed`, `profiles.show_steward_balance`; 26/26 AC,
 1 Medium-Bug während der QA gefunden und behoben — leere Bilanz-Karte im fremden Profil).
-Offen auf der Roadmap: PROJ-17 (Web-Push).
+Offen auf der Roadmap: PROJ-17 (Web-Push), PROJ-30 (Feedback-Formular, Planned).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)
@@ -309,6 +310,7 @@ Whiskies existieren und eine Runde läuft.
 | **PROJ-27** | **Release-Notes-Seite „Neuigkeiten“** | Öffentliche Seite `/neuigkeiten` (ohne Login, `noindex`) mit den Release Notes zu PROJ-18..26 auf dezentem Marken-Hintergrund. Schlanker Ablauf, reiner Inhalt. | P2 | PROJ-13 |
 | **PROJ-28** | **Whisky-Fotos** | Optional ein Foto je Whisky hinterlegen — sowohl bei der Vorbereitung (Eintragen auf „Meine Whiskys") als auch nachträglich nach dem Tasting. Ein Etikettfoto verrät den Whisky: vor dem Abschluss nur für Bringer und Gastgeber/Steward sichtbar, danach für alle (Ergebnisseite/Historie). Hebt das PRD-Non-Goal „Keine Fotos oder Datei-Uploads" für Whisky-Fotos auf (Supabase Storage). Spec: ein Foto je Whisky, Bringer + Admin jederzeit, Mini-Bild in Rangliste und Ausschankliste, auch für Sammlungs-Einträge (PROJ-15, Kopie bei „Zur Sammlung hinzufügen"). | P2 | PROJ-5, PROJ-9, PROJ-15 |
 | **PROJ-29** | **Steward-Bewertung durch Teilnehmer** | Ist bei einem Tasting ein Whisky-Steward benannt, können die Teilnehmer ihn mit 0–10 Punkten bewerten. Spec (2026-11-23): bewertet wird während des laufenden Tastings (Karte in der Bewertungsansicht), geheim bis zum Abschluss — auch für den Steward —, danach alle Noten mit Namen + optionalem Kommentar auf der Ergebnisseite; Schrittweite wie das Tasting; Bilanz „Als Whisky-Steward: N Abende · Ø X" mit eigenem Schalter (PROJ-14). Keine Steward-Rangliste über alle Tastings (PRD-Non-Goal). | P2 | PROJ-11, PROJ-18 |
+| **PROJ-30** | **Feedback-Formular (Fehler & Wünsche)** | Dezenter Link auf der Startseite (neben „Neuigkeiten“) zu einem Formular: Art (Fehler/Wunsch/Sonstiges) + Beschreibung; Versand per E-Mail über das vorhandene SMTP an eine feste Admin-Adresse (Umgebungsvariable), Reply-To = Absender, mit Seite/Gerät/Version; nur angemeldet, keine Speicherung der Inhalte, max. 5 pro Stunde je Person. | P2 | PROJ-2, PROJ-16 |
 
 ### Anmerkungen zur Aufteilung
 
