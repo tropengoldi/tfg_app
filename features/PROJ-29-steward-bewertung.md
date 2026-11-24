@@ -1,6 +1,6 @@
 # PROJ-29: Steward-Bewertung durch Teilnehmer
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -355,7 +355,104 @@ Keine. Alle UI-Bausteine (Collapsible, Card, Textarea, AlertDialog, ScoreField) 
   Profil); dabei den Kartenkopf entzerrt (Status unter den Namen). Typprüfung, Lint, Unit 253/253 grün.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-11-24
+**App URL:** http://localhost:3000 (Produktions-Build, Live-Datenbank, Wegwerf-Testkonten)
+**Tester:** QA Engineer (AI)
+**Browser:** Chromium (Desktop) + Mobile Safari (iPhone 13); 360 px geprüft. Firefox nicht im Playwright-Setup.
+
+### Automatisierte Tests
+- **Neu E2E** `tests/PROJ-29-steward-bewertung.spec.ts`: **28/28** grün (14 Fälle × 2 Browser, `--workers=1`,
+  Abbruch-Sicherung gegen ein fremdes laufendes Tasting).
+- **Integration** `steward-scores.integration.test.ts`: **16/16** (nach `db:push`, siehe Backend-Notizen).
+- **Unit:** **253/253** (u. a. `steward-scores.test.ts` 7, `schemas/steward-scores.test.ts` 4).
+- **Regression E2E** PROJ-7/9/10/14/20/22/24: **151 grün, 9 übersprungen, 2 rot** — beide derselbe
+  PROJ-14-Fall „Alle Felder verborgen → nur der Anzeigename" (Chromium + Mobile Safari) → **BUG-1**.
+
+### Acceptance Criteria Status
+
+#### Bewerten (Bewertungsansicht)
+- [x] Karte „Den Steward bewerten" mit Name unter dem Sieger-Tipp (Teilnehmer und Gastgeber) — E2E
+- [x] Ohne Steward keine Karte — E2E
+- [x] Steward/Admin ohne Teilnahme: keine Karte, Seite „nicht gefunden"; direkte Aufrufe → TS028 — E2E + Integration
+- [x] Regler 0–10 mit −/+ in der Schrittweite (0,5 geprüft), Kommentar max. 500 — E2E
+- [x] Hinweis „mit Namen für alle sichtbar … auch nicht <Steward>" — E2E
+- [x] Speichern mit Bestätigung, „Deine Note: 8,5" im Kopf — E2E
+- [x] 0 Punkte → Rückfrage; „Zurück" speichert nicht — E2E
+- [x] Wiederöffnen zeigt Note + Kommentar — E2E (Neuladen)
+- [x] Ändern — E2E inkl. DB-Prüfung
+- [x] Zurückziehen mit Rückfrage löscht Note + Kommentar — E2E inkl. DB-Prüfung
+- [x] Letzter Whisky im Glas, noch offen → „Noch nicht bewertet" hervorgehoben (gold) — E2E
+- [x] Ungültige Note / zu langer Kommentar abgelehnt — Integration (TS028) + E2E (Zähler rot, Knopf gesperrt)
+- [x] Netzwerkfehler: Toast, Eingabe bleibt — Code-Review (`.catch` in beiden Aktionen), nicht simuliert
+
+#### Geheim bis zum Abschluss
+- [x] Niemand (Teilnehmer, Gastgeber, Steward, Admin) liest fremde Noten — Integration (Tabelle + Sicht)
+- [x] Live-Einblick des Stewards ohne Steward-Noten — Integration (`steward_ratings`) + E2E (Steuerungsseite)
+- [x] Entwurf: keine Note möglich, keine Karte — Integration + E2E
+
+#### Nach dem Abschluss
+- [x] Kein Setzen/Ändern/Zurückziehen mehr, Karte weg — Integration + E2E
+- [x] Abschnitt „Whisky-Steward": Name, „8,3 von 10 · 2 Stimmen", Liste nach Note ↓ mit Kommentar — E2E
+- [x] Ohne Note kein Abschnitt — E2E
+- [x] Sichtbar für alle, die das Tasting sehen; Testkonten-Regel — Integration (echtes Mitglied sieht Test-Tasting nicht)
+
+#### Profil-Bilanz
+- [x] „Als Whisky-Steward" mit Ø und Abenden (Darstellung im Kennzahlen-Raster: „Ø 7,8" / „3 Abende") — E2E
+- [x] Steward-Abende ohne Note → „noch keine Note" — Unit (`stewardBalanceStat`)
+- [x] Nie Steward → kein Eintrag — E2E (Regression PROJ-10/14) — **aber siehe BUG-1** (leere Bilanz-Karte)
+- [x] Schalter „Steward-Bilanz", Standard an — E2E
+- [x] Schalter aus → im fremden Profil verborgen, Besitzer sieht es weiter — E2E
+- [x] Schalter betrifft die Ergebnisseite nicht — E2E
+
+### Edge Cases Status
+- [x] Steward-Wechsel nach dem Start unmöglich (bestehende `update_event`-Regel) — Code-Review
+- [x] Zwei Geräte: Upsert, höchstens eine Note pro Person/Tasting (PK) — Integration
+- [x] Abschluss genau beim Speichern: `for share` auf dem Event; nach dem Abschluss TS028 — Integration (nach Abschluss), Sperre per Code-Review
+- [x] Schrittweite 1 lehnt 7,5 ab, erlaubt 7 — Integration
+- [x] Leerer Kommentar → „kein Kommentar" (NULL), Liste zeigt nur die Note — Integration
+- [x] Alte Tastings mit Steward ohne Noten → kein Abschnitt, zählen als Abend „noch keine Note" — E2E/Unit
+- [x] `tasting:delete` per Kaskade; `user:delete` zeigt abgegebene/erhaltene Noten — Code-Review (Skript nicht gegen echte Konten ausgeführt)
+- [x] Deaktivierte Bewerter bleiben in der Liste (Sicht filtert nur den Betrachter) — Code-Review
+
+### Security Audit Results
+- [x] Ohne Anmeldung: Tabelle, Sicht, `set_steward_score`, `steward_score_guard` → 42501 (live geprüft)
+- [x] Autorisierung: Schreiben nur über SECURITY-DEFINER-Funktionen; Direkt-Insert/-Update abgelehnt; Steward,
+  Außenstehende, Admin ohne Teilnahme → TS028 (Integration)
+- [x] Geheimhaltung auf DB-Ebene; der Steward erfährt vor dem Abschluss weder Noten noch wer bewertet hat
+- [x] Eingaben: Note 0–10 + Schrittweite in Funktion **und** CHECK; Viertelpunkte/NaN/außerhalb abgelehnt;
+  Kommentar ≤ 500 doppelt geprüft (Zod + DB)
+- [x] XSS: Kommentar und Namen werden als Text gerendert, kein `dangerouslySetInnerHTML`
+- [x] Interne Prüf-Funktion für `authenticated` gesperrt
+- [ ] Hinweis (kein Bug): Der Bilanz-Schalter wirkt wie bei „Kenner der Woche" nur in der App-Abfrage — die
+  Einzelnoten sind auf den Ergebnisseiten ohnehin für alle aktiven Mitglieder sichtbar (gewollt, Spec)
+- Rate-Limiting: keins, wie bei allen übrigen Tasting-Aktionen (geschlossener Nutzerkreis)
+
+### Bugs Found
+
+#### BUG-1: Leere „Bilanz"-Karte im fremden Profil, wenn alle alten Kennzahlen verborgen sind
+- **Severity:** Medium (Regression aus PROJ-14, keine Datenpanne)
+- **Steps to Reproduce:**
+  1. Mitglied X schaltet in den Sichtbarkeits-Einstellungen alle Bilanz-Kennzahlen aus (wie vor PROJ-29
+     möglich). Der neue Schalter „Steward-Bilanz" steht per Default auf **an**.
+  2. X war nie Whisky-Steward.
+  3. Ein anderes Mitglied öffnet `/profil/<X>`.
+  4. Expected: nur der Anzeigename, keine Bilanz-Karte (PROJ-14-AC).
+  5. Actual: Karte mit Überschrift „Bilanz" und ohne Inhalt.
+- **Ursache:** `getPublicProfile` setzt `showAnyBalance` auch dann, wenn nur `show_steward_balance` an ist,
+  obwohl `stewardBalance` `null` ist. Betrifft gerade bestehende Mitglieder, die vor PROJ-29 alles verborgen haben.
+- **Fix-Idee:** Karte nur rendern, wenn mindestens eine Kennzahl tatsächlich angezeigt wird (Steward-Eintrag
+  zählt nur mit vorhandenem `stewardBalance`). Den PROJ-14-E2E-Fall um `show_steward_balance: false`
+  ergänzen und einen Fall „nur Steward-Schalter an, nie Steward → keine Karte" hinzufügen.
+- **Priority:** Fix before deployment
+
+### Summary
+- **Acceptance Criteria:** 26/26 passed (1 Darstellungs-Abweichung bei der Bilanz-Zeile, siehe Frontend-Notizen)
+- **Bugs Found:** 1 total (0 critical, 0 high, 1 medium, 0 low)
+- **Security:** Pass
+- **Production Ready:** YES nach Regel (kein Critical/High) — **Empfehlung: BUG-1 vorher beheben**, weil er
+  bestehende Mitglieder sofort nach dem Deploy betrifft
+- **Recommendation:** BUG-1 fixen, PROJ-14-Regression erneut laufen lassen, dann deployen
 
 ## Deployment
 _To be added by /deploy_
