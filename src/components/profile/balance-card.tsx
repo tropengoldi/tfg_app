@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatEventDate } from '@/lib/dates'
 import { ordinalPlace, type PersonalBalance } from '@/lib/personal-balance'
+import { stewardBalanceStat } from '@/lib/steward-scores'
 import { formatKennerCount } from '@/lib/winner-tips'
 
 export function BalanceCard({ balance }: { balance: PersonalBalance | null }) {
@@ -45,6 +46,10 @@ export function BalanceCard({ balance }: { balance: PersonalBalance | null }) {
               />
 
               <Stat label="Kenner der Woche" value={formatKennerCount(balance.kennerCount)} />
+
+              {balance.stewardBalance ? (
+                <Stat label="Als Whisky-Steward" {...stewardBalanceStat(balance.stewardBalance)} />
+              ) : null}
             </dl>
           </>
         )}

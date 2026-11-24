@@ -76,6 +76,7 @@ export default async function ProfilPage() {
             show_best_placement: profile.show_best_placement,
             show_avg_points: profile.show_avg_points,
             show_kenner_count: profile.show_kenner_count,
+            show_steward_balance: profile.show_steward_balance,
             show_collection: profile.show_collection,
           }}
         />

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /** Die Sichtbarkeits-Schalter: sieben aus PROJ-14 plus „Sammlung sichtbar"
- * (PROJ-15) plus „Kenner der Woche" (PROJ-22). Anzeigename ist bewusst nicht dabei — er ist immer sichtbar
+ * (PROJ-15) plus „Kenner der Woche" (PROJ-22) plus „Steward-Bilanz" (PROJ-29). Anzeigename ist bewusst nicht dabei — er ist immer sichtbar
  * (Ranglisten/Teilnehmerlisten brauchen ihn). */
 export const VISIBILITY_FIELDS = [
   'show_favorite_dram',
@@ -12,6 +12,7 @@ export const VISIBILITY_FIELDS = [
   'show_best_placement',
   'show_avg_points',
   'show_kenner_count',
+  'show_steward_balance',
   'show_collection',
 ] as const
 

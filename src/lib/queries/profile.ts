@@ -5,6 +5,7 @@ import {
   type PersonalBalance,
   type RankingRowLike,
 } from '@/lib/personal-balance'
+import { getStewardBalance } from '@/lib/queries/steward-scores'
 import { getKennerCount } from '@/lib/queries/tips'
 import { countsForBalance } from '@/lib/test-accounts'
 
@@ -58,7 +59,7 @@ export async function getPersonalBalance(
 ): Promise<PersonalBalance> {
   const supabase = await createClient()
 
-  const [participations, rankings, ratings, kennerCount] = await Promise.all([
+  const [participations, rankings, ratings, kennerCount, stewardBalance] = await Promise.all([
     supabase.from('event_participants').select('event_id').eq('profile_id', userId),
     supabase
       .from('whisky_rankings')
@@ -66,6 +67,7 @@ export async function getPersonalBalance(
       .eq('brought_by', userId),
     supabase.from('ratings').select('total_points, event_id').eq('profile_id', userId),
     getKennerCount(userId, ownerIsTest),
+    getStewardBalance(userId, ownerIsTest),
   ])
   if (participations.error) throw participations.error
   if (rankings.error) throw rankings.error
@@ -129,6 +131,8 @@ export async function getPersonalBalance(
     bestPlacement,
     avgPointsGiven,
     kennerCount,
-    isFresh: tastingCount === 0 && whiskyCount === 0 && totals.length === 0,
+    stewardBalance,
+    isFresh:
+      tastingCount === 0 && whiskyCount === 0 && totals.length === 0 && stewardBalance === null,
   }
 }

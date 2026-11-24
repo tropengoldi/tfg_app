@@ -5,7 +5,9 @@ import {
   type BestPlacement,
   type RankingRowLike,
 } from '@/lib/personal-balance'
+import { getStewardBalance } from '@/lib/queries/steward-scores'
 import { getKennerCount } from '@/lib/queries/tips'
+import type { StewardBalance } from '@/lib/steward-scores'
 import { countsForBalance } from '@/lib/test-accounts'
 
 /** Jedes Feld fehlt (`undefined`), wenn der Profilinhaber es verborgen hat —
@@ -17,6 +19,8 @@ export interface PublicBalance {
   avgPointsGiven?: { avg: string; count: number } | null
   /** PROJ-22 */
   kennerCount?: number
+  /** PROJ-29: `null` = nie Steward; fehlt = verborgen. */
+  stewardBalance?: StewardBalance | null
 }
 
 export interface PublicProfileData {
@@ -46,6 +50,7 @@ type VisibilityFlags = {
   show_best_placement: boolean | null
   show_avg_points: boolean | null
   show_kenner_count: boolean | null
+  show_steward_balance: boolean | null
   /** PROJ-26: Bilanz eines Testkontos zählt Test-Tastings, die eines echten nicht. */
   is_test: boolean | null
 }
@@ -71,7 +76,7 @@ export async function getPublicProfile(targetId: string): Promise<PublicProfileD
     supabase
       .from('profiles_public')
       .select(
-        'id, display_name, bio, favorite_dram, favorite_region, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points, show_kenner_count, is_test',
+        'id, display_name, bio, favorite_dram, favorite_region, show_tasting_count, show_whisky_count, show_best_placement, show_avg_points, show_kenner_count, show_steward_balance, is_test',
       )
       .eq('id', targetId)
       .maybeSingle(),
@@ -85,7 +90,8 @@ export async function getPublicProfile(targetId: string): Promise<PublicProfileD
     Boolean(row.show_whisky_count) ||
     Boolean(row.show_best_placement) ||
     Boolean(row.show_avg_points) ||
-    Boolean(row.show_kenner_count)
+    Boolean(row.show_kenner_count) ||
+    Boolean(row.show_steward_balance)
 
   let balance: PublicBalance | null = null
   if (showAnyBalance) {
@@ -206,6 +212,9 @@ async function computeMaskedBalance(
   }
   if (flags.show_kenner_count) {
     balance.kennerCount = await getKennerCount(targetId, ownerIsTest)
+  }
+  if (flags.show_steward_balance) {
+    balance.stewardBalance = await getStewardBalance(targetId, ownerIsTest)
   }
   return balance
 }

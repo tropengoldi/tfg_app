@@ -18,6 +18,7 @@ const FIELD_LABELS: Record<VisibilityField, string> = {
   show_best_placement: 'Beste Platzierung',
   show_avg_points: 'Ø vergebene Punkte',
   show_kenner_count: 'Kenner der Woche',
+  show_steward_balance: 'Steward-Bilanz',
   show_collection: 'Sammlung',
 }
 
@@ -34,6 +35,7 @@ const GROUPS: { title: string; fields: VisibilityField[] }[] = [
       'show_best_placement',
       'show_avg_points',
       'show_kenner_count',
+      'show_steward_balance',
     ],
   },
   {

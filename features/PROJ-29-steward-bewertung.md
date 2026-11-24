@@ -329,6 +329,31 @@ Keine. Alle UI-Bausteine (Collapsible, Card, Textarea, AlertDialog, ScoreField) 
   `show_steward_balance` ergänzt. Typprüfung fehlerfrei. Integrationstest **16/16** grün; Regression
   `profile-visibility` / `test-accounts` / `winner-tips` / `steward-insight` **49/49**; Unit **246/246**.
 
+### Implementation Notes (Frontend, 2026-11-24)
+- **Logik** `src/lib/steward-scores.ts` (+ 7 Unit-Tests): `summarizeStewardScores`, `stewardSummaryLine`
+  („8,5 von 10 · 6 Stimmen"), `sortStewardScores` (Note ↓, Name), `stewardBalanceStat`
+  („Ø 8,7" / „3 Abende · noch keine Note"), `stewardScorePrivacyHint`.
+- **Lesezugriffe** `src/lib/queries/steward-scores.ts`: `getOwnStewardScore` (eigene Zeile),
+  `getRevealedStewardScores` (Sicht), `getStewardBalance` (Abende aus `past_tastings.helper_id`, Ø aus
+  der Sicht; Testkonten-Regel über `countsForBalance`).
+- **Bewertungsansicht:** `rating/steward-score-card.tsx` unter dem Sieger-Tipp, nur `active` + Steward.
+  Zugeklappt: „Den Steward bewerten" + „Name · Deine Note: 8,5" bzw. „Noch nicht bewertet" (gold, sobald
+  der letzte Whisky im Glas ist). Aufgeklappt: Hinweis mit Auge, bestehender `ScoreField` (Schrittweite des
+  Tastings, Start bei 0), Kommentar mit Zähler, „Note speichern"/„Note ändern" (gesperrt ohne Änderung),
+  „Bewertung zurückziehen"; 0-Rückfrage und Zurückziehen-Rückfrage über `ConfirmDialog`. Netzwerkfehler
+  werden abgefangen (Toast, Eingabe bleibt).
+- **Ergebnisseite:** `results/steward-section.tsx` „Whisky-Steward" nach den Sieger-Tipps — Name (Link zum
+  Profil), Schnitt + Stimmen, Liste Name · Note · Kommentar; ohne Noten nicht gerendert; Ladefehler lässt
+  die Seite heil.
+- **Profil:** `PersonalBalance.stewardBalance` / `PublicBalance.stewardBalance`, Kennzahl „Als
+  Whisky-Steward" in `balance-card.tsx` und `public-profile-view.tsx` (nur wenn mindestens ein
+  abgeschlossener Steward-Abend); neuer Schalter „Steward-Bilanz" (`show_steward_balance`) in den
+  Sichtbarkeits-Einstellungen; ein reiner Steward gilt nicht mehr als „frische" Bilanz.
+- **Abweichung (Darstellung):** Die Bilanz zeigt die Spec-Zeile „Als Whisky-Steward: N Abende · Ø X" im
+  bestehenden Kennzahlen-Raster: Wert „Ø X", Unterzeile „N Abende".
+- Sichtprüfung bei 360 px mit Wegwerf-Tasting (Karte zu/offen/gespeichert, Ergebnis-Abschnitt, fremdes
+  Profil); dabei den Kartenkopf entzerrt (Status unter den Namen). Typprüfung, Lint, Unit 253/253 grün.
+
 ## QA Test Results
 _To be added by /qa_
 

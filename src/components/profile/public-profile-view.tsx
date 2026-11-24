@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatEventDate } from '@/lib/dates'
 import { ordinalPlace } from '@/lib/personal-balance'
 import type { PublicProfileData } from '@/lib/queries/public-profile'
+import { stewardBalanceStat } from '@/lib/steward-scores'
 import { formatKennerCount } from '@/lib/winner-tips'
 
 /**
@@ -78,6 +79,9 @@ export function PublicProfileView({ profile }: { profile: PublicProfileData }) {
                 ) : null}
                 {balance.kennerCount !== undefined ? (
                   <Stat label="Kenner der Woche" value={formatKennerCount(balance.kennerCount)} />
+                ) : null}
+                {balance.stewardBalance ? (
+                  <Stat label="Als Whisky-Steward" {...stewardBalanceStat(balance.stewardBalance)} />
                 ) : null}
               </dl>
             )}

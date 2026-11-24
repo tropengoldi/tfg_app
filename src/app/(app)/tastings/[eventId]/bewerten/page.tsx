@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft, Lock } from 'lucide-react'
 
 import { RatingView } from '@/components/rating/rating-view'
+import { StewardScoreCard } from '@/components/rating/steward-score-card'
 import { WinnerTipProvider } from '@/components/rating/winner-tip-context'
 import { WinnerTipField } from '@/components/rating/winner-tip-field'
 import { PageHeader } from '@/components/layout/page-header'
@@ -12,6 +13,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
 import { formatEventDate } from '@/lib/dates'
 import { getRatingViewData } from '@/lib/queries/ratings'
+import { getOwnStewardScore } from '@/lib/queries/steward-scores'
+import { toRatingStep } from '@/lib/points'
 import { getOwnTipPosition } from '@/lib/queries/tips'
 
 export const metadata: Metadata = { title: 'Bewerten' }
@@ -31,6 +34,9 @@ export default async function BewertenPage({
   // PROJ-22: nur Teilnehmer erreichen diese Seite (der Steward ist keiner).
   const tipPosition =
     event.status === 'draft' ? null : await getOwnTipPosition(eventId, userId)
+  // PROJ-29: Steward-Note nur im laufenden Tasting mit Steward.
+  const stewardScore =
+    event.status === 'active' && steward ? await getOwnStewardScore(eventId, userId) : null
 
   return (
     <>
@@ -68,6 +74,18 @@ export default async function BewertenPage({
           <div className="mb-5">
             <WinnerTipField total={total} steward={steward} />
           </div>
+
+          {steward ? (
+            <div className="mb-5">
+              <StewardScoreCard
+                eventId={eventId}
+                stewardName={steward.name}
+                ratingStep={toRatingStep(event.rating_step)}
+                saved={stewardScore}
+                lastWhiskyPoured={total > 0 && event.current_position >= total}
+              />
+            </div>
+          ) : null}
 
           {event.current_position < 1 ? (
             <Card>

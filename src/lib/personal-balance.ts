@@ -2,6 +2,7 @@
  * Reine Ableitungen für die persönliche Bilanz (PROJ-10). Kein DB-, kein
  * React-Bezug — von /qa mit Vitest abhakbar.
  */
+import type { StewardBalance } from '@/lib/steward-scores'
 
 export interface BestPlacement {
   rank: number
@@ -20,6 +21,8 @@ export interface PersonalBalance {
   avgPointsGiven: { avg: string; count: number } | null
   /** PROJ-22: wie oft „Kenner der Woche". */
   kennerCount: number
+  /** PROJ-29: „Als Whisky-Steward" — `null`/fehlend = nie Steward. */
+  stewardBalance?: StewardBalance | null
   /** Noch kein abgeschlossenes Tasting, kein Whisky, keine Bewertung. */
   isFresh: boolean
 }
