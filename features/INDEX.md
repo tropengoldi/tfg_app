@@ -44,7 +44,7 @@
 | PROJ-27 | Release-Notes-Seite „Neuigkeiten“ | Deployed | [PROJ-27-release-notes-seite.md](PROJ-27-release-notes-seite.md) | 2026-10-09 |
 | PROJ-28 | Whisky-Fotos | Deployed | [PROJ-28-whisky-fotos.md](PROJ-28-whisky-fotos.md) | 2026-11-23 |
 | PROJ-29 | Steward-Bewertung durch Teilnehmer | Deployed | [PROJ-29-steward-bewertung.md](PROJ-29-steward-bewertung.md) | 2026-11-23 |
-| PROJ-30 | Feedback-Formular (Fehler & Wünsche) | Planned | [PROJ-30-feedback-formular.md](PROJ-30-feedback-formular.md) | 2026-11-24 |
+| PROJ-30 | Feedback-Formular (Fehler & Wünsche) | Architected | [PROJ-30-feedback-formular.md](PROJ-30-feedback-formular.md) | 2026-11-24 |
 
 <!-- Add features above this line -->
 
@@ -154,7 +154,7 @@ Bilanz „Als Whisky-Steward" mit eigenem Schalter) am 2026-11-24 als `v1.18.0` 
 `20261124120000_steward_scores.sql` — Tabelle `steward_scores`, RPCs `set_steward_score` /
 `clear_steward_score` (TS028), Sicht `steward_scores_revealed`, `profiles.show_steward_balance`; 26/26 AC,
 1 Medium-Bug während der QA gefunden und behoben — leere Bilanz-Karte im fremden Profil).
-Offen auf der Roadmap: PROJ-17 (Web-Push), PROJ-30 (Feedback-Formular, Planned).
+Offen auf der Roadmap: PROJ-17 (Web-Push), PROJ-30 (Feedback-Formular, Architected).
 Sonstige offene Arbeit siehe Post-Deploy-Backlog.
 
 ## Post-Deploy-Backlog (Betrieb)

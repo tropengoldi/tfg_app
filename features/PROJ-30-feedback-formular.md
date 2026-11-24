@@ -1,6 +1,6 @@
 # PROJ-30: Feedback-Formular (Fehler & Wünsche)
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-11-24
 **Last Updated:** 2026-11-24
 
@@ -111,10 +111,9 @@ verloren. Ein einfaches Formular in der App soll beides direkt in das Postfach d
 - Antwortzeit: Die Bestätigung erscheint in der Regel innerhalb weniger Sekunden.
 
 ## Open Questions
-- [ ] Wie lässt sich das Rate-Limit ohne Speicherung der Einreichungen umsetzen? Ein Zähler im Arbeitsspeicher hält
-  auf Vercel nicht zuverlässig. Möglich ist eine minimale Zähler-Tabelle ohne Inhalte oder ein anderer Weg. Das
-  entscheidet `/architecture`.
-- [ ] Woher kommt die App-Version (z. B. Commit-Kennung des Deployments)? Das entscheidet `/architecture`.
+- [x] ~~Rate-Limit ohne Speicherung?~~ Gelöst mit einer minimalen Zähler-Tabelle ohne Inhalte (siehe Tech Design).
+- [x] ~~Woher kommt die App-Version?~~ Kurze Commit-Kennung des Vercel-Deployments, lokal „lokal“.
+- [ ] Wie verhindern E2E-Tests echte Mails (Testmodus oder Abfangen)? Das entscheidet `/backend`.
 
 ## Decision Log
 
@@ -133,11 +132,109 @@ verloren. Ein einfaches Formular in der App soll beides direkt in das Postfach d
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Neue Seite `/feedback` im angemeldeten Bereich + Server-Aktion | Anmeldeprüfung und Muster wie bei allen Formularen (PROJ-16) | 2026-11-24 |
+| Rate-Limit über minimale Zähler-Tabelle (nur Mitglied + Zeitpunkt), Zugriff nur per DB-Funktion, neuer Code TS029 | Arbeitsspeicher auf Vercel unzuverlässig, Cookie umgehbar; keine Inhalte gespeichert, Einträge > 1 Tag werden gelöscht | 2026-11-24 |
+| Fehlgeschlagene Versuche zählen mit | Bremst gerade das wiederholte Absenden bei kaputtem Versand; 5/h stört niemanden | 2026-11-24 |
+| Empfänger `FEEDBACK_EMAIL` (Server-Variable) | Nie im Browser; änderbar ohne Code | 2026-11-24 |
+| Browserkennung serverseitig aus der Anfrage, Herkunftsseite per Link-Parameter, Version = Vercel-Commit-Kennung | Zuverlässig ohne Browser-Code; alles gekürzter Klartext | 2026-11-24 |
+| SMTP-Transport mit PROJ-16 teilen | Keine doppelte Konfiguration | 2026-11-24 |
 
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+Eine neue App-Seite **`/feedback`** mit einem Formular und eine Server-Aktion, die die Mail verschickt. Wiederverwendet
+werden der Mailversand aus PROJ-16 (Nodemailer über Gmail-SMTP, feste Absenderadresse, Reply-To), die Anmeldeprüfung
+der App-Seiten (PROJ-2) und die Fehlertexte über die TS-Codes. Neu im Backend ist nur ein **schlanker Zähler** für das
+Stundenlimit. Er speichert keine Inhalte.
+
+### A) Komponenten
+```
+Startseite (bestehend)
++-- Fußzeile mit dezenten Links
+    +-- „Was gibt's Neues in Whizzky?"  (bestehend, PROJ-27)
+    +-- „Fehler gefunden oder eine Idee?"  (neu, Sprechblasen-Icon, gleicher Stil)
+
+/feedback  (neue Seite im angemeldeten Bereich, mit Seitenkopf wie die anderen Seiten)
++-- Feedback-Formular (Karte)
+|   +-- Art: Auswahl Fehler / Wunsch / Sonstiges (shadcn RadioGroup als große Kacheln)
+|   +-- Beschreibung: Textfeld mit Zeichenzähler, Platzhalter je nach Art
+|   +-- Hinweis: was mitgeschickt wird (Name, E-Mail, Seite, Gerät/Browser)
+|   +-- Knopf „Absenden" (mit Ladezustand gesperrt)
+|   +-- Fehlermeldung (Alert), Text bleibt stehen
++-- Bestätigung (statt des Formulars nach Erfolg)
+    +-- „Danke! Deine Nachricht ist beim Admin angekommen."
+    +-- Knöpfe „Zur Startseite" und „Noch etwas melden"
+```
+Alle Bausteine sind vorhandene shadcn-Komponenten: Card, RadioGroup, Textarea, Button, Alert und Label.
+
+### B) Daten
+**Der Inhalt einer Einreichung wird nirgends gespeichert.** Er existiert nur in der Mail.
+
+Für das Limit von 5 pro Stunde gibt es eine neue, minimale Tabelle **„Feedback-Zähler“**. Jede Zeile enthält nur:
+- wer gesendet hat (Mitglied)
+- wann gesendet wurde
+
+Art, Text und Technik-Angaben stehen nicht darin. Mitglieder können die Tabelle weder lesen noch beschreiben. Der
+Zugriff läuft nur über eine Datenbankfunktion, die in einem Schritt drei Dinge tut:
+1. prüfen, ob die Person aktives Mitglied ist
+2. die Einträge der letzten Stunde zählen. Sind es schon 5, lehnt sie mit dem neuen Code **TS029** ab („Du hast gerade
+   viele Nachrichten geschickt – bitte versuch es später noch einmal.“)
+3. einen neuen Eintrag anlegen und Einträge löschen, die älter als einen Tag sind
+
+Die Tabelle bleibt so immer winzig. Löscht man ein Konto, verschwinden seine Einträge automatisch mit.
+
+**Technik-Angaben in der Mail:**
+- **Seite:** Der Link auf der Startseite übergibt die Herkunftsseite. Fehlt sie, steht „unbekannt“ in der Mail. Der
+  Server übernimmt sie nur als gekürzten Klartext.
+- **Gerät/Browser:** Der Server liest die Browserkennung aus der Anfrage, gekürzt auf 300 Zeichen. Der Browser muss
+  sie nicht selbst mitschicken.
+- **App-Version:** Kurze Commit-Kennung des Vercel-Deployments, z. B. „Version 4ab533f“. Vercel stellt sie automatisch
+  bereit. Lokal steht „lokal“ in der Mail.
+- **Zeitpunkt:** Serverzeit, ausgegeben in deutscher Zeit.
+
+**Empfänger:** neue Server-Umgebungsvariable **`FEEDBACK_EMAIL`**, lokal in `.env.local` und bei Vercel. Sie wird in
+`.env.local.example` dokumentiert und hat bewusst kein `NEXT_PUBLIC_`-Präfix, damit sie nie im Browser landet.
+
+### C) Ablauf beim Absenden
+1. Das Formular prüft im Browser Art und Länge (Zod und react-hook-form, gleiche Regeln wie auf dem Server).
+2. Die Server-Aktion prüft die Sitzung und dieselben Regeln noch einmal.
+3. Sie prüft, ob `FEEDBACK_EMAIL` gesetzt ist. Fehlt die Variable, gibt es die normale Fehlermeldung und einen
+   Log-Hinweis, und es wird nichts gezählt.
+4. Der Zähler reserviert den Platz. Ist das Limit erreicht, kommt die TS029-Meldung.
+5. Die Mail geht per Nodemailer raus:
+   - Absender „Whizzky“
+   - Reply-To: Absender
+   - Betreff „[Whizzky] {Art} von {Name}“, bei Testkonten mit „(Testkonto)“
+   - Inhalt als reiner Text
+6. Bei Erfolg zeigt die Seite die Bestätigung. Bei einem Fehler zeigt sie die Meldung und behält den Text.
+
+Ein fehlgeschlagener Versand zählt mit. Das ist bewusst so, denn genau das Hämmern auf einen kaputten Versand soll
+gebremst werden. Bei 5 Versuchen pro Stunde stört das niemanden.
+
+### D) Technische Entscheidungen (Begründung)
+- **Server-Aktion statt API-Route:** Das ist das Muster aller bisherigen Formulare (z. B. Nachrichten in PROJ-16),
+  mit Sitzung und Fehlertexten wie gewohnt.
+- **Zähler in der Datenbank statt im Arbeitsspeicher:** Vercel startet Server-Instanzen beliebig neu und parallel. Ein
+  Zähler im Arbeitsspeicher würde das Limit nicht zuverlässig durchsetzen. Ein Cookie könnte man einfach löschen.
+- **Zähler ohne Inhalte:** Das hält die Produktentscheidung „nur E-Mail, keine Speicherung“ ein. Gespeichert wird
+  nur, dass und wann jemand gesendet hat, und auch das höchstens einen Tag lang.
+- **Header-Injection ausgeschlossen:** Betreff und Reply-To entstehen nur aus Anzeigename, Art und Sitzungs-E-Mail.
+  Zeilenumbrüche im Namen werden entfernt. Nutzertext kommt ausschließlich in den Mail-Inhalt, als reiner Text.
+- **Mailversand teilt sich den SMTP-Zugang mit PROJ-16:** Die Transport-Einrichtung wird gemeinsam genutzt statt
+  dupliziert.
+
+### E) Abhängigkeiten
+Keine neuen Pakete, `nodemailer` ist seit PROJ-16 vorhanden. Es gibt eine neue DB-Migration (Zähler-Tabelle und
+Funktion). Sie muss **vor** dem Code-Push per `db:push` eingespielt werden.
+
+### F) Tests (Vorschau für /backend und /qa)
+- Integration: Limit greift beim 6. Aufruf; deaktiviertes Konto und anonymer Aufruf werden abgelehnt; die Tabelle ist
+  für Mitglieder nicht lesbar.
+- Unit: Formular-Regeln, Betreff- und Mail-Aufbau inklusive Kürzen und Entfernen von Zeilenumbrüchen.
+- E2E: Link auf der Startseite, Formular-Validierung, Erfolg und Fehlerfall. Der echte Mailversand wird in E2E durch
+  einen Testmodus ersetzt, damit dein Postfach nicht vollläuft. Wie genau, entscheidet /backend.
 
 ## QA Test Results
 _To be added by /qa_
