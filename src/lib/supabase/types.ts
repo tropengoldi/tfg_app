@@ -217,6 +217,39 @@ export type Database = {
           },
         ]
       }
+      feedback_submissions: {
+        Row: {
+          created_at: string
+          id: number
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_submissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_submissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_recipients: {
         Row: {
           created_at: string
@@ -1299,6 +1332,7 @@ export type Database = {
         Args: { p_body: string; p_event_id?: string; p_recipient_ids: string[] }
         Returns: string
       }
+      register_feedback: { Args: never; Returns: undefined }
       remove_whisky: { Args: { p_whisky: string }; Returns: undefined }
       resolve_message_recipients: {
         Args: { p_event_id?: string; p_recipient_ids: string[] }

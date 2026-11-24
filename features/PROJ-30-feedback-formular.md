@@ -280,6 +280,10 @@ Funktion). Sie muss **vor** dem Code-Push per `db:push` eingespielt werden.
 - Integration: `feedback.integration.test.ts` (8) prüft Limit, pro Person, Parallelität, Aufräumen nach einem Tag,
   anonym, deaktiviert, kein Direktzugriff und CASCADE. Er läuft nach `db:push`.
 
+**2026-11-24:** Der Nutzer hat die Migration per `db:push` eingespielt und `FEEDBACK_EMAIL` lokal und bei Vercel
+gesetzt. Danach habe ich die Typen per `db:types` neu erzeugt. `tsc` läuft ohne Fehler, und der Integrationstest ist
+mit 8/8 grün.
+
 Damit ist die offene Frage zu E2E-Mails beantwortet: Trockenlauf per Umgebungsvariable statt Abfangen.
 
 ## QA Test Results
