@@ -40,6 +40,7 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   TS026: 'Merken ist gerade nicht möglich.',
   TS027: 'Ungültiger Speicherort für das Foto.',
   TS028: 'Den Whisky-Steward zu bewerten ist gerade nicht möglich.',
+  TS029: 'Du hast gerade viele Nachrichten geschickt – bitte versuch es später noch einmal.',
 
   // --- Standard-PostgreSQL-Codes -----------------------------------------
   '23505': 'Dieser Eintrag existiert bereits.',

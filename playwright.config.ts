@@ -49,5 +49,9 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
+    // PROJ-30: Feedback-Mails im Testlauf nicht wirklich verschicken. Gilt nur
+    // für einen von Playwright gestarteten Server — läuft schon einer, muss er
+    // selbst mit FEEDBACK_DRY_RUN=1 gestartet sein.
+    env: { FEEDBACK_DRY_RUN: '1' },
   },
 })

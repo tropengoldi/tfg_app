@@ -1,6 +1,5 @@
-import nodemailer from 'nodemailer'
-
 import { formatEventDate } from '@/lib/dates'
+import { fromAddress as appFromAddress, getTransport } from '@/lib/email/transport'
 
 interface Recipient {
   email: string
@@ -12,24 +11,6 @@ export interface MessageMailContext {
   senderEmail: string
   body: string
   tasting: { eventDate: string; location: string } | null
-}
-
-function getTransport() {
-  const host = process.env.SMTP_HOST
-  const port = process.env.SMTP_PORT
-  const user = process.env.SMTP_USER
-  const pass = process.env.SMTP_PASS
-  if (!host || !port || !user || !pass) {
-    throw new Error(
-      'SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS sind nicht gesetzt (PROJ-16-Mailversand).',
-    )
-  }
-  return nodemailer.createTransport({
-    host,
-    port: Number(port),
-    secure: Number(port) === 465,
-    auth: { user, pass },
-  })
 }
 
 /**
@@ -47,7 +28,7 @@ export async function sendMessageEmails(
   ctx: MessageMailContext,
 ): Promise<{ succeeded: Recipient[]; failed: Recipient[] }> {
   const transport = getTransport()
-  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER!
+  const fromAddress = appFromAddress()
 
   const subject = ctx.tasting
     ? `Neue Nachricht von ${ctx.senderName} zum Tasting am ${formatEventDate(ctx.tasting.eventDate)}`

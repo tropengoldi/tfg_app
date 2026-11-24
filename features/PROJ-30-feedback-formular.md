@@ -1,6 +1,6 @@
 # PROJ-30: Feedback-Formular (Fehler & Wünsche)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-11-24
 **Last Updated:** 2026-11-24
 
@@ -113,7 +113,8 @@ verloren. Ein einfaches Formular in der App soll beides direkt in das Postfach d
 ## Open Questions
 - [x] ~~Rate-Limit ohne Speicherung?~~ Gelöst mit einer minimalen Zähler-Tabelle ohne Inhalte (siehe Tech Design).
 - [x] ~~Woher kommt die App-Version?~~ Kurze Commit-Kennung des Vercel-Deployments, lokal „lokal“.
-- [ ] Wie verhindern E2E-Tests echte Mails (Testmodus oder Abfangen)? Das entscheidet `/backend`.
+- [x] ~~Wie verhindern E2E-Tests echte Mails?~~ Mit dem Trockenlauf `FEEDBACK_DRY_RUN=1`, den Playwright beim Start des
+  Servers setzt.
 
 ## Decision Log
 
@@ -235,6 +236,51 @@ Funktion). Sie muss **vor** dem Code-Push per `db:push` eingespielt werden.
 - Unit: Formular-Regeln, Betreff- und Mail-Aufbau inklusive Kürzen und Entfernen von Zeilenumbrüchen.
 - E2E: Link auf der Startseite, Formular-Validierung, Erfolg und Fehlerfall. Der echte Mailversand wird in E2E durch
   einen Testmodus ersetzt, damit dein Postfach nicht vollläuft. Wie genau, entscheidet /backend.
+
+## Backend-Implementierung (2026-11-24)
+
+**Migration** `supabase/migrations/20261125120000_feedback_submissions.sql`:
+- Tabelle `feedback_submissions(id, profile_id → profiles ON DELETE CASCADE, created_at)` mit Index
+  `(profile_id, created_at)`. RLS ist an, es gibt **keine Policy** und alle Rechte für `anon`/`authenticated` sind
+  entzogen. Die Tabelle speichert keine Inhalte.
+- `register_feedback()` (SECURITY DEFINER, nur `authenticated`):
+  - prüft auf aktives Mitglied, sonst TS004
+  - nimmt einen Advisory-Lock pro Person, damit parallele Aufrufe das Limit nicht überholen
+  - löscht alle Einträge, die älter als einen Tag sind
+  - lehnt ab 5 Einträgen in der letzten Stunde mit TS029 ab, legt sonst einen Eintrag an
+
+**App-Code:**
+- `src/lib/email/transport.ts`: Der SMTP-Transport und die Absenderadresse kommen aus `send-message.ts` (PROJ-16) und
+  werden jetzt gemeinsam genutzt.
+- `src/lib/schemas/feedback.ts`: Art `bug|wish|other` mit deutschen Bezeichnungen, Beschreibung getrimmt mit 10–2000
+  Zeichen, optional `from`.
+- `src/lib/feedback-mail.ts` (rein, testbar):
+  - baut Betreff und Klartext
+  - `oneLine` entfernt Steuerzeichen und Zeilenumbrüche (Schutz vor Header-Injection im Betreff) und kürzt
+  - `sanitizeFromPage` lässt nur App-Pfade zu, die mit genau einem „/“ beginnen, sonst „unbekannt“
+  - die Browserkennung wird auf 300 Zeichen gekürzt
+  - die Version sind die ersten 7 Zeichen von `VERCEL_GIT_COMMIT_SHA`, sonst „lokal“
+  - die Zeit wird in Europe/Berlin ausgegeben
+- `src/lib/email/send-feedback.ts`: Versand mit Absender „Whizzky“ und Reply-To = Absender. Ist
+  **`FEEDBACK_DRY_RUN=1`** gesetzt, wird nur geloggt und nichts verschickt.
+- `src/lib/actions/feedback.ts`, `sendFeedbackAction(input)`, in dieser Reihenfolge:
+  1. Sitzung prüfen
+  2. Zod-Validierung
+  3. `FEEDBACK_EMAIL` vorhanden? Sonst Fehlermeldung und Log, nichts gezählt
+  4. `register_feedback`
+  5. Mail verschicken
+  6. Ergebnis `{ok:true}` oder `{error}`. Ein SMTP-Fehler wird abgefangen, nichts wirft bis in die Fehlergrenze.
+- `src/lib/errors.ts`: TS029.
+- `.env.local.example`: `FEEDBACK_EMAIL` und der Hinweis zu `FEEDBACK_DRY_RUN`.
+- `playwright.config.ts`: `webServer.env.FEEDBACK_DRY_RUN = '1'`. Damit verschickt E2E keine echten Mails, sofern der
+  Server von Playwright gestartet wird.
+
+**Tests:**
+- Unit: `feedback.test.ts` (5) und `feedback-mail.test.ts` (10), alle grün.
+- Integration: `feedback.integration.test.ts` (8) prüft Limit, pro Person, Parallelität, Aufräumen nach einem Tag,
+  anonym, deaktiviert, kein Direktzugriff und CASCADE. Er läuft nach `db:push`.
+
+Damit ist die offene Frage zu E2E-Mails beantwortet: Trockenlauf per Umgebungsvariable statt Abfangen.
 
 ## QA Test Results
 _To be added by /qa_
