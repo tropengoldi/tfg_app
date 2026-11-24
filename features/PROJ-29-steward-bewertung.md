@@ -1,6 +1,6 @@
 # PROJ-29: Steward-Bewertung durch Teilnehmer
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-11-23
 **Last Updated:** 2026-11-23
 
@@ -298,6 +298,35 @@ Keine. Alle UI-Bausteine (Collapsible, Card, Textarea, AlertDialog, ScoreField) 
 ### Arbeitsaufteilung
 - `/backend` zuerst: Migration, Typen, Server-Aktionen, Integrationstests (wie bei PROJ-22).
 - `/frontend`: Karte in der Bewertungsansicht, Ergebnis-Abschnitt, Bilanz + Schalter.
+
+### Implementation Notes (Backend, 2026-11-24)
+- Migration `supabase/migrations/20261124120000_steward_scores.sql`:
+  - Tabelle `steward_scores` (PK `event_id` + `profile_id`; `score numeric(3,1)` mit CHECK 0–10 in
+    Halbschritten; `comment` 1–500 Zeichen oder NULL; CASCADE bei Event-/Profil-Löschung). RLS an;
+    `select` nur eigene Zeile; `insert/update/delete` für `authenticated` entzogen.
+  - Interne Prüf-Funktion `steward_score_guard(p_event)` (nicht aufrufbar für Nutzer): aktives Mitglied
+    (TS004), Event `active` mit `for share` gegen gleichzeitiges Abschließen, Steward vorhanden, nicht
+    der Steward selbst, Teilnehmer → sonst **TS028**; liefert die Schrittweite.
+  - `set_steward_score(p_event, p_score, p_comment default null)`: Note 0–10, `mod(score, rating_step)
+    = 0`, Kommentar getrimmt (leer → NULL), ≤ 500 → sonst TS028; Upsert ersetzt.
+  - `clear_steward_score(p_event)`: gleiche Prüfung, löscht die eigene Zeile (keine Zeile = kein Fehler).
+  - Sicht `steward_scores_revealed` (Owner-Rechte): nur `closed`, `helper_id` gesetzt,
+    `is_active_member()`, Testkonten-Filter wie die übrigen Ergebnis-Sichten; Spalten `event_id,
+    steward_id, profile_id, display_name, score, comment, is_test`.
+  - `profiles.show_steward_balance` (Default `true`) + Spalten-GRANTs; `profiles_public` um die Spalte
+    **am Ende** erweitert (sonst 1:1 aus `20261009120000`).
+  - Live-Einblick (`steward_ratings`, PROJ-20) unverändert.
+- App-Server: `src/lib/schemas/steward-scores.ts` (+ 4 Unit-Tests), `src/lib/actions/steward-scores.ts`
+  (`setStewardScoreAction`, `clearStewardScoreAction`), `errors.ts` TS028.
+- `scripts/delete-user.mjs`: Fußabdruck zeigt Steward-Noten (abgegeben / erhalten); abgegebene gehen bei
+  `hard`/`cascade` per CASCADE mit, blockieren nichts.
+- Integrationstest `steward-scores.integration.test.ts` (16 Fälle): Entwurf/abgeschlossen/Steward/
+  Außenstehender/Admin ohne Teilnahme/ohne Steward → TS028; Ersetzen; leerer Kommentar; Gastgeber darf;
+  0 erlaubt; Grenzen + Schrittweite 1; Zurückziehen; kein Direktschreiben; Geheimhaltung Tabelle + Sicht
+  für Teilnehmer/Gastgeber/Steward/Admin; Live-Einblick ohne Steward-Noten; Aufdecken mit Namen;
+  Testkonten-Regel; Profil-Schalter. Sicherheitsnetz: bricht ab, wenn ein fremdes Tasting läuft.
+- Offen bis `db:push`: Typen neu erzeugen (`db:types`), `auth.ts` Session-Spalten um
+  `show_steward_balance` ergänzen, `npm run test:rls`.
 
 ## QA Test Results
 _To be added by /qa_

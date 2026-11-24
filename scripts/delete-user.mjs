@@ -11,7 +11,7 @@
  *   soft        — profiles.is_active = false. Reversibel, versteckt aus Auswahllisten.
  *                 Bleibt in der Historie sichtbar (Name-Erhalt, gewollt).
  *   reactivate  — macht `soft` rückgängig (is_active = true).
- *   hard        — löscht Auth-User + Profil (+ Teilnahmen, Tipps, Sammlung, empfangene
+ *   hard        — löscht Auth-User + Profil (+ Teilnahmen, Tipps, abgegebene Steward-Noten, Sammlung, empfangene
  *                 Nachrichten per CASCADE). Nur wenn der Nutzer NICHTS Geschütztes
  *                 referenziert (kein host_id / created_by / helper_id (Whisky-Steward) /
  *                 mitgebrachter Whisky / abgegebene Bewertung / gesendete Nachricht).
@@ -58,7 +58,24 @@ async function footprint(profileId) {
       .select('profile_id', { count: 'exact', head: true })
       .eq('profile_id', profileId),
   ])
+  // PROJ-29: Steward-Noten — abgegebene gehen per CASCADE mit, erhaltene hängen am
+  // Tasting (Steward = helper_id). Beides blockiert das Löschen nicht, nur Info.
+  const [givenScores, stewardEvents] = await Promise.all([
+    q('steward_scores', 'profile_id'),
+    supabase.from('tasting_events').select('id').eq('helper_id', profileId),
+  ])
+  const stewardEventIds = (stewardEvents.data ?? []).map((e) => e.id)
+  let receivedScores = 0
+  if (stewardEventIds.length > 0) {
+    const { count } = await supabase
+      .from('steward_scores')
+      .select('event_id', { count: 'exact', head: true })
+      .in('event_id', stewardEventIds)
+    receivedScores = count ?? 0
+  }
   return {
+    givenScores: givenScores.count ?? 0,
+    receivedScores,
     hosted: hosted.count ?? 0,
     created: created.count ?? 0,
     stewarded: stewarded.count ?? 0,
@@ -90,7 +107,8 @@ async function main() {
   console.log(
     `  Fußabdruck: ${fp.hosted} Events als Gastgeber · ${fp.created} als Ersteller · ` +
       `${fp.stewarded} als Whisky-Steward · ${fp.brought} mitgebrachte Whiskys · ` +
-      `${fp.rated} Bewertungen · ${fp.sent} gesendete Nachrichten · ${fp.participations} Teilnahmen`,
+      `${fp.rated} Bewertungen · ${fp.sent} gesendete Nachrichten · ${fp.participations} Teilnahmen · ` +
+      `Steward-Noten: ${fp.givenScores} abgegeben / ${fp.receivedScores} erhalten`,
   )
 
   const isAdmin = profile?.role === 'admin'
