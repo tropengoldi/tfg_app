@@ -286,6 +286,28 @@ mit 8/8 grün.
 
 Damit ist die offene Frage zu E2E-Mails beantwortet: Trockenlauf per Umgebungsvariable statt Abfangen.
 
+## Frontend-Implementierung (2026-11-24)
+
+- **Startseite** `src/app/(app)/page.tsx`: Die beiden dezenten Links stehen jetzt in einem
+  `<nav aria-label="Rund um die App">` untereinander. Neu ist „Fehler gefunden oder eine Idee?“ mit
+  `MessageSquareText`-Icon, das Ziel ist `/feedback?von=/`.
+- **Seite** `src/app/(app)/feedback/page.tsx`: Titel „Fehler & Wünsche“ mit der Unterzeile „Etwas klemmt oder du hast
+  eine Idee? Schreib es dem Admin.“ `requireUser()` prüft die Anmeldung. Der Parameter `von` wird an das Formular
+  durchgereicht.
+- **Formular** `src/components/feedback/feedback-form.tsx`:
+  - drei große Kacheln für die Art (shadcn RadioGroup, die Radiopunkte sind visuell versteckt und bleiben für
+    Screenreader zugänglich)
+  - Textarea mit Platzhalter je nach Art und Zähler „n / 2000“, bei Überlänge rot und der Knopf gesperrt
+  - Feldfehler aus demselben Zod-Schema wie die Server-Aktion
+  - Hinweis auf die mitgeschickten Angaben
+  - der Knopf „Absenden“ zeigt beim Senden „Wird gesendet …“ und ist gesperrt
+  - Fehler vom Server erscheinen als Alert, ein Netzwerkfehler wird abgefangen; der Text bleibt jeweils stehen
+  - nach Erfolg erscheint eine Bestätigungskarte (`role="status"`) mit „Zur Startseite“ und „Noch etwas melden“
+- **Abweichung vom Tech Design:** einfacher React-State und das Zod-Schema statt react-hook-form. Das ist dasselbe
+  Muster wie beim Nachrichten-Formular (PROJ-16), die Regeln sind identisch.
+- **Sichtprüfung** bei 375 px mit Playwright-Screenshots (Startseite, Pflichtfeld-Fehler, ausgefüllt, Bestätigung).
+  Der Versand lief im Trockenlauf.
+
 ## QA Test Results
 _To be added by /qa_
 
